@@ -88,29 +88,95 @@
     "id": "ITEM-008"
   },
   {
+    "id": "ITEM-009",
     "sort": 9,
-    "name": "冷氣單主機，細節請看合作備註",
-    "price": 0,
+    "name": "冷氣單主機 2.3kw (3片)",
+    "price": 22500,
     "cost": 0,
     "friendPrice": 0,
-    "unit": "式",
+    "unit": "台",
     "category": "工班",
-    "subCategory": "冷氣",
-    "id": "ITEM-009"
+    "subCategory": "冷氣"
   },
   {
+    "id": "ITEM-010",
     "sort": 10,
-    "name": "冷氣全部費用",
-    "price": 0,
+    "name": "冷氣單主機 2.9kw (4片)",
+    "price": 24500,
     "cost": 0,
     "friendPrice": 0,
-    "unit": "式",
+    "unit": "台",
     "category": "工班",
-    "subCategory": "冷氣",
-    "id": "ITEM-010"
+    "subCategory": "冷氣"
   },
   {
+    "id": "ITEM-011",
     "sort": 11,
+    "name": "冷氣單主機 3.6kw (5片)",
+    "price": 28500,
+    "cost": 0,
+    "friendPrice": 0,
+    "unit": "台",
+    "category": "工班",
+    "subCategory": "冷氣"
+  },
+  {
+    "id": "ITEM-012",
+    "sort": 12,
+    "name": "冷氣單主機 4.3kw (6片)",
+    "price": 31500,
+    "cost": 0,
+    "friendPrice": 0,
+    "unit": "台",
+    "category": "工班",
+    "subCategory": "冷氣"
+  },
+  {
+    "id": "ITEM-013",
+    "sort": 13,
+    "name": "冷氣單主機 5.0kw (7片)",
+    "price": 36000,
+    "cost": 0,
+    "friendPrice": 0,
+    "unit": "台",
+    "category": "工班",
+    "subCategory": "冷氣"
+  },
+  {
+    "id": "ITEM-014",
+    "sort": 14,
+    "name": "冷氣單主機 6.3kw (8片)",
+    "price": 45000,
+    "cost": 0,
+    "friendPrice": 0,
+    "unit": "台",
+    "category": "工班",
+    "subCategory": "冷氣"
+  },
+  {
+    "id": "ITEM-015",
+    "sort": 15,
+    "name": "冷氣單主機 7.2kw (9片)",
+    "price": 47000,
+    "cost": 0,
+    "friendPrice": 0,
+    "unit": "台",
+    "category": "工班",
+    "subCategory": "冷氣"
+  },
+  {
+    "id": "ITEM-016",
+    "sort": 16,
+    "name": "冷氣單主機 8.0kw (10片)",
+    "price": 50000,
+    "cost": 0,
+    "friendPrice": 0,
+    "unit": "台",
+    "category": "工班",
+    "subCategory": "冷氣"
+  },
+  {
+    "sort": 17,
     "name": "一般壁紙+補土（輕隔間雙面的牆面）",
     "price": 900,
     "cost": 600,
@@ -118,10 +184,10 @@
     "unit": "坪",
     "category": "工班",
     "subCategory": "壁紙",
-    "id": "ITEM-011"
+    "id": "ITEM-017"
   },
   {
-    "sort": 12,
+    "sort": 18,
     "name": "一般壁紙+補土（原牆面）",
     "price": 900,
     "cost": 600,
@@ -129,10 +195,10 @@
     "unit": "坪",
     "category": "工班",
     "subCategory": "壁紙",
-    "id": "ITEM-012"
+    "id": "ITEM-018"
   },
   {
-    "sort": 13,
+    "sort": 19,
     "name": "一般壁紙+補土（總數）",
     "price": 900,
     "cost": 600,
@@ -140,10 +206,10 @@
     "unit": "坪",
     "category": "工班",
     "subCategory": "壁紙",
-    "id": "ITEM-013"
+    "id": "ITEM-019"
   },
   {
-    "sort": 14,
+    "sort": 20,
     "name": "高階壁紙+補土（總數）",
     "price": 1000,
     "cost": 650,
@@ -151,10 +217,10 @@
     "unit": "坪",
     "category": "工班",
     "subCategory": "壁紙",
-    "id": "ITEM-014"
+    "id": "ITEM-020"
   },
   {
-    "sort": 15,
+    "sort": 21,
     "name": "木門安裝費用+電子鎖安裝",
     "price": 3500,
     "cost": 0,
@@ -162,10 +228,10 @@
     "unit": "組",
     "category": "工班",
     "subCategory": "木工",
-    "id": "ITEM-015"
+    "id": "ITEM-021"
   },
   {
-    "sort": 16,
+    "sort": 22,
     "name": "木工費用",
     "price": 0,
     "cost": 0,
@@ -173,10 +239,10 @@
     "unit": "式",
     "category": "工班",
     "subCategory": "木工",
-    "id": "ITEM-016"
+    "id": "ITEM-022"
   },
   {
-    "sort": 17,
+    "sort": 23,
     "name": "木門訂製（原門洞改裝）+電子鎖安裝",
     "price": 10000,
     "cost": 0,
@@ -184,10 +250,10 @@
     "unit": "組",
     "category": "工班",
     "subCategory": "木工",
-    "id": "ITEM-017"
+    "id": "ITEM-023"
   },
   {
-    "sort": 18,
+    "sort": 24,
     "name": "循環扇(含配電+安裝)",
     "price": 2200,
     "cost": 0,
@@ -195,10 +261,10 @@
     "unit": "台",
     "category": "工班",
     "subCategory": "水電",
-    "id": "ITEM-018"
+    "id": "ITEM-024"
   },
   {
-    "sort": 19,
+    "sort": 25,
     "name": "包廂公區配電工程",
     "price": 0,
     "cost": 0,
@@ -206,10 +272,10 @@
     "unit": "式",
     "category": "工班",
     "subCategory": "水電",
-    "id": "ITEM-019"
+    "id": "ITEM-025"
   },
   {
-    "sort": 20,
+    "sort": 26,
     "name": "包廂插座，升級USB+TYPEC充電",
     "price": 500,
     "cost": 0,
@@ -217,10 +283,10 @@
     "unit": "組",
     "category": "工班",
     "subCategory": "水電",
-    "id": "ITEM-020"
+    "id": "ITEM-026"
   },
   {
-    "sort": 21,
+    "sort": 27,
     "name": "室內監視器，WIFI類型(含配電+安裝)",
     "price": 2500,
     "cost": 0,
@@ -228,10 +294,10 @@
     "unit": "台",
     "category": "工班",
     "subCategory": "水電",
-    "id": "ITEM-021"
+    "id": "ITEM-027"
   },
   {
-    "sort": 22,
+    "sort": 28,
     "name": "室外監視器，WIFI類型(含配電+安裝)",
     "price": 3500,
     "cost": 0,
@@ -239,10 +305,10 @@
     "unit": "台",
     "category": "工班",
     "subCategory": "水電",
-    "id": "ITEM-022"
+    "id": "ITEM-028"
   },
   {
-    "sort": 23,
+    "sort": 29,
     "name": "消防三寶+煙偵器(含配電+安裝)",
     "price": 0,
     "cost": 0,
@@ -250,10 +316,10 @@
     "unit": "式",
     "category": "工班",
     "subCategory": "水電",
-    "id": "ITEM-023"
+    "id": "ITEM-029"
   },
   {
-    "sort": 24,
+    "sort": 30,
     "name": "麻將桌",
     "price": 22800,
     "cost": 0,
@@ -261,10 +327,10 @@
     "unit": "台",
     "category": "工班",
     "subCategory": "其他",
-    "id": "ITEM-024"
+    "id": "ITEM-030"
   },
   {
-    "sort": 25,
+    "sort": 31,
     "name": "ONE頂規麻將桌(邊框燈.除溼.紫外線.超靜音)",
     "price": 23800,
     "cost": 0,
@@ -272,10 +338,10 @@
     "unit": "台",
     "category": "工班",
     "subCategory": "其他",
-    "id": "ITEM-025"
+    "id": "ITEM-031"
   },
   {
-    "sort": 26,
+    "sort": 32,
     "name": "麻將椅一組4張(含焊接補強+運送組裝)",
     "price": 10000,
     "cost": 0,
@@ -283,10 +349,10 @@
     "unit": "組",
     "category": "工班",
     "subCategory": "其他",
-    "id": "ITEM-026"
+    "id": "ITEM-032"
   },
   {
-    "sort": 27,
+    "sort": 33,
     "name": "監視器配電預留插座",
     "price": 600,
     "cost": 0,
@@ -294,10 +360,10 @@
     "unit": "個",
     "category": "工班",
     "subCategory": "水電",
-    "id": "ITEM-027"
+    "id": "ITEM-033"
   },
   {
-    "sort": 28,
+    "sort": 34,
     "name": "消防配電預留插座",
     "price": 600,
     "cost": 0,
@@ -305,10 +371,10 @@
     "unit": "個",
     "category": "工班",
     "subCategory": "水電",
-    "id": "ITEM-028"
+    "id": "ITEM-034"
   },
   {
-    "sort": 29,
+    "sort": 35,
     "name": "210*240雙開鋁門窗（大門）",
     "price": 40000,
     "cost": 0,
@@ -316,10 +382,10 @@
     "unit": "組",
     "category": "工班",
     "subCategory": "其他",
-    "id": "ITEM-029"
+    "id": "ITEM-035"
   },
   {
-    "sort": 30,
+    "sort": 36,
     "name": "門弓器",
     "price": 1500,
     "cost": 1000,
@@ -327,10 +393,10 @@
     "unit": "組",
     "category": "工班",
     "subCategory": "其他",
-    "id": "ITEM-030"
+    "id": "ITEM-036"
   },
   {
-    "sort": 31,
+    "sort": 37,
     "name": "備用麻將雙色各一副（1500）*9折",
     "price": 2700,
     "cost": 0,
@@ -338,10 +404,10 @@
     "unit": "套",
     "category": "工班",
     "subCategory": "其他",
-    "id": "ITEM-031"
+    "id": "ITEM-037"
   },
   {
-    "sort": 32,
+    "sort": 38,
     "name": "備用麻將雙色各一副（1500）",
     "price": 3000,
     "cost": 0,
@@ -349,10 +415,10 @@
     "unit": "套",
     "category": "工班",
     "subCategory": "其他",
-    "id": "ITEM-032"
+    "id": "ITEM-038"
   },
   {
-    "sort": 33,
+    "sort": 39,
     "name": "焊接椅子含組裝搬運",
     "price": 10000,
     "cost": 0,
@@ -360,10 +426,10 @@
     "unit": "式",
     "category": "工班",
     "subCategory": "其他",
-    "id": "ITEM-033"
+    "id": "ITEM-039"
   },
   {
-    "sort": 34,
+    "sort": 40,
     "name": "飲料櫃",
     "price": 8000,
     "cost": 0,
@@ -371,10 +437,10 @@
     "unit": "組",
     "category": "工班",
     "subCategory": "其他",
-    "id": "ITEM-034"
+    "id": "ITEM-040"
   },
   {
-    "sort": 35,
+    "sort": 41,
     "name": "垃圾桶",
     "price": 1,
     "cost": 0,
@@ -382,10 +448,10 @@
     "unit": "式",
     "category": "工班",
     "subCategory": "其他",
-    "id": "ITEM-035"
+    "id": "ITEM-041"
   },
   {
-    "sort": 36,
+    "sort": 42,
     "name": "牆面單封",
     "price": 3200,
     "cost": 0,
@@ -393,6 +459,6 @@
     "unit": "坪",
     "category": "工班",
     "subCategory": "木工",
-    "id": "ITEM-036"
+    "id": "ITEM-042"
   }
 ]
