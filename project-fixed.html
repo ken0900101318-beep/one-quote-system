@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專案詳情 - ONE桌遊報價管理系統</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .error-box {
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #c53030;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" style="width: 35px; height: 35px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">
+            ONE桌遊報價管理系統
+        </div>
+        <div class="navbar-user">
+            <div class="user-info">
+                <div class="user-name" id="userName">載入中...</div>
+                <div class="user-role" id="userRole">-</div>
+            </div>
+            <button class="btn-logout" onclick="location.href='dashboard.html'">← 返回列表</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="errorContainer"></div>
+        <div class="card" id="projectCard" style="display: none;">
+            <div class="card-header">
+                <h2 class="card-title" id="projectTitle">📋 專案詳情</h2>
+                <div>
+                    <span id="projectStatus" class="status-badge">-</span>
+                </div>
+            </div>
+
+            <!-- 基本資訊 -->
+            <h3>📋 基本資訊</h3>
+            <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div><strong>店名：</strong><span id="storeName">-</span></div>
+                    <div><strong>地址：</strong><span id="address">-</span></div>
+                    <div><strong>包廂數：</strong><span id="rooms">-</span> 間</div>
+                    <div><strong>開放式：</strong><span id="openSeats">-</span> 桌</div>
+                    <div><strong>聯絡人：</strong><span id="contact">-</span></div>
+                    <div><strong>電話：</strong><span id="phone">-</span></div>
+                </div>
+            </div>
+
+            <!-- 收款明細 -->
+            <h3>💰 收款明細</h3>
+            <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>合約總價：</span><strong id="totalAmount">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>已收金額：</span><strong id="paidAmount" style="color: var(--success);">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <span>待收金額：</span><strong id="pendingAmount" style="color: var(--danger);">$0</strong>
+                </div>
+                <div class="progress-bar" style="height: 20px;">
+                    <div class="progress-fill" id="paymentProgress" style="width: 0%;"></div>
+                </div>
+                <div style="text-align: center; margin-top: 5px;" id="paymentPercent">0%</div>
+            </div>
+
+            <!-- 獲利分析 -->
+            <div id="profitAnalysis" style="display: none;">
+                <h3>📊 獲利分析</h3>
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; color: white; margin: 20px 0;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                <span>報價總額：</span>
+                                <strong id="profitTotalAmount">$0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                <span>總成本：</span>
+                                <strong style="color: #fbbf24;" id="profitTotalCost">$0</strong>
+                            </div>
+                        </div>
+                        <div style="border-left: 2px solid rgba(255,255,255,0.3); padding-left: 20px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                <span>毛利：</span>
+                                <strong style="color: #34d399; font-size: 1.4em;" id="profitGrossProfit">$0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>毛利率：</span>
+                                <strong style="color: #34d399; font-size: 1.6em;" id="profitGrossMargin">0%</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 報價明細 -->
+            <h3>📋 報價明細</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>項目名稱</th>
+                        <th>數量</th>
+                        <th>單價</th>
+                        <th>小計</th>
+                    </tr>
+                </thead>
+                <tbody id="quoteItemsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="ensure-data.js"></script>
+    <script>
+        // 全域錯誤處理
+        window.onerror = function(msg, url, line, col, error) {
+            showError('JavaScript 錯誤: ' + msg + ' (第' + line + '行)');
+            return false;
+        };
+
+        function showError(message) {
+            const container = document.getElementById('errorContainer');
+            container.innerHTML = `
+                <div class="error-box">
+                    <h3>❌ 載入失敗</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="location.reload()">重新載入</button>
+                    <button class="btn btn-secondary" onclick="location.href='dashboard.html'">返回列表</button>
+                </div>
+            `;
+            document.getElementById('projectCard').style.display = 'none';
+        }
+
+        try {
+            console.log('=== 開始載入專案 ===');
+
+            // 確保數據初始化
+            if (typeof ensureDataInitialized === 'function') {
+                ensureDataInitialized();
+            }
+
+            // 讀取 URL 參數
+            const urlParams = new URLSearchParams(window.location.search);
+            const projectId = urlParams.get('id');
+            
+            console.log('專案 ID:', projectId);
+
+            if (!projectId) {
+                showError('缺少專案 ID 參數。請從儀表板點擊「查看」按鈕進入。');
+                throw new Error('No project ID');
+            }
+
+            // 讀取數據
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            
+            console.log('專案數量:', projects.length);
+            console.log('使用者數量:', users.length);
+            console.log('價格項目:', priceTable.length);
+            console.log('當前使用者:', currentUser.name);
+
+            if (projects.length === 0) {
+                showError('沒有專案數據！請使用診斷工具初始化數據。');
+                throw new Error('No projects');
+            }
+
+            // 查找專案
+            const project = projects.find(p => p.id === projectId);
+            
+            if (!project) {
+                showError(`找不到專案 ${projectId}！<br><br>可用專案：` + projects.map(p => p.id).join(', '));
+                throw new Error('Project not found');
+            }
+
+            console.log('✅ 找到專案:', project.storeName);
+
+            // 顯示專案卡片
+            document.getElementById('projectCard').style.display = 'block';
+
+            // 顯示使用者資訊
+            document.getElementById('userName').textContent = (currentUser.avatar || '👤') + ' ' + (currentUser.name || '訪客');
+            document.getElementById('userRole').textContent = currentUser.role === 'admin' ? '主管' : (currentUser.role === 'viewer' ? '會計' : '員工');
+
+            // 顯示基本資訊
+            const statusLabels = {
+                'draft': '草稿中',
+                'quoted': '已報價',
+                'signed': '已簽約',
+                'construction': '施工中',
+                'completed': '已完工',
+                'paid': '已結清'
+            };
+
+            document.getElementById('projectTitle').textContent = `${project.id} - ${project.storeName || '未命名'}`;
+            document.getElementById('projectStatus').textContent = statusLabels[project.status] || '未知';
+            document.getElementById('projectStatus').className = 'status-badge status-' + (project.status || 'draft');
+            document.getElementById('storeName').textContent = project.storeName || '-';
+            document.getElementById('address').textContent = project.address || '-';
+            document.getElementById('rooms').textContent = project.rooms || 0;
+            document.getElementById('openSeats').textContent = project.openSeats || 0;
+            document.getElementById('contact').textContent = project.contact || '-';
+            document.getElementById('phone').textContent = project.phone || '-';
+
+            // 收款資訊
+            const totalAmount = project.totalAmount || 0;
+            const paidAmount = project.paidAmount || 0;
+            const pendingAmount = totalAmount - paidAmount;
+            const percent = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
+
+            document.getElementById('totalAmount').textContent = '$' + totalAmount.toLocaleString();
+            document.getElementById('paidAmount').textContent = '$' + paidAmount.toLocaleString();
+            document.getElementById('pendingAmount').textContent = '$' + pendingAmount.toLocaleString();
+            document.getElementById('paymentProgress').style.width = percent + '%';
+            document.getElementById('paymentPercent').textContent = percent + '%';
+
+            // 獲利分析（主管和會計可見）
+            if (currentUser.role === 'admin' || currentUser.role === 'viewer') {
+                document.getElementById('profitAnalysis').style.display = 'block';
+
+                // 計算成本
+                let totalCost = 0;
+                const latestQuote = project.quoteVersions && project.quoteVersions.length > 0 ? 
+                    project.quoteVersions[project.quoteVersions.length - 1] : null;
+
+                if (latestQuote && latestQuote.items) {
+                    latestQuote.items.forEach(item => {
+                        const priceItem = priceTable.find(p => p.name === item.name);
+                        if (priceItem && priceItem.cost) {
+                            totalCost += item.quantity * priceItem.cost;
+                        }
+                    });
+                }
+
+                const grossProfit = totalAmount - totalCost;
+                const grossMargin = totalAmount > 0 ? (grossProfit / totalAmount * 100) : 0;
+
+                document.getElementById('profitTotalAmount').textContent = '$' + totalAmount.toLocaleString();
+                document.getElementById('profitTotalCost').textContent = '$' + totalCost.toLocaleString();
+                document.getElementById('profitGrossProfit').textContent = '$' + grossProfit.toLocaleString();
+                document.getElementById('profitGrossMargin').textContent = grossMargin.toFixed(1) + '%';
+            }
+
+            // 報價明細
+            const quoteItemsBody = document.getElementById('quoteItemsBody');
+            
+            if (project.quoteVersions && project.quoteVersions.length > 0) {
+                const latestQuote = project.quoteVersions[project.quoteVersions.length - 1];
+                
+                if (latestQuote.items && latestQuote.items.length > 0) {
+                    quoteItemsBody.innerHTML = latestQuote.items.map(item => `
+                        <tr>
+                            <td>${item.name || '-'}</td>
+                            <td>${item.quantity || 0}</td>
+                            <td>$${(item.price || 0).toLocaleString()}</td>
+                            <td><strong>$${(item.total || 0).toLocaleString()}</strong></td>
+                        </tr>
+                    `).join('') + `
+                        <tr style="background: #f7fafc; font-weight: bold;">
+                            <td colspan="3" style="text-align: right;">總計</td>
+                            <td>$${totalAmount.toLocaleString()}</td>
+                        </tr>
+                    `;
+                } else {
+                    quoteItemsBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">沒有報價項目</td></tr>';
+                }
+            } else {
+                quoteItemsBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">沒有報價版本</td></tr>';
+            }
+
+            console.log('✅ 專案載入完成');
+
+        } catch (error) {
+            console.error('❌ 錯誤:', error);
+            if (!document.getElementById('errorContainer').innerHTML) {
+                showError('載入失敗: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
