@@ -1,0 +1,78 @@
+<!-- 操作按鈕區（加到專案詳情頁面末尾，在時間軸後面） -->
+<div class="card" style="margin-top: 20px;">
+    <h3>🎯 專案操作</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+        <button class="btn btn-primary" onclick="openPaymentModal(project.id)">💰 記錄收款</button>
+        <button class="btn btn-primary" onclick="openProgressModal(project.id)">📊 更新進度</button>
+        <button class="btn btn-primary" onclick="markAsCompleted(project.id)">✅ 標記完工</button>
+        <button class="btn btn-primary" onclick="window.print()">📄 匯出PDF</button>
+    </div>
+</div>
+
+<!-- 收款 Modal -->
+<div class="modal" id="paymentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+        <div style="background: white; border-radius: 15px; padding: 30px; max-width: 500px; width: 90%;">
+            <h3>💰 記錄收款</h3>
+            <form id="paymentForm" onsubmit="event.preventDefault(); savePayment();">
+                <input type="hidden" id="paymentProjectId">
+                <div style="margin: 15px 0;">
+                    <label>收款日期</label>
+                    <input type="date" id="paymentDate" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                </div>
+                <div style="margin: 15px 0;">
+                    <label>期別</label>
+                    <select id="paymentType" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                        <option value="訂金">訂金</option>
+                        <option value="開工款">開工款</option>
+                        <option value="驗收款">驗收款</option>
+                        <option value="尾款">尾款</option>
+                    </select>
+                </div>
+                <div style="margin: 15px 0;">
+                    <label>收款金額</label>
+                    <input type="number" id="paymentAmount" required min="1" placeholder="例如：200000" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                </div>
+                <div style="margin: 15px 0;">
+                    <label>付款方式</label>
+                    <select id="paymentMethod" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                        <option value="銀行轉帳">銀行轉帳</option>
+                        <option value="現金">現金</option>
+                        <option value="支票">支票</option>
+                    </select>
+                </div>
+                <div style="margin: 15px 0;">
+                    <label>備註</label>
+                    <textarea id="paymentNote" rows="2" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="closePaymentModal()" style="flex: 1; background: #e2e8f0; color: #4a5568;">取消</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">確認收款</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 進度更新 Modal -->
+<div class="modal" id="progressModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+        <div style="background: white; border-radius: 15px; padding: 30px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <h3>📊 更新施工進度</h3>
+            <input type="hidden" id="progressProjectId">
+            <div id="progressList" style="margin: 20px 0;"></div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn" onclick="closeProgressModal()" style="flex: 1; background: #e2e8f0; color: #4a5568;">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveProgress()" style="flex: 1;">儲存進度</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .modal.show { display: block !important; }
+    .modal { display: none; }
+    @media print {
+        .navbar, .btn, button, .modal { display: none !important; }
+    }
+</style>
