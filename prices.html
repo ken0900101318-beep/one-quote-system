@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>價格管理 - ONE桌遊報價管理系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">🎮 ONE桌遊報價管理系統</div>
+        <div class="navbar-user">
+            <button class="btn-logout" onclick="location.href='dashboard.html'">← 返回</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">💰 價格資料庫</h2>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="searchInput" placeholder="🔍 搜尋項目..." 
+                       style="padding: 10px 15px; border: 2px solid var(--border); border-radius: 8px; width: 300px;">
+                <select id="categoryFilter" style="padding: 10px 15px; border: 2px solid var(--border); border-radius: 8px; margin-left: 10px;">
+                    <option value="">全部分類</option>
+                    <option value="工班">工班</option>
+                    <option value="ONE桌遊">ONE桌遊</option>
+                    <option value="新系統">新系統</option>
+                </select>
+            </div>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>項目名稱</th>
+                        <th>單價</th>
+                        <th>成本</th>
+                        <th>友情價</th>
+                        <th>單位</th>
+                        <th>分類</th>
+                    </tr>
+                </thead>
+                <tbody id="pricesBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script>
+        const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+        
+        function renderPrices() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+
+            const filtered = priceTable.filter(item => {
+                const matchSearch = item.name.toLowerCase().includes(searchTerm);
+                const matchCategory = !category || item.category === category;
+                return matchSearch && matchCategory;
+            });
+
+            document.getElementById('pricesBody').innerHTML = filtered.map(item => `
+                <tr>
+                    <td><strong>${item.name}</strong></td>
+                    <td>$${item.price.toLocaleString()}</td>
+                    <td>${item.cost ? '$' + item.cost.toLocaleString() : '-'}</td>
+                    <td>${item.friendPrice ? '$' + item.friendPrice.toLocaleString() : '-'}</td>
+                    <td>${item.unit}</td>
+                    <td><span class="status-badge">${item.category}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('searchInput').addEventListener('input', renderPrices);
+        document.getElementById('categoryFilter').addEventListener('change', renderPrices);
+        renderPrices();
+    </script>
+</body>
+</html>

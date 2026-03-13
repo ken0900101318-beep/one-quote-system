@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONE桌遊報價管理系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-box">
+            <div class="logo">
+                <h1>🎮 ONE桌遊</h1>
+                <p>報價管理系統</p>
+            </div>
+            
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="username">👤 使用者</label>
+                    <select id="username" required>
+                        <option value="">請選擇使用者</option>
+                        <option value="U001">阿建（主管）</option>
+                        <option value="U002">建佑（主管）</option>
+                        <option value="U003">小圓（員工）</option>
+                        <option value="U004">尼克（員工）</option>
+                        <option value="U005">會計（查看）</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">🔒 密碼</label>
+                    <input type="password" id="password" placeholder="請輸入密碼" required>
+                    <small class="hint">主管/員工: admin123/staff123 | 會計: view123</small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block">
+                    登入系統
+                </button>
+            </form>
+            
+            <div class="login-footer">
+                <p>© 2026 ONE桌遊 | 版本 v1.0</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script>
+        // 登入處理
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const userId = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const user = users.find(u => u.id === userId && u.password === password);
+            
+            if (user) {
+                // 登入成功
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                window.location.href = 'dashboard.html';
+            } else {
+                alert('密碼錯誤，請重試');
+                document.getElementById('password').value = '';
+            }
+        });
+
+        // 檢查是否已登入
+        const currentUser = localStorage.getItem('currentUser');
+        if (currentUser) {
+            window.location.href = 'dashboard.html';
+        }
+    </script>
+</body>
+</html>
