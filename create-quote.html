@@ -479,8 +479,9 @@
             const projects = JSON.parse(localStorage.getItem('projects') || '[]');
             const nextId = parseInt(localStorage.getItem('nextProjectId') || '2');
             
+            const currentYear = new Date().getFullYear();
             const newProject = {
-                id: `P-2024${String(nextId).padStart(3, '0')}`,
+                id: `P-${currentYear}${String(nextId).padStart(3, '0')}`,
                 storeName: document.getElementById('storeName').value,
                 address: document.getElementById('address').value,
                 contact: document.getElementById('contact').value || '-',

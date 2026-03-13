@@ -135,9 +135,11 @@
             document.getElementById('totalProjects').textContent = projects.length;
             document.getElementById('constructionProjects').textContent = projects.filter(p => p.status === 'construction').length;
             
+            // 動態獲取當月（YYYY-MM 格式）
+            const thisMonth = new Date().toISOString().slice(0, 7);
             const monthlyPayments = projects.reduce((sum, p) => {
                 return sum + (p.payments || [])
-                    .filter(pay => pay.date.startsWith('2026-03'))
+                    .filter(pay => pay.date.startsWith(thisMonth))
                     .reduce((s, pay) => s + pay.amount, 0);
             }, 0);
             document.getElementById('monthlyRevenue').textContent = '$' + monthlyPayments.toLocaleString();
