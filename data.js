@@ -208,7 +208,7 @@ function initializeData() {
                 { date: '2025-12-11', status: '完工', operator: 'U002', note: '待收尾款 $305,700' }
             ]
         },
-        // 專案 5: 台北中山(林森北路) (已完工) ✅
+        // 專案 5: 台北中山(林森北路) (已報價，未開工) 📝
         {
             id: 'P-2025005',
             storeName: '台北中山(林森北路)',
@@ -219,26 +219,24 @@ function initializeData() {
             rooms: 11,
             openSeats: 0,
             area: 60,
-            status: 'paid',
+            status: 'quoted',
             assignee: 'U001',
             createdDate: '2025-11-12',
             quoteDate: '2025-11-20',
-            signDate: '2025-11-23',
-            startDate: '2025-11-26',
-            expectedEndDate: '2025-12-16',
-            completedDate: '2025-12-14',
+            signDate: null,
+            startDate: null,
+            expectedEndDate: null,
+            completedDate: null,
             totalAmount: 3086100,
-            paidAmount: 3086100,
+            paidAmount: 100000,
             quoteVersions: [{ version: 'v1', date: '2025-11-20', totalAmount: 3086100, operator: 'U001', reason: '初次報價', note: '11間包廂', items: [] }],
             payments: [
-                { id: 'PAY-001', date: '2025-11-23', type: '訂金', amount: 1000000, method: '銀行轉帳', receiver: 'U001', note: '' },
-                { id: 'PAY-002', date: '2025-11-28', type: '開工款', amount: 1000000, method: '銀行轉帳', receiver: 'U001', note: '' },
-                { id: 'PAY-003', date: '2025-12-14', type: '尾款', amount: 1086100, method: '銀行轉帳', receiver: 'U001', note: '' }
+                { id: 'PAY-001', date: '2025-11-23', type: '訂金', amount: 100000, method: '銀行轉帳', receiver: 'U001', note: '僅收訂金，未簽約開工' }
             ],
             progress: [],
             statusLogs: [
                 { date: '2025-11-20', status: '報價建立', operator: 'U001', note: '初次報價 $3,086,100' },
-                { date: '2025-12-14', status: '結清', operator: 'U001', note: '專案結案' }
+                { date: '2025-11-23', status: '收訂金', operator: 'U001', note: '收訂金 $100,000，客戶考慮中' }
             ]
         },
         // 專案 6: 士林劍潭店 (已完工) ✅
