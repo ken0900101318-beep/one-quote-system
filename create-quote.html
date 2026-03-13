@@ -208,10 +208,15 @@
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
                 <div class="form-row">
                     <label>包廂數</label>
-                    <input type="number" id="rooms" min="1" placeholder="例如：10">
+                    <input type="number" id="rooms" min="0" value="0" placeholder="例如：10">
+                </div>
+                
+                <div class="form-row">
+                    <label>開放式數量</label>
+                    <input type="number" id="openSeats" min="0" value="0" placeholder="例如：5">
                 </div>
                 
                 <div class="form-row">
@@ -488,6 +493,7 @@
                 phone: document.getElementById('phone').value || '-',
                 lineId: '',
                 rooms: parseInt(document.getElementById('rooms').value) || 0,
+                openSeats: parseInt(document.getElementById('openSeats').value) || 0,
                 area: parseInt(document.getElementById('area').value) || 0,
                 status: 'quoted',
                 assignee: document.getElementById('assignee').value,

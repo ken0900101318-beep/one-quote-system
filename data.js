@@ -76,6 +76,7 @@ function initializeData() {
             phone: '0912-345-678',
             lineId: '@kaohsiung_left',
             rooms: 13,
+            openSeats: 0,
             area: 65,
             status: 'construction', // draft/quoted/signed/construction/completed/paid
             assignee: 'U001', // 阿建

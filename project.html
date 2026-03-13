@@ -36,6 +36,7 @@
                     <strong>店名：</strong><span id="storeName"></span><br>
                     <strong>地址：</strong><span id="address"></span><br>
                     <strong>包廂數：</strong><span id="rooms"></span> 間<br>
+                    <strong>開放式：</strong><span id="openSeats"></span> 桌<br>
                 </div>
                 <div>
                     <strong>聯絡人：</strong><span id="contact"></span><br>
@@ -217,7 +218,8 @@
         document.getElementById('projectStatus').className = 'status-badge status-' + project.status;
         document.getElementById('storeName').textContent = project.storeName;
         document.getElementById('address').textContent = project.address;
-        document.getElementById('rooms').textContent = project.rooms;
+        document.getElementById('rooms').textContent = project.rooms || 0;
+        document.getElementById('openSeats').textContent = project.openSeats || 0;
         document.getElementById('contact').textContent = project.contact;
         document.getElementById('phone').textContent = project.phone;
         
