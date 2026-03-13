@@ -25,36 +25,36 @@ function initializeData() {
         { id: 'ITEM-009', name: '一般壁紙+補土（輕隔間雙面）', price: 900, cost: 600, friendPrice: 800, unit: '坪', category: '工班', subCategory: '壁紙' },
         { id: 'ITEM-010', name: '一般壁紙+補土（原牆面）', price: 900, cost: 600, friendPrice: 800, unit: '坪', category: '工班', subCategory: '壁紙' },
         
-        // 系統設備
-        { id: 'ITEM-011', name: '加盟費用', price: 300000, cost: 0, friendPrice: 283200, unit: '式', category: 'ONE桌遊', subCategory: '系統設備' },
-        { id: 'ITEM-012', name: '智能門鎖', price: 7000, cost: 5500, friendPrice: 6500, unit: '組', category: 'ONE桌遊', subCategory: '系統設備' },
-        { id: 'ITEM-013', name: 'ONE客製木門含探視孔', price: 8000, cost: 6500, friendPrice: 7500, unit: '組', category: 'ONE桌遊', subCategory: '系統設備' },
-        { id: 'ITEM-014', name: '智能控電箱', price: 3000, cost: 2400, friendPrice: 2800, unit: '組', category: 'ONE桌遊', subCategory: '系統設備' },
-        { id: 'ITEM-015', name: '藍芽喇叭', price: 2000, cost: 1600, friendPrice: 1800, unit: '組', category: 'ONE桌遊', subCategory: '系統設備' },
-        { id: 'ITEM-016', name: '門牌燈', price: 800, cost: 600, friendPrice: 700, unit: '組', category: 'ONE桌遊', subCategory: '系統設備' },
-        { id: 'ITEM-017', name: '桌遊Ｂ', price: 11800, cost: 9000, friendPrice: 11000, unit: '套', category: 'ONE桌遊', subCategory: '桌遊' },
+        // 公司設備
+        { id: 'ITEM-011', name: '加盟費用', price: 300000, cost: 0, friendPrice: 283200, unit: '式', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-012', name: '智能門鎖', price: 7000, cost: 5500, friendPrice: 6500, unit: '組', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-013', name: 'ONE客製木門含探視孔', price: 8000, cost: 6500, friendPrice: 7500, unit: '組', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-014', name: '智能控電箱', price: 3000, cost: 2400, friendPrice: 2800, unit: '組', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-015', name: '藍芽喇叭', price: 2000, cost: 1600, friendPrice: 1800, unit: '組', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-016', name: '門牌燈', price: 800, cost: 600, friendPrice: 700, unit: '組', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-017', name: '桌遊Ｂ', price: 11800, cost: 9000, friendPrice: 11000, unit: '套', category: '公司', subCategory: '桌遊' },
         
-        // 冷氣設備
-        { id: 'ITEM-018', name: '冷氣2.3kw變頻冷暖', price: 22500, cost: 18000, friendPrice: 21000, unit: '台', category: '新系統', subCategory: '冷氣' },
-        { id: 'ITEM-019', name: '冷氣2.9kw變頻冷暖', price: 24500, cost: 20000, friendPrice: 23000, unit: '台', category: '新系統', subCategory: '冷氣' },
-        { id: 'ITEM-020', name: '冷氣3.6kw變頻冷暖', price: 28500, cost: 24000, friendPrice: 27000, unit: '台', category: '新系統', subCategory: '冷氣' },
-        { id: 'ITEM-021', name: '冷氣4.1kw變頻冷暖', price: 31500, cost: 27000, friendPrice: 30000, unit: '台', category: '新系統', subCategory: '冷氣' },
-        { id: 'ITEM-022', name: '冷氣5.0kw變頻冷暖', price: 36000, cost: 32000, friendPrice: 34500, unit: '台', category: '新系統', subCategory: '冷氣' },
-        { id: 'ITEM-023', name: '排水器', price: 1800, cost: 1500, friendPrice: 1700, unit: '顆', category: '新系統', subCategory: '冷氣配件' },
-        { id: 'ITEM-024', name: '銅管(5.0kw以下)', price: 400, cost: 300, friendPrice: 350, unit: '米', category: '新系統', subCategory: '冷氣配件' },
-        { id: 'ITEM-025', name: '銅管(6.3kw以上)', price: 500, cost: 400, friendPrice: 450, unit: '米', category: '新系統', subCategory: '冷氣配件' },
+        // 冷氣設備（工班）
+        { id: 'ITEM-018', name: '冷氣2.3kw變頻冷暖', price: 22500, cost: 18000, friendPrice: 21000, unit: '台', category: '工班', subCategory: '冷氣' },
+        { id: 'ITEM-019', name: '冷氣2.9kw變頻冷暖', price: 24500, cost: 20000, friendPrice: 23000, unit: '台', category: '工班', subCategory: '冷氣' },
+        { id: 'ITEM-020', name: '冷氣3.6kw變頻冷暖', price: 28500, cost: 24000, friendPrice: 27000, unit: '台', category: '工班', subCategory: '冷氣' },
+        { id: 'ITEM-021', name: '冷氣4.1kw變頻冷暖', price: 31500, cost: 27000, friendPrice: 30000, unit: '台', category: '工班', subCategory: '冷氣' },
+        { id: 'ITEM-022', name: '冷氣5.0kw變頻冷暖', price: 36000, cost: 32000, friendPrice: 34500, unit: '台', category: '工班', subCategory: '冷氣' },
+        { id: 'ITEM-023', name: '排水器', price: 1800, cost: 1500, friendPrice: 1700, unit: '顆', category: '工班', subCategory: '冷氣配件' },
+        { id: 'ITEM-024', name: '銅管(5.0kw以下)', price: 400, cost: 300, friendPrice: 350, unit: '米', category: '工班', subCategory: '冷氣配件' },
+        { id: 'ITEM-025', name: '銅管(6.3kw以上)', price: 500, cost: 400, friendPrice: 450, unit: '米', category: '工班', subCategory: '冷氣配件' },
         
-        // 其他設備
-        { id: 'ITEM-026', name: '循環扇', price: 1200, cost: 900, friendPrice: 1100, unit: '台', category: '新系統', subCategory: '循環扇' },
-        { id: 'ITEM-027', name: '室內監視器WIFI類型(含配電+安裝)', price: 8000, cost: 6000, friendPrice: 7500, unit: '台', category: '新系統', subCategory: '監視器' },
-        { id: 'ITEM-028', name: '室外監視器WIFI類型(含配電+安裝)', price: 10000, cost: 8000, friendPrice: 9500, unit: '台', category: '新系統', subCategory: '監視器' },
-        { id: 'ITEM-029', name: '麻將桌', price: 45000, cost: 38000, friendPrice: 43000, unit: '台', category: '新系統', subCategory: '麻將桌' },
-        { id: 'ITEM-030', name: '緊急出口燈+方向燈', price: 1500, cost: 1200, friendPrice: 1400, unit: '組', category: '新系統', subCategory: '消防' },
-        { id: 'ITEM-031', name: '雙面指示燈', price: 800, cost: 600, friendPrice: 750, unit: '個', category: '新系統', subCategory: '消防' },
-        { id: 'ITEM-032', name: '緊急照明', price: 1200, cost: 900, friendPrice: 1100, unit: '組', category: '新系統', subCategory: '消防' },
-        { id: 'ITEM-033', name: '滅火器', price: 600, cost: 450, friendPrice: 550, unit: '支', category: '新系統', subCategory: '消防' },
-        { id: 'ITEM-034', name: '煙霧偵測', price: 800, cost: 600, friendPrice: 750, unit: '個', category: '新系統', subCategory: '消防' },
-        { id: 'ITEM-035', name: '麻將桌備品', price: 5000, cost: 4000, friendPrice: 4500, unit: '套', category: '新系統', subCategory: '麻將桌' }
+        // 其他設備（公司）
+        { id: 'ITEM-026', name: '循環扇', price: 1200, cost: 900, friendPrice: 1100, unit: '台', category: '公司', subCategory: '循環扇' },
+        { id: 'ITEM-027', name: '室內監視器WIFI類型(含配電+安裝)', price: 8000, cost: 6000, friendPrice: 7500, unit: '台', category: '公司', subCategory: '監視器' },
+        { id: 'ITEM-028', name: '室外監視器WIFI類型(含配電+安裝)', price: 10000, cost: 8000, friendPrice: 9500, unit: '台', category: '公司', subCategory: '監視器' },
+        { id: 'ITEM-029', name: '麻將桌', price: 45000, cost: 38000, friendPrice: 43000, unit: '台', category: '公司', subCategory: '麻將桌' },
+        { id: 'ITEM-030', name: '緊急出口燈+方向燈', price: 1500, cost: 1200, friendPrice: 1400, unit: '組', category: '公司', subCategory: '消防' },
+        { id: 'ITEM-031', name: '雙面指示燈', price: 800, cost: 600, friendPrice: 750, unit: '個', category: '公司', subCategory: '消防' },
+        { id: 'ITEM-032', name: '緊急照明', price: 1200, cost: 900, friendPrice: 1100, unit: '組', category: '公司', subCategory: '消防' },
+        { id: 'ITEM-033', name: '滅火器', price: 600, cost: 450, friendPrice: 550, unit: '支', category: '公司', subCategory: '消防' },
+        { id: 'ITEM-034', name: '煙霧偵測', price: 800, cost: 600, friendPrice: 750, unit: '個', category: '公司', subCategory: '消防' },
+        { id: 'ITEM-035', name: '麻將桌備品', price: 5000, cost: 4000, friendPrice: 4500, unit: '套', category: '公司', subCategory: '麻將桌' }
     ];
 
     // 使用者數據
