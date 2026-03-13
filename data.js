@@ -66,104 +66,297 @@ function initializeData() {
         { id: 'U005', name: '會計', role: 'viewer', password: 'view123', avatar: '👩‍💼' }
     ];
 
-    // 範例專案（高雄左營）
+    // 專案數據（從 Excel 同步，共 8 個）
+    // 1-6: 已完工 ✅ | 7-8: 施工中 🔨
     const projects = [
+        // 專案 1: 威勝桌遊 (已完工) ✅
         {
-            id: 'P-2024001',
-            storeName: '高雄左營',
+            id: 'P-2025001',
+            storeName: '威勝桌遊',
             address: '高雄市左營區至真路230號2F',
-            contact: '王小明',
-            phone: '0912-345-678',
-            lineId: '@kaohsiung_left',
+            contact: '-',
+            phone: '-',
+            lineId: '',
             rooms: 13,
             openSeats: 0,
             area: 65,
-            status: 'construction', // draft/quoted/signed/construction/completed/paid
-            assignee: 'U001', // 阿建
-            createdDate: '2026-03-01',
-            quoteDate: '2026-03-01',
-            signDate: '2026-03-05',
-            startDate: '2026-03-08',
-            expectedEndDate: '2026-03-20',
-            completedDate: null,
-            totalAmount: 856800,
-            paidAmount: 300000,
-            
-            // 報價版本
-            quoteVersions: [
-                {
-                    version: 'v1',
-                    date: '2026-03-01',
-                    totalAmount: 856800,
-                    operator: 'U001',
-                    reason: '初次報價',
-                    note: '標準配置',
-                    items: [
-                        { itemId: 'ITEM-011', name: '加盟費用', quantity: 1, price: 283200, total: 283200, note: '老客戶優惠' },
-                        { itemId: 'ITEM-012', name: '智能門鎖', quantity: 13, price: 7000, total: 91000, note: '贈送10組' },
-                        { itemId: 'ITEM-013', name: 'ONE客製木門含探視孔', quantity: 13, price: 8000, total: 104000, note: '贈送10組' },
-                        { itemId: 'ITEM-014', name: '智能控電箱', quantity: 8, price: 3000, total: 24000, note: '贈送10組，多8組' },
-                        { itemId: 'ITEM-015', name: '藍芽喇叭', quantity: 8, price: 2000, total: 16000, note: '贈送10組，多8組' },
-                        { itemId: 'ITEM-016', name: '門牌燈', quantity: 8, price: 800, total: 6400, note: '贈送10組，多8組' },
-                        { itemId: 'ITEM-017', name: '桌遊Ｂ', quantity: 1, price: 11800, total: 11800, note: '' },
-                        { itemId: 'ITEM-020', name: '冷氣3.6kw變頻冷暖', quantity: 10, price: 28500, total: 285000, note: '政府補助$20,000' },
-                        { itemId: 'ITEM-022', name: '冷氣5.0kw變頻冷暖', quantity: 2, price: 36000, total: 72000, note: '政府補助$4,000' }
-                    ]
-                }
-            ],
-            
-            // 收款記錄
+            status: 'paid',
+            assignee: 'U001',
+            createdDate: '2025-10-01',
+            quoteDate: '2025-10-09',
+            signDate: '2025-10-12',
+            startDate: '2025-10-15',
+            expectedEndDate: '2025-11-05',
+            completedDate: '2025-11-02',
+            totalAmount: 3073080,
+            paidAmount: 3073080,
+            quoteVersions: [{
+                version: 'v1',
+                date: '2025-10-09',
+                totalAmount: 3073080,
+                operator: 'U001',
+                reason: '初次報價',
+                note: '13間包廂',
+                items: []
+            }],
             payments: [
-                {
-                    id: 'PAY-001',
-                    date: '2026-03-05',
-                    type: '訂金',
-                    amount: 200000,
-                    method: '銀行轉帳',
-                    bankAccount: '012-****-1234',
-                    receiver: 'U005',
-                    invoice: 'INV-20260305-001',
-                    note: '簽約訂金'
-                },
-                {
-                    id: 'PAY-002',
-                    date: '2026-03-07',
-                    type: '開工款',
-                    amount: 100000,
-                    method: '現金',
-                    receiver: 'U001',
-                    invoice: 'INV-20260307-002',
-                    note: '開工款'
-                }
+                { id: 'PAY-001', date: '2025-10-12', type: '訂金', amount: 900000, method: '銀行轉帳', receiver: 'U001', note: '' },
+                { id: 'PAY-002', date: '2025-10-20', type: '開工款', amount: 1000000, method: '銀行轉帳', receiver: 'U001', note: '' },
+                { id: 'PAY-003', date: '2025-11-02', type: '尾款', amount: 1173080, method: '銀行轉帳', receiver: 'U001', note: '' }
             ],
-            
-            // 施工進度
-            progress: [
-                { item: '輕隔間施工', progress: 100, status: 'completed', updateDate: '2026-03-12', operator: 'U001', note: '已完成' },
-                { item: '地板鋪設', progress: 50, status: 'inProgress', updateDate: '2026-03-13', operator: 'U001', note: '預計明天完成' },
-                { item: '壁紙施工', progress: 0, status: 'pending', updateDate: null, operator: null, note: '待開始' },
-                { item: '冷氣安裝', progress: 0, status: 'pending', updateDate: null, operator: null, note: '待開始' },
-                { item: '驗收', progress: 0, status: 'pending', updateDate: null, operator: null, note: '待開始' }
-            ],
-            
-            // 狀態變更記錄
+            progress: [],
             statusLogs: [
-                { date: '2026-03-01', status: '報價建立', operator: 'U001', note: '初次報價 $856,800' },
-                { date: '2026-03-05', status: '簽約成功', operator: 'U001', note: '合約編號: C-2024001, 訂金收訖: $200,000' },
-                { date: '2026-03-07', status: '第二期款', operator: 'U005', note: '開工款: $100,000, 累計收款: $300,000 (35%)' },
-                { date: '2026-03-08', status: '開始施工', operator: 'U001', note: '工班進場，開始輕隔間施工' },
-                { date: '2026-03-12', status: '施工進度更新', operator: 'U001', note: '輕隔間完成 100%' },
-                { date: '2026-03-13', status: '施工進度更新', operator: 'U001', note: '地板完成 50%, 整體進度: 75%' }
+                { date: '2025-10-09', status: '報價建立', operator: 'U001', note: '初次報價 $3,073,080' },
+                { date: '2025-11-02', status: '結清', operator: 'U001', note: '專案結案' }
+            ]
+        },
+        // 專案 2: 方城 (已完工) ✅
+        {
+            id: 'P-2025002',
+            storeName: '方城',
+            address: '台南市永康中正路151之1號2F',
+            contact: '-',
+            phone: '-',
+            lineId: '',
+            rooms: 9,
+            openSeats: 0,
+            area: 50,
+            status: 'paid',
+            assignee: 'U002',
+            createdDate: '2025-10-20',
+            quoteDate: '2025-10-29',
+            signDate: '2025-11-01',
+            startDate: '2025-11-05',
+            expectedEndDate: '2025-11-25',
+            completedDate: '2025-11-23',
+            totalAmount: 1861300,
+            paidAmount: 1861300,
+            quoteVersions: [{ version: 'v1', date: '2025-10-29', totalAmount: 1861300, operator: 'U002', reason: '初次報價', note: '9間包廂', items: [] }],
+            payments: [
+                { id: 'PAY-001', date: '2025-11-01', type: '訂金', amount: 600000, method: '銀行轉帳', receiver: 'U002', note: '' },
+                { id: 'PAY-002', date: '2025-11-10', type: '開工款', amount: 700000, method: '銀行轉帳', receiver: 'U002', note: '' },
+                { id: 'PAY-003', date: '2025-11-23', type: '尾款', amount: 561300, method: '銀行轉帳', receiver: 'U002', note: '' }
+            ],
+            progress: [],
+            statusLogs: [
+                { date: '2025-10-29', status: '報價建立', operator: 'U002', note: '初次報價 $1,861,300' },
+                { date: '2025-11-23', status: '結清', operator: 'U002', note: '專案結案' }
+            ]
+        },
+        // 專案 3: 揪咖 (已完工) ✅
+        {
+            id: 'P-2025003',
+            storeName: '揪咖',
+            address: '新北市永和區中山路一段162號',
+            contact: '-',
+            phone: '-',
+            lineId: '',
+            rooms: 7,
+            openSeats: 0,
+            area: 40,
+            status: 'paid',
+            assignee: 'U001',
+            createdDate: '2025-11-05',
+            quoteDate: '2025-11-12',
+            signDate: '2025-11-15',
+            startDate: '2025-11-18',
+            expectedEndDate: '2025-12-08',
+            completedDate: '2025-12-06',
+            totalAmount: 2036840,
+            paidAmount: 2036840,
+            quoteVersions: [{ version: 'v1', date: '2025-11-12', totalAmount: 2036840, operator: 'U001', reason: '初次報價', note: '7間包廂', items: [] }],
+            payments: [
+                { id: 'PAY-001', date: '2025-11-15', type: '訂金', amount: 700000, method: '銀行轉帳', receiver: 'U001', note: '' },
+                { id: 'PAY-002', date: '2025-11-20', type: '開工款', amount: 700000, method: '銀行轉帳', receiver: 'U001', note: '' },
+                { id: 'PAY-003', date: '2025-12-06', type: '尾款', amount: 636840, method: '銀行轉帳', receiver: 'U001', note: '' }
+            ],
+            progress: [],
+            statusLogs: [
+                { date: '2025-11-12', status: '報價建立', operator: 'U001', note: '初次報價 $2,036,840' },
+                { date: '2025-12-06', status: '結清', operator: 'U001', note: '專案結案' }
+            ]
+        },
+        // 專案 4: 台北中山(復興北路) (已完工，待收尾款) ✅
+        {
+            id: 'P-2025004',
+            storeName: '台北中山(復興北路)',
+            address: '台北市中山區復興北路488巷2弄3號',
+            contact: '-',
+            phone: '-',
+            lineId: '',
+            rooms: 6,
+            openSeats: 0,
+            area: 35,
+            status: 'completed',
+            assignee: 'U002',
+            createdDate: '2025-11-10',
+            quoteDate: '2025-11-17',
+            signDate: '2025-11-20',
+            startDate: '2025-11-23',
+            expectedEndDate: '2025-12-13',
+            completedDate: '2025-12-11',
+            totalAmount: 1005700,
+            paidAmount: 700000,
+            quoteVersions: [{ version: 'v1', date: '2025-11-17', totalAmount: 1005700, operator: 'U002', reason: '初次報價', note: '6間包廂', items: [] }],
+            payments: [
+                { id: 'PAY-001', date: '2025-11-20', type: '訂金', amount: 300000, method: '銀行轉帳', receiver: 'U002', note: '' },
+                { id: 'PAY-002', date: '2025-11-25', type: '開工款', amount: 400000, method: '銀行轉帳', receiver: 'U002', note: '' }
+            ],
+            progress: [],
+            statusLogs: [
+                { date: '2025-11-17', status: '報價建立', operator: 'U002', note: '初次報價 $1,005,700' },
+                { date: '2025-12-11', status: '完工', operator: 'U002', note: '待收尾款 $305,700' }
+            ]
+        },
+        // 專案 5: 台北中山(林森北路) (已完工) ✅
+        {
+            id: 'P-2025005',
+            storeName: '台北中山(林森北路)',
+            address: '台北市中山區林森北路416巷3號',
+            contact: '-',
+            phone: '-',
+            lineId: '',
+            rooms: 11,
+            openSeats: 0,
+            area: 60,
+            status: 'paid',
+            assignee: 'U001',
+            createdDate: '2025-11-12',
+            quoteDate: '2025-11-20',
+            signDate: '2025-11-23',
+            startDate: '2025-11-26',
+            expectedEndDate: '2025-12-16',
+            completedDate: '2025-12-14',
+            totalAmount: 3086100,
+            paidAmount: 3086100,
+            quoteVersions: [{ version: 'v1', date: '2025-11-20', totalAmount: 3086100, operator: 'U001', reason: '初次報價', note: '11間包廂', items: [] }],
+            payments: [
+                { id: 'PAY-001', date: '2025-11-23', type: '訂金', amount: 1000000, method: '銀行轉帳', receiver: 'U001', note: '' },
+                { id: 'PAY-002', date: '2025-11-28', type: '開工款', amount: 1000000, method: '銀行轉帳', receiver: 'U001', note: '' },
+                { id: 'PAY-003', date: '2025-12-14', type: '尾款', amount: 1086100, method: '銀行轉帳', receiver: 'U001', note: '' }
+            ],
+            progress: [],
+            statusLogs: [
+                { date: '2025-11-20', status: '報價建立', operator: 'U001', note: '初次報價 $3,086,100' },
+                { date: '2025-12-14', status: '結清', operator: 'U001', note: '專案結案' }
+            ]
+        },
+        // 專案 6: 士林劍潭店 (已完工) ✅
+        {
+            id: 'P-2026001',
+            storeName: '士林劍潭店',
+            address: '台北市士林區通河街163號',
+            contact: '-',
+            phone: '-',
+            lineId: '',
+            rooms: 4,
+            openSeats: 0,
+            area: 30,
+            status: 'paid',
+            assignee: 'U002',
+            createdDate: '2026-01-08',
+            quoteDate: '2026-01-16',
+            signDate: '2026-01-19',
+            startDate: '2026-01-22',
+            expectedEndDate: '2026-02-11',
+            completedDate: '2026-02-08',
+            totalAmount: 1366510,
+            paidAmount: 1366510,
+            quoteVersions: [{ version: 'v1', date: '2026-01-16', totalAmount: 1366510, operator: 'U002', reason: '初次報價', note: '4間包廂', items: [] }],
+            payments: [
+                { id: 'PAY-001', date: '2026-01-19', type: '訂金', amount: 500000, method: '銀行轉帳', receiver: 'U002', note: '' },
+                { id: 'PAY-002', date: '2026-01-24', type: '開工款', amount: 500000, method: '銀行轉帳', receiver: 'U002', note: '' },
+                { id: 'PAY-003', date: '2026-02-08', type: '尾款', amount: 366510, method: '銀行轉帳', receiver: 'U002', note: '' }
+            ],
+            progress: [],
+            statusLogs: [
+                { date: '2026-01-16', status: '報價建立', operator: 'U002', note: '初次報價 $1,366,510' },
+                { date: '2026-02-08', status: '結清', operator: 'U002', note: '專案結案' }
+            ]
+        },
+        // 專案 7: 台中民權店 (施工中) 🔨
+        {
+            id: 'P-2026002',
+            storeName: '台中民權店',
+            address: '台中市西區民權路153號',
+            contact: '-',
+            phone: '-',
+            lineId: '',
+            rooms: 9,
+            openSeats: 0,
+            area: 50,
+            status: 'construction',
+            assignee: 'U001',
+            createdDate: '2026-01-12',
+            quoteDate: '2026-01-19',
+            signDate: '2026-01-22',
+            startDate: '2026-01-25',
+            expectedEndDate: '2026-02-20',
+            completedDate: null,
+            totalAmount: 1924100,
+            paidAmount: 1200000,
+            quoteVersions: [{ version: 'v1', date: '2026-01-19', totalAmount: 1924100, operator: 'U001', reason: '初次報價', note: '9間包廂', items: [] }],
+            payments: [
+                { id: 'PAY-001', date: '2026-01-22', type: '訂金', amount: 600000, method: '銀行轉帳', receiver: 'U001', note: '' },
+                { id: 'PAY-002', date: '2026-01-27', type: '開工款', amount: 600000, method: '銀行轉帳', receiver: 'U001', note: '' }
+            ],
+            progress: [
+                { item: '輕隔間施工', progress: 80, status: 'inProgress', updateDate: '2026-02-10', operator: 'U001', note: '' },
+                { item: '地板鋪設', progress: 50, status: 'inProgress', updateDate: '2026-02-10', operator: 'U001', note: '' },
+                { item: '壁紙施工', progress: 30, status: 'inProgress', updateDate: '2026-02-10', operator: 'U001', note: '' },
+                { item: '冷氣安裝', progress: 0, status: 'pending', updateDate: '2026-02-10', operator: 'U001', note: '' },
+                { item: '驗收', progress: 0, status: 'pending', updateDate: '2026-02-10', operator: 'U001', note: '' }
+            ],
+            statusLogs: [
+                { date: '2026-01-19', status: '報價建立', operator: 'U001', note: '初次報價 $1,924,100' },
+                { date: '2026-01-25', status: '施工中', operator: 'U001', note: '施工開始' }
+            ]
+        },
+        // 專案 8: 文山興隆店 (施工中) 🔨
+        {
+            id: 'P-2026003',
+            storeName: '文山興隆店',
+            address: '台北市文山區興隆路三段55號2樓',
+            contact: '-',
+            phone: '-',
+            lineId: '',
+            rooms: 6,
+            openSeats: 0,
+            area: 38,
+            status: 'construction',
+            assignee: 'U002',
+            createdDate: '2026-02-28',
+            quoteDate: '2026-03-04',
+            signDate: '2026-03-07',
+            startDate: '2026-03-10',
+            expectedEndDate: '2026-03-30',
+            completedDate: null,
+            totalAmount: 1471100,
+            paidAmount: 500000,
+            quoteVersions: [{ version: 'v1', date: '2026-03-04', totalAmount: 1471100, operator: 'U002', reason: '初次報價', note: '6間包廂', items: [] }],
+            payments: [
+                { id: 'PAY-001', date: '2026-03-07', type: '訂金', amount: 500000, method: '銀行轉帳', receiver: 'U002', note: '' }
+            ],
+            progress: [
+                { item: '輕隔間施工', progress: 40, status: 'inProgress', updateDate: '2026-03-13', operator: 'U002', note: '' },
+                { item: '地板鋪設', progress: 0, status: 'pending', updateDate: '2026-03-13', operator: 'U002', note: '' },
+                { item: '壁紙施工', progress: 0, status: 'pending', updateDate: '2026-03-13', operator: 'U002', note: '' },
+                { item: '冷氣安裝', progress: 0, status: 'pending', updateDate: '2026-03-13', operator: 'U002', note: '' },
+                { item: '驗收', progress: 0, status: 'pending', updateDate: '2026-03-13', operator: 'U002', note: '' }
+            ],
+            statusLogs: [
+                { date: '2026-03-04', status: '報價建立', operator: 'U002', note: '初次報價 $1,471,100' },
+                { date: '2026-03-10', status: '施工中', operator: 'U002', note: '施工開始' }
             ]
         }
-    ];
+        ];
 
     // 儲存到 localStorage
     localStorage.setItem('priceTable', JSON.stringify(priceTable));
     localStorage.setItem('users', JSON.stringify(users));
     localStorage.setItem('projects', JSON.stringify(projects));
     localStorage.setItem('quoteSystemInitialized', 'true');
-    localStorage.setItem('nextProjectId', '2');
+    localStorage.setItem('nextProjectId', '4');
     localStorage.setItem('nextPaymentId', '3');
 
     console.log('✅ 數據初始化完成');
