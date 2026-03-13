@@ -1,77 +1,115 @@
-
-    <!-- 收款 Modal -->
-    <div class="modal" id="paymentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-        <div class="modal-content" style="background: white; border-radius: 15px; padding: 30px; max-width: 500px; width: 90%;">
-            <h3>💰 記錄收款</h3>
-            <form id="paymentForm" onsubmit="event.preventDefault(); savePayment();">
-                <input type="hidden" id="paymentProjectId">
-                <div style="margin: 15px 0;">
-                    <label>收款日期</label>
-                    <input type="date" id="paymentDate" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
-                </div>
-                <div style="margin: 15px 0;">
-                    <label>期別</label>
-                    <select id="paymentType" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
-                        <option value="訂金">訂金</option>
-                        <option value="開工款">開工款</option>
-                        <option value="驗收款">驗收款</option>
-                        <option value="尾款">尾款</option>
-                        <option value="其他">其他</option>
-                    </select>
-                </div>
-                <div style="margin: 15px 0;">
-                    <label>收款金額</label>
-                    <input type="number" id="paymentAmount" required min="1" placeholder="例如：200000" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
-                </div>
-                <div style="margin: 15px 0;">
-                    <label>付款方式</label>
-                    <select id="paymentMethod" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
-                        <option value="銀行轉帳">銀行轉帳</option>
-                        <option value="現金">現金</option>
-                        <option value="支票">支票</option>
-                        <option value="信用卡">信用卡</option>
-                    </select>
-                </div>
-                <div style="margin: 15px 0;">
-                    <label>銀行帳號後5碼</label>
-                    <input type="text" id="paymentBank" placeholder="選填" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
-                </div>
-                <div style="margin: 15px 0;">
-                    <label>發票號碼</label>
-                    <input type="text" id="paymentInvoice" placeholder="選填，例如：INV-20260313-001" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
-                </div>
-                <div style="margin: 15px 0;">
-                    <label>備註</label>
-                    <textarea id="paymentNote" rows="3" placeholder="選填" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;"></textarea>
-                </div>
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button type="button" class="btn" onclick="closePaymentModal()" style="flex: 1; background: #e2e8f0; color: #4a5568;">取消</button>
-                    <button type="submit" class="btn btn-primary" style="flex: 1;">確認收款</button>
-                </div>
-            </form>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專案詳情 - ONE桌遊報價管理系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" style="width: 35px; height: 35px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">
+            ONE桌遊報價管理系統
         </div>
-    </div>
-
-    <!-- 進度更新 Modal -->
-    <div class="modal" id="progressModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-        <div class="modal-content" style="background: white; border-radius: 15px; padding: 30px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
-            <h3>📊 更新施工進度</h3>
-            <input type="hidden" id="progressProjectId">
-            <div id="progressList" style="margin: 20px 0;"></div>
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button type="button" class="btn" onclick="closeProgressModal()" style="flex: 1; background: #e2e8f0; color: #4a5568;">取消</button>
-                <button type="button" class="btn btn-primary" onclick="saveProgress()" style="flex: 1;">儲存進度</button>
+        <div class="navbar-user">
+            <div class="user-info">
+                <div class="user-name" id="userName"></div>
+                <div class="user-role" id="userRole"></div>
             </div>
+            <button class="btn-logout" onclick="location.href='dashboard.html'">← 返回列表</button>
         </div>
-        
-        <!-- 操作按鈕區 -->
-        <div class="card" style="margin-top: 20px;">
-            <h3>🎯 專案操作</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
-                <button class="btn btn-primary" onclick="openPaymentModal(projectId)">💰 記錄收款</button>
-                <button class="btn btn-primary" onclick="openProgressModal(projectId)">📊 更新進度</button>
-                <button class="btn btn-primary" onclick="markAsCompleted(projectId)">✅ 標記完工</button>
-                <button class="btn btn-primary" onclick="window.print()">📄 匯出PDF</button>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title" id="projectTitle">📋 專案詳情</h2>
+                <div>
+                    <span id="projectStatus" class="status-badge"></span>
+                </div>
+            </div>
+
+            <!-- 基本資訊 -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div>
+                    <strong>店名：</strong><span id="storeName"></span><br>
+                    <strong>地址：</strong><span id="address"></span><br>
+                    <strong>包廂數：</strong><span id="rooms"></span> 間<br>
+                </div>
+                <div>
+                    <strong>聯絡人：</strong><span id="contact"></span><br>
+                    <strong>電話：</strong><span id="phone"></span><br>
+                    <strong>負責人：</strong><span id="assignee"></span><br>
+                </div>
+                <div>
+                    <strong>簽約日期：</strong><span id="signDate"></span><br>
+                    <strong>開工日期：</strong><span id="startDate"></span><br>
+                    <strong>預計完工：</strong><span id="expectedEndDate"></span><br>
+                </div>
+            </div>
+
+            <!-- 收款進度 -->
+            <h3>💰 收款明細</h3>
+            <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>合約總價：</span><strong id="totalAmount">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>已收金額：</span><strong id="paidAmount" style="color: var(--success);">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <span>待收金額：</span><strong id="pendingAmount" style="color: var(--danger);">$0</strong>
+                </div>
+                <div class="progress-bar" style="height: 20px;">
+                    <div class="progress-fill" id="paymentProgress"></div>
+                </div>
+                <div style="text-align: center; margin-top: 5px;" id="paymentPercent">0%</div>
+            </div>
+
+            <!-- 收款記錄 -->
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>期別</th>
+                        <th>金額</th>
+                        <th>付款方式</th>
+                        <th>收款人</th>
+                        <th>發票號碼</th>
+                    </tr>
+                </thead>
+                <tbody id="paymentsBody"></tbody>
+            </table>
+
+            <!-- 報價明細 -->
+            <h3 style="margin-top: 40px;">📋 報價明細</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>項目名稱</th>
+                        <th>數量</th>
+                        <th>單價</th>
+                        <th>小計</th>
+                        <th>備註</th>
+                    </tr>
+                </thead>
+                <tbody id="quoteItemsBody"></tbody>
+            </table>
+
+            <!-- 時間軸 -->
+            <h3 style="margin-top: 40px;">📅 專案時間軸</h3>
+            <div id="timeline" style="margin-top: 20px;"></div>
+
+            <!-- 操作按鈕區 -->
+            <div style="margin-top: 40px; padding-top: 30px; border-top: 2px solid #e2e8f0;">
+                <h3 style="margin-bottom: 20px;">🎯 專案操作</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <button class="btn btn-primary" onclick="openPaymentModal(projectId)">💰 記錄收款</button>
+                    <button class="btn btn-primary" onclick="openProgressModal(projectId)">📊 更新進度</button>
+                    <button class="btn btn-primary" onclick="markAsCompleted(projectId)">✅ 標記完工</button>
+                    <button class="btn btn-primary" onclick="window.print()">📄 匯出PDF</button>
+                </div>
             </div>
         </div>
     </div>
@@ -105,6 +143,7 @@
                         <select id="paymentMethod" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
                             <option value="銀行轉帳">銀行轉帳</option>
                             <option value="現金">現金</option>
+                            <option value="支票">支票</option>
                         </select>
                     </div>
                     <div style="margin: 15px 0;">
@@ -136,9 +175,114 @@
     </div>
 
     <script src="actions.js"></script>
+    <script src="data.js"></script>
     <style>
-        .modal.show { display: flex !important; }
+        .modal.show { display: block !important; }
         @media print {
-            .navbar, .btn, button { display: none !important; }
+            .navbar, .btn, button, .modal { display: none !important; }
         }
     </style>
+    <script>
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) location.href = 'index.html';
+
+        const roleNames = {'admin': '主管', 'staff': '員工', 'viewer': '會計（查看）'};
+        document.getElementById('userName').textContent = currentUser.avatar + ' ' + currentUser.name;
+        document.getElementById('userRole').textContent = roleNames[currentUser.role];
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('id');
+
+        const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        const project = projects.find(p => p.id === projectId);
+
+        if (!project) {
+            alert('專案不存在');
+            location.href = 'dashboard.html';
+        }
+
+        const statusLabels = {
+            'draft': '草稿中',
+            'quoted': '已報價',
+            'signed': '已簽約',
+            'construction': '施工中',
+            'completed': '已完工',
+            'paid': '已結清'
+        };
+
+        // 顯示基本資訊
+        document.getElementById('projectTitle').textContent = `${project.id} - ${project.storeName}`;
+        document.getElementById('projectStatus').textContent = statusLabels[project.status];
+        document.getElementById('projectStatus').className = 'status-badge status-' + project.status;
+        document.getElementById('storeName').textContent = project.storeName;
+        document.getElementById('address').textContent = project.address;
+        document.getElementById('rooms').textContent = project.rooms;
+        document.getElementById('contact').textContent = project.contact;
+        document.getElementById('phone').textContent = project.phone;
+        
+        const assignee = users.find(u => u.id === project.assignee);
+        document.getElementById('assignee').textContent = assignee ? assignee.name : '-';
+        document.getElementById('signDate').textContent = project.signDate || '-';
+        document.getElementById('startDate').textContent = project.startDate || '-';
+        document.getElementById('expectedEndDate').textContent = project.expectedEndDate || '-';
+
+        // 收款資訊
+        const pending = project.totalAmount - project.paidAmount;
+        const percent = Math.round((project.paidAmount / project.totalAmount) * 100);
+        document.getElementById('totalAmount').textContent = '$' + project.totalAmount.toLocaleString();
+        document.getElementById('paidAmount').textContent = '$' + project.paidAmount.toLocaleString();
+        document.getElementById('pendingAmount').textContent = '$' + pending.toLocaleString();
+        document.getElementById('paymentProgress').style.width = percent + '%';
+        document.getElementById('paymentPercent').textContent = percent + '%';
+
+        // 收款記錄
+        const paymentsBody = document.getElementById('paymentsBody');
+        paymentsBody.innerHTML = (project.payments || []).map(pay => {
+            const receiver = users.find(u => u.id === pay.receiver);
+            return `
+                <tr>
+                    <td>${pay.date}</td>
+                    <td>${pay.type}</td>
+                    <td><strong>$${pay.amount.toLocaleString()}</strong></td>
+                    <td>${pay.method}</td>
+                    <td>${receiver ? receiver.name : '-'}</td>
+                    <td>${pay.invoice}</td>
+                </tr>
+            `;
+        }).join('');
+
+        // 報價明細
+        const latestQuote = project.quoteVersions[project.quoteVersions.length - 1];
+        const quoteItemsBody = document.getElementById('quoteItemsBody');
+        quoteItemsBody.innerHTML = latestQuote.items.map(item => `
+            <tr>
+                <td>${item.name}</td>
+                <td>${item.quantity}</td>
+                <td>$${item.price.toLocaleString()}</td>
+                <td><strong>$${item.total.toLocaleString()}</strong></td>
+                <td>${item.note}</td>
+            </tr>
+        `).join('') + `
+            <tr style="background: #f7fafc; font-weight: bold;">
+                <td colspan="3" style="text-align: right;">總計</td>
+                <td>$${project.totalAmount.toLocaleString()}</td>
+                <td></td>
+            </tr>
+        `;
+
+        // 時間軸
+        const timeline = document.getElementById('timeline');
+        timeline.innerHTML = project.statusLogs.map(log => {
+            const operator = users.find(u => u.id === log.operator);
+            return `
+                <div style="border-left: 3px solid var(--primary); padding-left: 15px; margin-bottom: 20px;">
+                    <div style="color: var(--primary); font-weight: bold;">${log.date} - ${log.status}</div>
+                    <div style="color: #666; margin-top: 5px;">${log.note}</div>
+                    <div style="color: #999; font-size: 0.9em; margin-top: 3px;">操作人: ${operator ? operator.name : '-'}</div>
+                </div>
+            `;
+        }).reverse().join('');
+    </script>
+</body>
+</html>
