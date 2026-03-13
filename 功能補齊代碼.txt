@@ -1,0 +1,290 @@
+
+==============================================
+功能 1：刪除專案（dashboard.html）
+==============================================
+
+1. 在操作欄的「查看」按鈕後加入刪除按鈕：
+
+<button class="btn btn-danger btn-sm" 
+        onclick="deleteProject('${project.id}')" 
+        style="margin-left: 5px; background: #ef4444;">
+    🗑️ 刪除
+</button>
+
+2. 在 dashboard.html 的 <script> 區塊最後加入：
+
+// 刪除專案
+function deleteProject(projectId) {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    
+    // 只有主管可以刪除
+    if (currentUser.role !== 'admin') {
+        alert('只有主管才能刪除專案！');
+        return;
+    }
+    
+    const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+    const project = projects.find(p => p.id === projectId);
+    
+    if (!project) return;
+    
+    if (!confirm(`確定要刪除專案「${project.storeName}」嗎？\n\n刪除後無法復原！`)) {
+        return;
+    }
+    
+    const filtered = projects.filter(p => p.id !== projectId);
+    localStorage.setItem('projects', JSON.stringify(filtered));
+    
+    alert('專案已刪除！');
+    location.reload();
+}
+
+==============================================
+功能 2 + 3：報價項目刪除和新增（project.html）
+==============================================
+
+1. 修改報價項目表格，每行加入刪除按鈕：
+
+<td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; width: 50px;">
+    <button onclick="deleteQuoteItem(${index})" 
+            style="padding: 5px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        🗑️
+    </button>
+</td>
+
+2. 在報價明細表格後、「變更原因」前加入新增項目區塊：
+
+<div style="margin: 20px 0; padding: 15px; background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 8px;">
+    <h4 style="margin-bottom: 15px;">➕ 新增項目</h4>
+    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: end;">
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: 500;">選擇項目</label>
+            <select id="newItemSelect" style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px;">
+                <option value="">-- 請選擇 --</option>
+            </select>
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: 500;">數量</label>
+            <input type="number" id="newItemQty" min="0" step="0.1" placeholder="0" 
+                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px;">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: 500;">單價</label>
+            <input type="number" id="newItemPrice" min="0" placeholder="0" 
+                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px;">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: 500;">小計</label>
+            <input type="text" id="newItemTotal" readonly 
+                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px; background: #f3f4f6;">
+        </div>
+        <div>
+            <button onclick="addQuoteItem()" class="btn btn-primary" 
+                    style="padding: 8px 16px; white-space: nowrap;">
+                ➕ 加入
+            </button>
+        </div>
+    </div>
+</div>
+
+3. 在 openQuoteEditModal 函數中加入價格表載入：
+
+// 載入價格表到下拉選單
+const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+const newItemSelect = document.getElementById('newItemSelect');
+newItemSelect.innerHTML = '<option value="">-- 請選擇 --</option>' + 
+    priceTable.map((item, idx) => 
+        `<option value="${idx}">${item.name} (${item.unit})</option>`
+    ).join('');
+
+// 監聽選擇變更
+newItemSelect.onchange = function() {
+    const idx = this.value;
+    if (idx === '') {
+        document.getElementById('newItemPrice').value = '';
+        return;
+    }
+    const item = priceTable[idx];
+    document.getElementById('newItemPrice').value = item.price;
+    calculateNewItemTotal();
+};
+
+// 監聽數量和單價變更
+document.getElementById('newItemQty').oninput = calculateNewItemTotal;
+document.getElementById('newItemPrice').oninput = calculateNewItemTotal;
+
+4. 加入輔助函數：
+
+// 計算新增項目小計
+function calculateNewItemTotal() {
+    const qty = parseFloat(document.getElementById('newItemQty').value) || 0;
+    const price = parseFloat(document.getElementById('newItemPrice').value) || 0;
+    document.getElementById('newItemTotal').value = '$' + (qty * price).toLocaleString();
+}
+
+// 刪除報價項目
+let quoteItemsToDelete = [];
+
+function deleteQuoteItem(index) {
+    if (!confirm('確定要刪除此項目嗎？')) return;
+    
+    quoteItemsToDelete.push(index);
+    
+    // 隱藏該行
+    const row = document.querySelector(`#quoteItemsList tr:nth-child(${index + 1})`);
+    if (row) {
+        row.style.display = 'none';
+    }
+    
+    recalculateQuoteTotal();
+}
+
+// 新增報價項目
+let newQuoteItems = [];
+
+function addQuoteItem() {
+    const selectIdx = document.getElementById('newItemSelect').value;
+    if (selectIdx === '') {
+        alert('請選擇項目！');
+        return;
+    }
+    
+    const qty = parseFloat(document.getElementById('newItemQty').value);
+    if (!qty || qty <= 0) {
+        alert('請輸入數量！');
+        return;
+    }
+    
+    const price = parseFloat(document.getElementById('newItemPrice').value);
+    if (!price || price <= 0) {
+        alert('請輸入單價！');
+        return;
+    }
+    
+    const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+    const item = priceTable[selectIdx];
+    
+    const newItem = {
+        itemId: 'ITEM-NEW-' + (newQuoteItems.length + 1),
+        name: item.name,
+        quantity: qty,
+        price: price,
+        total: qty * price,
+        note: '新增項目'
+    };
+    
+    newQuoteItems.push(newItem);
+    
+    // 加到表格
+    const tbody = document.getElementById('quoteItemsList');
+    const newRow = `
+        <tr style="background: #ecfdf5;">
+            <td style="padding: 10px; border: 1px solid #e5e7eb;">${newItem.name} <span style="color: #059669;">✨ 新增</span></td>
+            <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; color: #6b7280;">-</td>
+            <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">${newItem.quantity}</td>
+            <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; color: #6b7280;">-</td>
+            <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right;">$${newItem.price.toLocaleString()}</td>
+            <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold;">$${newItem.total.toLocaleString()}</td>
+            <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">
+                <button onclick="removeNewItem(${newQuoteItems.length - 1})" style="padding: 5px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
+            </td>
+        </tr>
+    `;
+    tbody.insertAdjacentHTML('beforeend', newRow);
+    
+    // 清空表單
+    document.getElementById('newItemSelect').value = '';
+    document.getElementById('newItemQty').value = '';
+    document.getElementById('newItemPrice').value = '';
+    document.getElementById('newItemTotal').value = '';
+    
+    recalculateQuoteTotal();
+    
+    alert('項目已加入！記得點擊「確認修改」儲存變更。');
+}
+
+// 移除新增的項目
+function removeNewItem(index) {
+    newQuoteItems.splice(index, 1);
+    location.reload(); // 簡單重新整理
+}
+
+5. 修改 saveQuoteEdit 函數，處理刪除和新增：
+
+function saveQuoteEdit() {
+    const projectId = document.getElementById('quoteEditProjectId').value;
+    const reason = document.getElementById('quoteEditReason').value || '報價調整';
+    
+    const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    
+    const latestVersion = project.quoteVersions[project.quoteVersions.length - 1];
+    const oldItems = latestVersion.items || [];
+    
+    // 收集修改後的項目（排除被刪除的）
+    const updatedItems = oldItems
+        .filter((item, index) => !quoteItemsToDelete.includes(index))
+        .map((item, index) => {
+            const qtyInput = document.getElementById(`newQty-${index}`);
+            const priceInput = document.getElementById(`newPrice-${index}`);
+            
+            if (!qtyInput || !priceInput) return item;
+            
+            const newQty = parseFloat(qtyInput.value) || 0;
+            const newPrice = parseFloat(priceInput.value) || 0;
+            
+            return {
+                ...item,
+                quantity: newQty,
+                price: newPrice,
+                total: newQty * newPrice
+            };
+        });
+    
+    // 加入新增的項目
+    const finalItems = [...updatedItems, ...newQuoteItems];
+    
+    // 計算新總額
+    const newTotalAmount = finalItems.reduce((sum, item) => sum + item.total, 0);
+    
+    // 建立新版本
+    const newVersion = {
+        version: 'v' + (project.quoteVersions.length + 1),
+        date: new Date().toISOString().split('T')[0],
+        totalAmount: newTotalAmount,
+        operator: JSON.parse(localStorage.getItem('currentUser')).id,
+        reason: reason,
+        note: `報價調整（刪除 ${quoteItemsToDelete.length} 項，新增 ${newQuoteItems.length} 項）`,
+        items: finalItems
+    };
+    
+    project.quoteVersions.push(newVersion);
+    project.totalAmount = newTotalAmount;
+    
+    // 記錄到時間軸
+    if (!project.statusLogs) project.statusLogs = [];
+    project.statusLogs.push({
+        date: newVersion.date,
+        status: '報價修改',
+        operator: newVersion.operator,
+        note: `${reason}，總額：$${latestVersion.totalAmount.toLocaleString()} → $${newTotalAmount.toLocaleString()}（刪除 ${quoteItemsToDelete.length} 項，新增 ${newQuoteItems.length} 項）`
+    });
+    
+    localStorage.setItem('projects', JSON.stringify(projects));
+    
+    // 清空暫存
+    quoteItemsToDelete = [];
+    newQuoteItems = [];
+    
+    alert(`報價已更新！\n\n原總額：$${latestVersion.totalAmount.toLocaleString()}\n新總額：$${newTotalAmount.toLocaleString()}\n版本：${newVersion.version}`);
+    closeQuoteEditModal();
+    location.reload();
+}
+
+==============================================
+完成！
+==============================================
+
+3 個功能的代碼已生成。
+接下來需要手動更新到對應的 HTML 檔案中。
