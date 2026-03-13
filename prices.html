@@ -5,10 +5,120 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>價格管理 - ONE桌遊報價管理系統</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .modal-close {
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .modal-close:hover {
+            color: var(--danger);
+        }
+        
+        .form-row {
+            margin-bottom: 15px;
+        }
+        
+        .form-row label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .form-row input,
+        .form-row select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        
+        .form-row input:focus,
+        .form-row select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+        
+        .action-btns {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .action-btns button {
+            padding: 6px 12px;
+            font-size: 0.9em;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
-        <div class="navbar-brand">🎮 ONE桌遊報價管理系統</div>
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" style="width: 35px; height: 35px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">
+            ONE桌遊報價管理系統
+        </div>
         <div class="navbar-user">
             <button class="btn-logout" onclick="location.href='dashboard.html'">← 返回</button>
         </div>
@@ -18,6 +128,7 @@
         <div class="card">
             <div class="card-header">
                 <h2 class="card-title">💰 價格資料庫</h2>
+                <button class="btn btn-primary" onclick="openAddModal()">➕ 新增項目</button>
             </div>
 
             <div style="margin-bottom: 20px;">
@@ -40,6 +151,7 @@
                         <th>友情價</th>
                         <th>單位</th>
                         <th>分類</th>
+                        <th>操作</th>
                     </tr>
                 </thead>
                 <tbody id="pricesBody"></tbody>
@@ -47,9 +159,91 @@
         </div>
     </div>
 
+    <!-- 新增/編輯 Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">新增項目</h3>
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+            </div>
+            
+            <form id="editForm">
+                <div class="form-row">
+                    <label>項目名稱 *</label>
+                    <input type="text" id="itemName" required placeholder="例如：輕隔間(15MM石膏板)">
+                </div>
+                
+                <div class="form-row">
+                    <label>單價 *</label>
+                    <input type="number" id="itemPrice" required min="0" placeholder="例如：3700">
+                </div>
+                
+                <div class="form-row">
+                    <label>成本</label>
+                    <input type="number" id="itemCost" min="0" placeholder="例如：3000">
+                </div>
+                
+                <div class="form-row">
+                    <label>友情價</label>
+                    <input type="number" id="itemFriendPrice" min="0" placeholder="例如：3300">
+                </div>
+                
+                <div class="form-row">
+                    <label>單位 *</label>
+                    <select id="itemUnit" required>
+                        <option value="坪">坪</option>
+                        <option value="式">式</option>
+                        <option value="組">組</option>
+                        <option value="台">台</option>
+                        <option value="套">套</option>
+                        <option value="顆">顆</option>
+                        <option value="米">米</option>
+                        <option value="次">次</option>
+                        <option value="片">片</option>
+                        <option value="個">個</option>
+                        <option value="支">支</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <label>分類 *</label>
+                    <select id="itemCategory" required>
+                        <option value="工班">工班</option>
+                        <option value="ONE桌遊">ONE桌遊</option>
+                        <option value="新系統">新系統</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <label>細分類</label>
+                    <select id="itemSubCategory">
+                        <option value="木工">木工</option>
+                        <option value="地板">地板</option>
+                        <option value="壁紙">壁紙</option>
+                        <option value="水電">水電</option>
+                        <option value="系統設備">系統設備</option>
+                        <option value="桌遊">桌遊</option>
+                        <option value="冷氣">冷氣</option>
+                        <option value="冷氣配件">冷氣配件</option>
+                        <option value="循環扇">循環扇</option>
+                        <option value="監視器">監視器</option>
+                        <option value="麻將桌">麻將桌</option>
+                        <option value="消防">消防</option>
+                    </select>
+                </div>
+                
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="data.js"></script>
     <script>
-        const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+        let priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+        let editingItemId = null;
         
         function renderPrices() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
@@ -69,12 +263,102 @@
                     <td>${item.friendPrice ? '$' + item.friendPrice.toLocaleString() : '-'}</td>
                     <td>${item.unit}</td>
                     <td><span class="status-badge">${item.category}</span></td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn btn-primary" onclick="editItem('${item.id}')">編輯</button>
+                            <button class="btn btn-danger" onclick="deleteItem('${item.id}')">刪除</button>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
         }
 
+        function openAddModal() {
+            editingItemId = null;
+            document.getElementById('modalTitle').textContent = '新增項目';
+            document.getElementById('editForm').reset();
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function editItem(id) {
+            const item = priceTable.find(i => i.id === id);
+            if (!item) return;
+            
+            editingItemId = id;
+            document.getElementById('modalTitle').textContent = '編輯項目';
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemPrice').value = item.price;
+            document.getElementById('itemCost').value = item.cost || '';
+            document.getElementById('itemFriendPrice').value = item.friendPrice || '';
+            document.getElementById('itemUnit').value = item.unit;
+            document.getElementById('itemCategory').value = item.category;
+            document.getElementById('itemSubCategory').value = item.subCategory || '';
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function deleteItem(id) {
+            const item = priceTable.find(i => i.id === id);
+            if (!item) return;
+            
+            if (confirm(`確定要刪除「${item.name}」嗎？`)) {
+                priceTable = priceTable.filter(i => i.id !== id);
+                localStorage.setItem('priceTable', JSON.stringify(priceTable));
+                renderPrices();
+                alert('刪除成功！');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('show');
+            editingItemId = null;
+        }
+
+        document.getElementById('editForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('itemName').value,
+                price: parseFloat(document.getElementById('itemPrice').value),
+                cost: parseFloat(document.getElementById('itemCost').value) || 0,
+                friendPrice: parseFloat(document.getElementById('itemFriendPrice').value) || 0,
+                unit: document.getElementById('itemUnit').value,
+                category: document.getElementById('itemCategory').value,
+                subCategory: document.getElementById('itemSubCategory').value
+            };
+            
+            if (editingItemId) {
+                // 編輯現有項目
+                const index = priceTable.findIndex(i => i.id === editingItemId);
+                if (index !== -1) {
+                    priceTable[index] = { ...priceTable[index], ...formData };
+                    alert('修改成功！');
+                }
+            } else {
+                // 新增項目
+                const newItem = {
+                    id: 'ITEM-' + String(priceTable.length + 1).padStart(3, '0'),
+                    sort: priceTable.length + 1,
+                    ...formData
+                };
+                priceTable.push(newItem);
+                alert('新增成功！');
+            }
+            
+            localStorage.setItem('priceTable', JSON.stringify(priceTable));
+            closeModal();
+            renderPrices();
+        });
+
         document.getElementById('searchInput').addEventListener('input', renderPrices);
         document.getElementById('categoryFilter').addEventListener('change', renderPrices);
+        
+        // 點擊 modal 外部關閉
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+        
         renderPrices();
     </script>
 </body>
