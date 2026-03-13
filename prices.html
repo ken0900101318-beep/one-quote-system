@@ -101,15 +101,187 @@
         .btn-danger:hover {
             background: #e53e3e;
         }
-        
-        .action-btns {
-            display: flex;
-            gap: 5px;
+
+        /* 分組樣式 */
+        .category-group {
+            margin-bottom: 30px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
         }
-        
-        .action-btns button {
-            padding: 6px 12px;
+
+        .category-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .category-header:hover {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+        }
+
+        .category-header.collapsed {
+            background: #f7fafc;
+            color: #4a5568;
+        }
+
+        .category-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-count {
+            background: rgba(255,255,255,0.3);
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.85em;
+        }
+
+        .category-header.collapsed .category-count {
+            background: #e2e8f0;
+        }
+
+        .category-toggle {
+            font-size: 1.5em;
+            transition: transform 0.3s;
+        }
+
+        .category-header.collapsed .category-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .category-content {
+            max-height: 5000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .category-content.collapsed {
+            max-height: 0;
+        }
+
+        /* 細分類 */
+        .subcategory-group {
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .subcategory-header {
+            background: #f7fafc;
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .subcategory-header:hover {
+            background: #edf2f7;
+        }
+
+        .subcategory-title {
+            font-weight: 600;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .subcategory-count {
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            color: #4a5568;
+        }
+
+        .subcategory-toggle {
+            font-size: 1.2em;
+            color: #a0aec0;
+            transition: transform 0.3s;
+        }
+
+        .subcategory-header.collapsed .subcategory-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .subcategory-content {
+            max-height: 3000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .subcategory-content.collapsed {
+            max-height: 0;
+        }
+
+        /* 項目列表 */
+        .item-list {
+            padding: 10px;
+            background: white;
+        }
+
+        .price-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+
+        .price-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+            transform: translateX(5px);
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .item-details {
+            display: flex;
+            gap: 15px;
             font-size: 0.9em;
+            color: #718096;
+        }
+
+        .item-price {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .item-actions button {
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+
+        .search-highlight {
+            background: yellow;
+            padding: 2px 4px;
+            border-radius: 3px;
         }
     </style>
 </head>
@@ -131,30 +303,13 @@
                 <button class="btn btn-primary" onclick="openAddModal()">➕ 新增項目</button>
             </div>
 
-            <div style="margin-bottom: 20px;">
-                <input type="text" id="searchInput" placeholder="🔍 搜尋項目..." 
-                       style="padding: 10px 15px; border: 2px solid var(--border); border-radius: 8px; width: 300px;">
-                <select id="categoryFilter" style="padding: 10px 15px; border: 2px solid var(--border); border-radius: 8px; margin-left: 10px;">
-                    <option value="">全部分類</option>
-                    <option value="工班">工班</option>
-                    <option value="公司">公司</option>
-                </select>
+            <div style="margin-bottom: 25px;">
+                <input type="text" id="searchInput" placeholder="🔍 搜尋項目名稱..." 
+                       style="padding: 12px 20px; border: 2px solid var(--border); border-radius: 8px; width: 400px; font-size: 1em;">
             </div>
 
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>項目名稱</th>
-                        <th>單價</th>
-                        <th>成本</th>
-                        <th>友情價</th>
-                        <th>單位</th>
-                        <th>分類</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody id="pricesBody"></tbody>
-            </table>
+            <!-- 分組顯示區域 -->
+            <div id="groupedPrices"></div>
         </div>
     </div>
 
@@ -242,33 +397,139 @@
     <script>
         let priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
         let editingItemId = null;
+        let collapsedCategories = JSON.parse(localStorage.getItem('collapsedCategories') || '{}');
+        let collapsedSubcategories = JSON.parse(localStorage.getItem('collapsedSubcategories') || '{}');
         
         function renderPrices() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const category = document.getElementById('categoryFilter').value;
 
-            const filtered = priceTable.filter(item => {
-                const matchSearch = item.name.toLowerCase().includes(searchTerm);
-                const matchCategory = !category || item.category === category;
-                return matchSearch && matchCategory;
+            // 過濾項目
+            const filtered = priceTable.filter(item => 
+                item.name.toLowerCase().includes(searchTerm)
+            );
+
+            // 按分類分組
+            const grouped = {};
+            filtered.forEach(item => {
+                const category = item.category || '未分類';
+                const subCategory = item.subCategory || '其他';
+                
+                if (!grouped[category]) {
+                    grouped[category] = {};
+                }
+                if (!grouped[category][subCategory]) {
+                    grouped[category][subCategory] = [];
+                }
+                grouped[category][subCategory].push(item);
             });
 
-            document.getElementById('pricesBody').innerHTML = filtered.map(item => `
-                <tr>
-                    <td><strong>${item.name}</strong></td>
-                    <td>$${item.price.toLocaleString()}</td>
-                    <td>${item.cost ? '$' + item.cost.toLocaleString() : '-'}</td>
-                    <td>${item.friendPrice ? '$' + item.friendPrice.toLocaleString() : '-'}</td>
-                    <td>${item.unit}</td>
-                    <td><span class="status-badge">${item.category}</span></td>
-                    <td>
-                        <div class="action-btns">
-                            <button class="btn btn-primary" onclick="editItem('${item.id}')">編輯</button>
-                            <button class="btn btn-danger" onclick="deleteItem('${item.id}')">刪除</button>
+            // 渲染分組
+            const container = document.getElementById('groupedPrices');
+            container.innerHTML = Object.keys(grouped).sort().map(category => {
+                const categoryItems = grouped[category];
+                const totalCount = Object.values(categoryItems).flat().length;
+                const isCollapsed = collapsedCategories[category] || false;
+                
+                return `
+                    <div class="category-group">
+                        <div class="category-header ${isCollapsed ? 'collapsed' : ''}" onclick="toggleCategory('${category}')">
+                            <div class="category-title">
+                                <span>${getCategoryIcon(category)} ${category}</span>
+                                <span class="category-count">${totalCount} 項</span>
+                            </div>
+                            <span class="category-toggle">▼</span>
                         </div>
-                    </td>
-                </tr>
-            `).join('');
+                        <div class="category-content ${isCollapsed ? 'collapsed' : ''}">
+                            ${Object.keys(categoryItems).sort().map(subCategory => {
+                                const items = categoryItems[subCategory];
+                                const subKey = `${category}-${subCategory}`;
+                                const isSubCollapsed = collapsedSubcategories[subKey] || false;
+                                
+                                return `
+                                    <div class="subcategory-group">
+                                        <div class="subcategory-header ${isSubCollapsed ? 'collapsed' : ''}" onclick="toggleSubcategory('${category}', '${subCategory}')">
+                                            <div class="subcategory-title">
+                                                <span>${getSubCategoryIcon(subCategory)} ${subCategory}</span>
+                                                <span class="subcategory-count">${items.length}</span>
+                                            </div>
+                                            <span class="subcategory-toggle">▼</span>
+                                        </div>
+                                        <div class="subcategory-content ${isSubCollapsed ? 'collapsed' : ''}">
+                                            <div class="item-list">
+                                                ${items.map(item => renderItem(item, searchTerm)).join('')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderItem(item, searchTerm) {
+            const highlightName = searchTerm 
+                ? item.name.replace(new RegExp(searchTerm, 'gi'), match => `<span class="search-highlight">${match}</span>`)
+                : item.name;
+
+            return `
+                <div class="price-item">
+                    <div class="item-info">
+                        <div class="item-name">${highlightName}</div>
+                        <div class="item-details">
+                            <span class="item-price">$${item.price.toLocaleString()} / ${item.unit}</span>
+                            ${item.cost ? `<span>成本: $${item.cost.toLocaleString()}</span>` : ''}
+                            ${item.friendPrice ? `<span>友情價: $${item.friendPrice.toLocaleString()}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn btn-primary" onclick="editItem('${item.id}')">✏️ 編輯</button>
+                        <button class="btn btn-danger" onclick="deleteItem('${item.id}')">🗑️ 刪除</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getCategoryIcon(category) {
+            const icons = {
+                '工班': '🔨',
+                '公司': '🏢',
+                '未分類': '📦'
+            };
+            return icons[category] || '📁';
+        }
+
+        function getSubCategoryIcon(subCategory) {
+            const icons = {
+                '木工': '🪵',
+                '地板': '🟫',
+                '壁紙': '🎨',
+                '水電': '💡',
+                '冷氣': '❄️',
+                '冷氣配件': '🔧',
+                '系統設備': '💻',
+                '桌遊': '🎲',
+                '循環扇': '🌀',
+                '監視器': '📹',
+                '麻將桌': '🀄',
+                '消防': '🔥',
+                '其他': '📌'
+            };
+            return icons[subCategory] || '•';
+        }
+
+        function toggleCategory(category) {
+            collapsedCategories[category] = !collapsedCategories[category];
+            localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
+            renderPrices();
+        }
+
+        function toggleSubcategory(category, subCategory) {
+            const key = `${category}-${subCategory}`;
+            collapsedSubcategories[key] = !collapsedSubcategories[key];
+            localStorage.setItem('collapsedSubcategories', JSON.stringify(collapsedSubcategories));
+            renderPrices();
         }
 
         function openAddModal() {
@@ -348,7 +609,6 @@
         });
 
         document.getElementById('searchInput').addEventListener('input', renderPrices);
-        document.getElementById('categoryFilter').addEventListener('change', renderPrices);
         
         // 點擊 modal 外部關閉
         document.getElementById('editModal').addEventListener('click', function(e) {
