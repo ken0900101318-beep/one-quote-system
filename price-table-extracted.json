@@ -1,0 +1,176 @@
+[
+  {
+    "name": "加盟費用",
+    "price": 283200,
+    "category": "公司",
+    "subCategory": "系統設備"
+  },
+  {
+    "name": "智能門鎖",
+    "price": 7000,
+    "category": "公司",
+    "subCategory": "系統設備"
+  },
+  {
+    "name": "ONE客製木門含探視孔",
+    "price": 8000,
+    "category": "公司",
+    "subCategory": "系統設備"
+  },
+  {
+    "name": "智能控電多8組",
+    "price": 3000,
+    "category": "公司",
+    "subCategory": "系統設備"
+  },
+  {
+    "name": "藍芽喇叭多8組",
+    "price": 2000,
+    "category": "公司",
+    "subCategory": "系統設備"
+  },
+  {
+    "name": "門牌燈多8組",
+    "price": 800,
+    "category": "公司",
+    "subCategory": "系統設備"
+  },
+  {
+    "name": "桌遊Ｂ",
+    "price": 11800,
+    "category": "公司",
+    "subCategory": "系統設備"
+  },
+  {
+    "name": "鋪克牌（乙箱200副2000元）",
+    "price": 0,
+    "category": "公司",
+    "subCategory": "系統設備"
+  },
+  {
+    "name": "紙杯（乙箱1000個1200元）",
+    "price": 0,
+    "category": "公司",
+    "subCategory": "系統設備"
+  },
+  {
+    "name": "輕隔間(15MM石膏板＋60Ｋ延綿）",
+    "price": 3700,
+    "category": "工班",
+    "subCategory": "木工"
+  },
+  {
+    "name": "輕隔間樓層搬運費",
+    "price": 5000,
+    "category": "工班",
+    "subCategory": "木工"
+  },
+  {
+    "name": "輕鋼架",
+    "price": 1400,
+    "category": "工班",
+    "subCategory": "木工"
+  },
+  {
+    "name": "入門款地板",
+    "price": 40000,
+    "category": "工班",
+    "subCategory": "地板"
+  },
+  {
+    "name": "一般壁紙+補土（輕隔間雙面的牆面）",
+    "price": 900,
+    "category": "工班",
+    "subCategory": "木工"
+  },
+  {
+    "name": "木門安裝費用+電子鎖安裝",
+    "price": 3500,
+    "category": "工班",
+    "subCategory": "木工"
+  },
+  {
+    "name": "包廂公區配電工程",
+    "price": 428000,
+    "category": "工班",
+    "subCategory": "水電"
+  },
+  {
+    "name": "循環扇(含配電+安裝)",
+    "price": 2200,
+    "category": "公司",
+    "subCategory": "循環扇"
+  },
+  {
+    "name": "室內監視器，WIFI類型(含配電+安裝)",
+    "price": 2500,
+    "category": "公司",
+    "subCategory": "監視器"
+  },
+  {
+    "name": "消防三寶+煙偵器(含配電+安裝)",
+    "price": 27100,
+    "category": "公司",
+    "subCategory": "消防"
+  },
+  {
+    "name": "ONE頂規麻將桌(邊框燈.除溼.紫外線.超靜音)",
+    "price": 23800,
+    "category": "公司",
+    "subCategory": "麻將桌"
+  },
+  {
+    "name": "備用麻將雙色各一副（1500）*9折",
+    "price": 2700,
+    "category": "公司",
+    "subCategory": "麻將桌"
+  },
+  {
+    "name": "冷氣全部費用",
+    "price": 589100,
+    "category": "工班",
+    "subCategory": "冷氣"
+  },
+  {
+    "name": "門弓器",
+    "price": 1500,
+    "category": "公司",
+    "subCategory": "其他設備"
+  },
+  {
+    "name": "一樓上二樓電源主線",
+    "price": 40000,
+    "category": "工班",
+    "subCategory": "其他"
+  },
+  {
+    "name": "包廂插座，升級USB+TYPEC充電",
+    "price": 500,
+    "category": "工班",
+    "subCategory": "水電"
+  },
+  {
+    "name": "木工費用",
+    "price": 5000,
+    "category": "工班",
+    "subCategory": "木工"
+  },
+  {
+    "name": "飲料櫃",
+    "price": 8000,
+    "category": "公司",
+    "subCategory": "其他設備"
+  },
+  {
+    "name": "焊接椅子含組裝搬運",
+    "price": 15400,
+    "category": "公司",
+    "subCategory": "其他設備"
+  },
+  {
+    "name": "垃圾桶",
+    "price": 11080,
+    "category": "公司",
+    "subCategory": "其他設備"
+  }
+]

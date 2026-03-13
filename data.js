@@ -9,52 +9,51 @@ function initializeData() {
 
     // 價格表數據
     const priceTable = [
-        // 木工類
-        { id: 'ITEM-001', name: '輕隔間(15MM石膏板＋60Ｋ延綿)', price: 3700, cost: 3000, friendPrice: 3300, unit: '坪', category: '工班', subCategory: '木工' },
-        { id: 'ITEM-002', name: '輕隔間(15MM石膏板＋100Ｋ延綿)', price: 3800, cost: 0, friendPrice: 0, unit: '坪', category: '工班', subCategory: '木工' },
-        { id: 'ITEM-003', name: '輕隔間樓層搬運費', price: 5000, cost: 5000, friendPrice: 0, unit: '次', category: '工班', subCategory: '木工' },
-        { id: 'ITEM-004', name: '輕鋼架', price: 1400, cost: 1000, friendPrice: 1200, unit: '坪', category: '工班', subCategory: '木工' },
-        { id: 'ITEM-005', name: '輕鋼架隔音（60Ｋ延綿）', price: 650, cost: 550, friendPrice: 600, unit: '坪', category: '工班', subCategory: '木工' },
-        { id: 'ITEM-006', name: '更換輕鋼架板子', price: 950, cost: 0, friendPrice: 0, unit: '片', category: '工班', subCategory: '木工' },
-        
-        // 地板類
-        { id: 'ITEM-007', name: '入門款地板', price: 1400, cost: 1000, friendPrice: 1200, unit: '坪', category: '工班', subCategory: '地板' },
-        { id: 'ITEM-008', name: '高階款地板', price: 1500, cost: 1100, friendPrice: 1300, unit: '坪', category: '工班', subCategory: '地板' },
-        
-        // 壁紙類
-        { id: 'ITEM-009', name: '一般壁紙+補土（輕隔間雙面）', price: 900, cost: 600, friendPrice: 800, unit: '坪', category: '工班', subCategory: '壁紙' },
-        { id: 'ITEM-010', name: '一般壁紙+補土（原牆面）', price: 900, cost: 600, friendPrice: 800, unit: '坪', category: '工班', subCategory: '壁紙' },
-        
-        // 公司設備
-        { id: 'ITEM-011', name: '加盟費用', price: 300000, cost: 0, friendPrice: 283200, unit: '式', category: '公司', subCategory: '系統設備' },
-        { id: 'ITEM-012', name: '智能門鎖', price: 7000, cost: 5500, friendPrice: 6500, unit: '組', category: '公司', subCategory: '系統設備' },
-        { id: 'ITEM-013', name: 'ONE客製木門含探視孔', price: 8000, cost: 6500, friendPrice: 7500, unit: '組', category: '公司', subCategory: '系統設備' },
-        { id: 'ITEM-014', name: '智能控電箱', price: 3000, cost: 2400, friendPrice: 2800, unit: '組', category: '公司', subCategory: '系統設備' },
-        { id: 'ITEM-015', name: '藍芽喇叭', price: 2000, cost: 1600, friendPrice: 1800, unit: '組', category: '公司', subCategory: '系統設備' },
-        { id: 'ITEM-016', name: '門牌燈', price: 800, cost: 600, friendPrice: 700, unit: '組', category: '公司', subCategory: '系統設備' },
-        { id: 'ITEM-017', name: '桌遊Ｂ', price: 11800, cost: 9000, friendPrice: 11000, unit: '套', category: '公司', subCategory: '桌遊' },
-        
-        // 冷氣設備（工班）
-        { id: 'ITEM-018', name: '冷氣2.3kw變頻冷暖', price: 22500, cost: 18000, friendPrice: 21000, unit: '台', category: '工班', subCategory: '冷氣' },
-        { id: 'ITEM-019', name: '冷氣2.9kw變頻冷暖', price: 24500, cost: 20000, friendPrice: 23000, unit: '台', category: '工班', subCategory: '冷氣' },
-        { id: 'ITEM-020', name: '冷氣3.6kw變頻冷暖', price: 28500, cost: 24000, friendPrice: 27000, unit: '台', category: '工班', subCategory: '冷氣' },
-        { id: 'ITEM-021', name: '冷氣4.1kw變頻冷暖', price: 31500, cost: 27000, friendPrice: 30000, unit: '台', category: '工班', subCategory: '冷氣' },
-        { id: 'ITEM-022', name: '冷氣5.0kw變頻冷暖', price: 36000, cost: 32000, friendPrice: 34500, unit: '台', category: '工班', subCategory: '冷氣' },
-        { id: 'ITEM-023', name: '排水器', price: 1800, cost: 1500, friendPrice: 1700, unit: '顆', category: '工班', subCategory: '冷氣配件' },
-        { id: 'ITEM-024', name: '銅管(5.0kw以下)', price: 400, cost: 300, friendPrice: 350, unit: '米', category: '工班', subCategory: '冷氣配件' },
-        { id: 'ITEM-025', name: '銅管(6.3kw以上)', price: 500, cost: 400, friendPrice: 450, unit: '米', category: '工班', subCategory: '冷氣配件' },
-        
-        // 其他設備（公司）
-        { id: 'ITEM-026', name: '循環扇', price: 1200, cost: 900, friendPrice: 1100, unit: '台', category: '公司', subCategory: '循環扇' },
-        { id: 'ITEM-027', name: '室內監視器WIFI類型(含配電+安裝)', price: 8000, cost: 6000, friendPrice: 7500, unit: '台', category: '公司', subCategory: '監視器' },
-        { id: 'ITEM-028', name: '室外監視器WIFI類型(含配電+安裝)', price: 10000, cost: 8000, friendPrice: 9500, unit: '台', category: '公司', subCategory: '監視器' },
-        { id: 'ITEM-029', name: '麻將桌', price: 45000, cost: 38000, friendPrice: 43000, unit: '台', category: '公司', subCategory: '麻將桌' },
-        { id: 'ITEM-030', name: '緊急出口燈+方向燈', price: 1500, cost: 1200, friendPrice: 1400, unit: '組', category: '公司', subCategory: '消防' },
-        { id: 'ITEM-031', name: '雙面指示燈', price: 800, cost: 600, friendPrice: 750, unit: '個', category: '公司', subCategory: '消防' },
-        { id: 'ITEM-032', name: '緊急照明', price: 1200, cost: 900, friendPrice: 1100, unit: '組', category: '公司', subCategory: '消防' },
-        { id: 'ITEM-033', name: '滅火器', price: 600, cost: 450, friendPrice: 550, unit: '支', category: '公司', subCategory: '消防' },
-        { id: 'ITEM-034', name: '煙霧偵測', price: 800, cost: 600, friendPrice: 750, unit: '個', category: '公司', subCategory: '消防' },
-        { id: 'ITEM-035', name: '麻將桌備品', price: 5000, cost: 4000, friendPrice: 4500, unit: '套', category: '公司', subCategory: '麻將桌' }
+        { id: 'ITEM-001', name: '210*240雙開鋁門窗（大門）', price: 40000, cost: 0, friendPrice: 0, unit: '組', category: '工班', subCategory: '其他' },
+        { id: 'ITEM-002', name: 'ONE客製木門含探視孔', price: 8000, cost: 0, friendPrice: 0, unit: '式', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-003', name: 'ONE頂規麻將桌(邊框燈.除溼.紫外線.超靜音)', price: 23800, cost: 0, friendPrice: 0, unit: '坪', category: '公司', subCategory: '麻將桌' },
+        { id: 'ITEM-004', name: '一樓上二樓電源主線', price: 40000, cost: 0, friendPrice: 0, unit: '式', category: '工班', subCategory: '其他' },
+        { id: 'ITEM-005', name: '一般壁紙+補土（原牆面）', price: 900, cost: 600, friendPrice: 800, unit: '坪', category: '工班', subCategory: '壁紙' },
+        { id: 'ITEM-006', name: '一般壁紙+補土（總數）', price: 900, cost: 600, friendPrice: 800, unit: '坪', category: '工班', subCategory: '壁紙' },
+        { id: 'ITEM-007', name: '一般壁紙+補土（輕隔間雙面的牆面）', price: 900, cost: 600, friendPrice: 800, unit: '坪', category: '工班', subCategory: '木工' },
+        { id: 'ITEM-008', name: '備用麻將雙色各一副（1500）', price: 3000, cost: 0, friendPrice: 0, unit: '坪', category: '公司', subCategory: '麻將桌' },
+        { id: 'ITEM-009', name: '備用麻將雙色各一副（1500）*9折', price: 2700, cost: 0, friendPrice: 0, unit: '坪', category: '公司', subCategory: '麻將桌' },
+        { id: 'ITEM-010', name: '入門款地板', price: 40000, cost: 1000, friendPrice: 1200, unit: '組', category: '工班', subCategory: '地板' },
+        { id: 'ITEM-011', name: '冷氣全部費用', price: 589100, cost: 0, friendPrice: 0, unit: '式', category: '工班', subCategory: '冷氣' },
+        { id: 'ITEM-012', name: '加盟費用', price: 283200, cost: 0, friendPrice: 0, unit: '式', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-013', name: '包廂公區配電工程', price: 428000, cost: 0, friendPrice: 0, unit: '式', category: '工班', subCategory: '水電' },
+        { id: 'ITEM-014', name: '包廂插座，升級USB+TYPEC充電', price: 500, cost: 0, friendPrice: 0, unit: '坪', category: '工班', subCategory: '水電' },
+        { id: 'ITEM-015', name: '垃圾桶', price: 11080, cost: 0, friendPrice: 0, unit: '坪', category: '公司', subCategory: '其他設備' },
+        { id: 'ITEM-016', name: '室內監視器，WIFI類型(含配電+安裝)', price: 2500, cost: 0, friendPrice: 0, unit: '台', category: '公司', subCategory: '監視器' },
+        { id: 'ITEM-017', name: '室外監視器，WIFI類型(含配電+安裝)', price: 3500, cost: 0, friendPrice: 0, unit: '台', category: '工班', subCategory: '水電' },
+        { id: 'ITEM-018', name: '循環扇(含配電+安裝)', price: 2200, cost: 0, friendPrice: 0, unit: '台', category: '公司', subCategory: '循環扇' },
+        { id: 'ITEM-019', name: '智能控電多8組', price: 3000, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-020', name: '智能門鎖', price: 7000, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-021', name: '更換輕鋼架板子', price: 950, cost: 0, friendPrice: 0, unit: '片', category: '工班', subCategory: '木工' },
+        { id: 'ITEM-022', name: '木工費用', price: 5000, cost: 0, friendPrice: 0, unit: '式', category: '工班', subCategory: '木工' },
+        { id: 'ITEM-023', name: '木門安裝費用+電子鎖安裝', price: 3500, cost: 0, friendPrice: 0, unit: '組', category: '工班', subCategory: '木工' },
+        { id: 'ITEM-024', name: '木門訂製（原門洞改裝）+電子鎖安裝', price: 10000, cost: 0, friendPrice: 0, unit: '組', category: '工班', subCategory: '木工' },
+        { id: 'ITEM-025', name: '桌遊Ｂ', price: 11800, cost: 0, friendPrice: 0, unit: '套', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-026', name: '消防三寶+煙偵器(含配電+安裝)', price: 27100, cost: 0, friendPrice: 0, unit: '式', category: '公司', subCategory: '消防' },
+        { id: 'ITEM-027', name: '消防配電預留插座', price: 600, cost: 0, friendPrice: 0, unit: '坪', category: '工班', subCategory: '水電' },
+        { id: 'ITEM-028', name: '焊接椅子含組裝搬運', price: 15400, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '其他設備' },
+        { id: 'ITEM-029', name: '牆面單封', price: 3200, cost: 0, friendPrice: 0, unit: '坪', category: '工班', subCategory: '其他' },
+        { id: 'ITEM-030', name: '監視器配電預留插座', price: 600, cost: 0, friendPrice: 0, unit: '台', category: '工班', subCategory: '水電' },
+        { id: 'ITEM-031', name: '紙杯（乙箱1000個1200元）', price: 0, cost: 0, friendPrice: 0, unit: '箱', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-032', name: '藍芽喇叭多8組', price: 2000, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-033', name: '輕鋼架', price: 1400, cost: 1000, friendPrice: 1200, unit: '坪', category: '工班', subCategory: '木工' },
+        { id: 'ITEM-034', name: '輕鋼架隔音（60Ｋ延綿）', price: 650, cost: 550, friendPrice: 1200, unit: '坪', category: '工班', subCategory: '木工' },
+        { id: 'ITEM-035', name: '輕隔間(15MM石膏板＋100Ｋ延綿）', price: 3800, cost: 0, friendPrice: 0, unit: '坪', category: '工班', subCategory: '木工' },
+        { id: 'ITEM-036', name: '輕隔間(15MM石膏板＋60Ｋ延綿）', price: 3700, cost: 3000, friendPrice: 3300, unit: '坪', category: '工班', subCategory: '木工' },
+        { id: 'ITEM-037', name: '輕隔間樓層搬運費', price: 5000, cost: 5000, friendPrice: 0, unit: '次', category: '工班', subCategory: '木工' },
+        { id: 'ITEM-038', name: '鋪克牌（乙箱200副2000元）', price: 0, cost: 0, friendPrice: 0, unit: '套', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-039', name: '門弓器', price: 1500, cost: 1000, friendPrice: 0, unit: '組', category: '公司', subCategory: '其他設備' },
+        { id: 'ITEM-040', name: '門牌燈多8組', price: 800, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-041', name: '飲料櫃', price: 8000, cost: 0, friendPrice: 0, unit: '坪', category: '公司', subCategory: '其他設備' },
+        { id: 'ITEM-042', name: '高階壁紙+補土（總數）', price: 1000, cost: 650, friendPrice: 850, unit: '坪', category: '工班', subCategory: '壁紙' },
+        { id: 'ITEM-043', name: '高階款地板', price: 1500, cost: 1100, friendPrice: 1300, unit: '坪', category: '工班', subCategory: '地板' },
+        { id: 'ITEM-044', name: '麻將桌', price: 22800, cost: 0, friendPrice: 0, unit: '坪', category: '公司', subCategory: '麻將桌' },
+        { id: 'ITEM-045', name: '麻將椅一組4張(含焊接補強+運送組裝)', price: 10000, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '麻將桌' }
     ];
 
     // 使用者數據
