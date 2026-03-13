@@ -2,10 +2,18 @@
 
 // 初始化數據到 localStorage
 function initializeData() {
-    // 檢查是否已初始化
-    if (localStorage.getItem('quoteSystemInitialized')) {
+    // 改進的初始化檢查：檢查實際數據是否存在
+    const hasProjects = localStorage.getItem('projects');
+    const hasPriceTable = localStorage.getItem('priceTable');
+    const hasUsers = localStorage.getItem('users');
+    
+    // 如果所有核心數據都存在，跳過初始化
+    if (hasProjects && hasPriceTable && hasUsers) {
+        console.log('✅ 數據已存在，跳過初始化');
         return;
     }
+    
+    console.log('🔄 開始初始化數據...');
 
     // 價格表數據
     const priceTable = [
