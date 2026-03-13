@@ -84,6 +84,42 @@
                 <tbody id="paymentsBody"></tbody>
             </table>
 
+            <!-- 獲利分析（只有主管和會計能看） -->
+            <div id="profitAnalysis" style="display: none;">
+                <h3 style="margin-top: 40px;">📊 獲利分析</h3>
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; color: white; margin: 20px 0;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.3);">
+                                <span style="opacity: 0.9;">報價總額：</span>
+                                <strong style="font-size: 1.2em;" id="profitTotalAmount">$0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.3);">
+                                <span style="opacity: 0.9;">總成本：</span>
+                                <strong style="font-size: 1.2em; color: #fbbf24;" id="profitTotalCost">$0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="opacity: 0.9;">成本占比：</span>
+                                <strong style="font-size: 1.1em;" id="profitCostRatio">0%</strong>
+                            </div>
+                        </div>
+                        <div style="border-left: 2px solid rgba(255,255,255,0.3); padding-left: 20px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.3);">
+                                <span style="opacity: 0.9;">毛利：</span>
+                                <strong style="font-size: 1.4em; color: #34d399;" id="profitGrossProfit">$0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="opacity: 0.9;">毛利率：</span>
+                                <strong style="font-size: 1.6em; color: #34d399;" id="profitGrossMargin">0%</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.9em; opacity: 0.8;">
+                        💡 提示：成本來自價格表的成本欄位，若成本為 0 則該項目不計入成本計算
+                    </div>
+                </div>
+            </div>
+
             <!-- 報價明細 -->
             <h3 style="margin-top: 40px;">📋 報價明細</h3>
             <table class="table">
@@ -982,6 +1018,40 @@
                 <td></td>
             </tr>
         `;
+
+        // 獲利分析（只有主管和會計能看）
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const canSeeCost = currentUser.role === 'admin' || currentUser.role === 'viewer';
+        
+        if (canSeeCost) {
+            // 顯示獲利分析區塊
+            document.getElementById('profitAnalysis').style.display = 'block';
+            
+            // 計算總成本（從價格表取得每個項目的成本）
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            let totalCost = 0;
+            
+            latestQuote.items.forEach(item => {
+                // 從價格表找到對應項目
+                const priceItem = priceTable.find(p => p.name === item.name);
+                if (priceItem && priceItem.cost) {
+                    // 成本 = 數量 × 單位成本
+                    totalCost += item.quantity * priceItem.cost;
+                }
+            });
+            
+            // 計算獲利數據
+            const grossProfit = project.totalAmount - totalCost;
+            const grossMargin = totalCost > 0 ? (grossProfit / project.totalAmount * 100) : 0;
+            const costRatio = totalCost > 0 ? (totalCost / project.totalAmount * 100) : 0;
+            
+            // 更新顯示
+            document.getElementById('profitTotalAmount').textContent = '$' + project.totalAmount.toLocaleString();
+            document.getElementById('profitTotalCost').textContent = '$' + totalCost.toLocaleString();
+            document.getElementById('profitGrossProfit').textContent = '$' + grossProfit.toLocaleString();
+            document.getElementById('profitGrossMargin').textContent = grossMargin.toFixed(1) + '%';
+            document.getElementById('profitCostRatio').textContent = costRatio.toFixed(1) + '%';
+        }
 
         // 時間軸
         const timeline = document.getElementById('timeline');
