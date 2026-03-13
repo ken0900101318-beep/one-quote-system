@@ -78,6 +78,7 @@
                         <th>付款方式</th>
                         <th>收款人</th>
                         <th>發票號碼</th>
+                        <th>操作</th>
                     </tr>
                 </thead>
                 <tbody id="paymentsBody"></tbody>
@@ -296,9 +297,10 @@
                         <thead>
                             <tr style="background: #f3f4f6;">
                                 <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb;">項目名稱</th>
-                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 120px;">原數量</th>
-                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 120px;">新數量</th>
-                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 100px;">單價</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 100px;">原數量</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 100px;">新數量</th>
+                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 100px;">原單價</th>
+                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 100px;">新單價</th>
                                 <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 120px;">新小計</th>
                             </tr>
                         </thead>
@@ -347,10 +349,18 @@
                                min="0" 
                                step="0.1"
                                onchange="recalculateQuoteTotal()"
-                               data-price="${item.price}"
                                style="width: 80px; padding: 5px; border: 2px solid #e2e8f0; border-radius: 4px; text-align: center;">
                     </td>
-                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right;">$${item.price.toLocaleString()}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; color: #6b7280;">$${item.price.toLocaleString()}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">
+                        <input type="number" 
+                               id="newPrice-${index}" 
+                               value="${item.price}" 
+                               min="0" 
+                               step="1"
+                               onchange="recalculateQuoteTotal()"
+                               style="width: 90px; padding: 5px; border: 2px solid #e2e8f0; border-radius: 4px; text-align: right;">
+                    </td>
                     <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold;" id="newSubtotal-${index}">$${item.total.toLocaleString()}</td>
                 </tr>
             `).join('');
@@ -370,9 +380,11 @@
             
             rows.forEach((row, index) => {
                 const qtyInput = document.getElementById(`newQty-${index}`);
-                if (qtyInput) {
+                const priceInput = document.getElementById(`newPrice-${index}`);
+                
+                if (qtyInput && priceInput) {
                     const qty = parseFloat(qtyInput.value) || 0;
-                    const price = parseFloat(qtyInput.dataset.price) || 0;
+                    const price = parseFloat(priceInput.value) || 0;
                     const subtotal = qty * price;
                     
                     document.getElementById(`newSubtotal-${index}`).textContent = `$${subtotal.toLocaleString()}`;
@@ -385,7 +397,7 @@
         
         function saveQuoteEdit() {
             const projectId = document.getElementById('quoteEditProjectId').value;
-            const reason = document.getElementById('quoteEditReason').value || '數量調整';
+            const reason = document.getElementById('quoteEditReason').value || '報價調整';
             
             const projects = JSON.parse(localStorage.getItem('projects') || '[]');
             const project = projects.find(p => p.id === projectId);
@@ -394,15 +406,18 @@
             const latestVersion = project.quoteVersions[project.quoteVersions.length - 1];
             const oldItems = latestVersion.items || [];
             
-            // 收集新數量
+            // 收集新數量和新單價
             const newItems = oldItems.map((item, index) => {
                 const qtyInput = document.getElementById(`newQty-${index}`);
+                const priceInput = document.getElementById(`newPrice-${index}`);
                 const newQty = parseFloat(qtyInput.value) || 0;
-                const newTotal = newQty * item.price;
+                const newPrice = parseFloat(priceInput.value) || 0;
+                const newTotal = newQty * newPrice;
                 
                 return {
                     ...item,
                     quantity: newQty,
+                    price: newPrice,
                     total: newTotal
                 };
             });
@@ -437,6 +452,67 @@
             
             alert(`報價已更新！\\n\\n原總額：$${latestVersion.totalAmount.toLocaleString()}\\n新總額：$${newTotalAmount.toLocaleString()}\\n版本：${newVersion.version}`);
             closeQuoteEditModal();
+            location.reload();
+        }
+        
+        // 編輯收款記錄
+        function editPayment(projectId, paymentIndex) {
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            if (!project || !project.payments || !project.payments[paymentIndex]) return;
+            
+            const payment = project.payments[paymentIndex];
+            
+            // 填入現有數據到收款 Modal
+            document.getElementById('paymentProjectId').value = projectId;
+            document.getElementById('paymentDate').value = payment.date;
+            document.getElementById('paymentType').value = payment.type;
+            document.getElementById('paymentAmount').value = payment.amount;
+            document.getElementById('paymentMethod').value = payment.method;
+            document.getElementById('paymentBank').value = payment.bankAccount || '';
+            document.getElementById('paymentInvoice').value = payment.invoice || '';
+            document.getElementById('paymentNote').value = payment.note || '';
+            
+            // 儲存索引供 savePayment 使用
+            document.getElementById('paymentForm').dataset.editIndex = paymentIndex;
+            
+            // 打開 Modal
+            document.getElementById('paymentModal').classList.add('show');
+        }
+        
+        // 刪除收款記錄
+        function deletePayment(projectId, paymentIndex) {
+            if (!confirm('確定要刪除這筆收款記錄嗎？')) return;
+            
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            if (!project || !project.payments) return;
+            
+            const deletedPayment = project.payments[paymentIndex];
+            
+            // 扣除已收金額
+            project.paidAmount -= deletedPayment.amount;
+            
+            // 刪除收款記錄
+            project.payments.splice(paymentIndex, 1);
+            
+            // 記錄到時間軸
+            if (!project.statusLogs) project.statusLogs = [];
+            project.statusLogs.push({
+                date: new Date().toISOString().split('T')[0],
+                status: '刪除收款記錄',
+                operator: JSON.parse(localStorage.getItem('currentUser')).id,
+                note: `刪除 ${deletedPayment.type} $${deletedPayment.amount.toLocaleString()}，已收款調整為 $${project.paidAmount.toLocaleString()}`
+            });
+            
+            // 如果已收款小於總額且狀態是已結清，改回已完工
+            if (project.paidAmount < project.totalAmount && project.status === 'paid') {
+                project.status = 'completed';
+            }
+            
+            localStorage.setItem('projects', JSON.stringify(projects));
+            
+            alert('收款記錄已刪除！');
             location.reload();
         }
         
@@ -603,7 +679,7 @@
 
         // 收款記錄
         const paymentsBody = document.getElementById('paymentsBody');
-        paymentsBody.innerHTML = (project.payments || []).map(pay => {
+        paymentsBody.innerHTML = (project.payments || []).map((pay, index) => {
             const receiver = users.find(u => u.id === pay.receiver);
             return `
                 <tr>
@@ -612,7 +688,11 @@
                     <td><strong>$${pay.amount.toLocaleString()}</strong></td>
                     <td>${pay.method}</td>
                     <td>${receiver ? receiver.name : '-'}</td>
-                    <td>${pay.invoice}</td>
+                    <td>${pay.invoice || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm" onclick="editPayment(projectId, ${index})" style="padding: 5px 10px; font-size: 0.85em; background: #3b82f6;">✏️ 編輯</button>
+                        <button class="btn btn-sm" onclick="deletePayment(projectId, ${index})" style="padding: 5px 10px; font-size: 0.85em; background: #ef4444; margin-left: 5px;">🗑️ 刪除</button>
+                    </td>
                 </tr>
             `;
         }).join('');

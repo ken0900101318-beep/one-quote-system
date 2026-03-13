@@ -11,8 +11,10 @@ function openPaymentModal(projectId) {
 }
 
 function closePaymentModal() {
+    const form = document.getElementById('paymentForm');
+    delete form.dataset.editIndex;
+    form.reset();
     document.getElementById('paymentModal').classList.remove('show');
-    document.getElementById('paymentForm').reset();
 }
 
 function savePayment() {
@@ -22,8 +24,12 @@ function savePayment() {
     
     if (!project) return;
     
-    const payment = {
-        id: 'PAY-' + String((project.payments?.length || 0) + 1).padStart(3, '0'),
+    const form = document.getElementById('paymentForm');
+    const editIndex = form.dataset.editIndex;
+    const isEdit = editIndex !== undefined && editIndex !== '';
+    
+    const newPayment = {
+        id: isEdit ? project.payments[editIndex].id : 'PAY-' + String((project.payments?.length || 0) + 1).padStart(3, '0'),
         date: document.getElementById('paymentDate').value,
         type: document.getElementById('paymentType').value,
         amount: parseFloat(document.getElementById('paymentAmount').value),
@@ -35,26 +41,57 @@ function savePayment() {
     };
     
     if (!project.payments) project.payments = [];
-    project.payments.push(payment);
-    project.paidAmount += payment.amount;
     
-    // 添加時間軸記錄
-    if (!project.statusLogs) project.statusLogs = [];
-    project.statusLogs.push({
-        date: payment.date,
-        status: '收款記錄',
-        operator: payment.receiver,
-        note: `${payment.type}：$${payment.amount.toLocaleString()}，累計收款：$${project.paidAmount.toLocaleString()} (${Math.round(project.paidAmount/project.totalAmount*100)}%)`
-    });
+    if (isEdit) {
+        // 編輯模式：調整已收金額
+        const oldAmount = project.payments[editIndex].amount;
+        const amountDiff = newPayment.amount - oldAmount;
+        
+        project.payments[editIndex] = newPayment;
+        project.paidAmount += amountDiff;
+        
+        // 添加時間軸記錄
+        if (!project.statusLogs) project.statusLogs = [];
+        project.statusLogs.push({
+            date: new Date().toISOString().split('T')[0],
+            status: '修改收款記錄',
+            operator: newPayment.receiver,
+            note: `${newPayment.type}：$${oldAmount.toLocaleString()} → $${newPayment.amount.toLocaleString()}，累計收款：$${project.paidAmount.toLocaleString()} (${Math.round(project.paidAmount/project.totalAmount*100)}%)`
+        });
+        
+        alert('收款記錄已更新！');
+    } else {
+        // 新增模式
+        project.payments.push(newPayment);
+        project.paidAmount += newPayment.amount;
+        
+        // 添加時間軸記錄
+        if (!project.statusLogs) project.statusLogs = [];
+        project.statusLogs.push({
+            date: newPayment.date,
+            status: '收款記錄',
+            operator: newPayment.receiver,
+            note: `${newPayment.type}：$${newPayment.amount.toLocaleString()}，累計收款：$${project.paidAmount.toLocaleString()} (${Math.round(project.paidAmount/project.totalAmount*100)}%)`
+        });
+        
+        alert('收款記錄成功！');
+    }
     
     // 如果全額收款，更新狀態
     if (project.paidAmount >= project.totalAmount && project.status === 'completed') {
         project.status = 'paid';
     }
     
+    // 如果已收款小於總額且狀態是已結清，改回已完工
+    if (project.paidAmount < project.totalAmount && project.status === 'paid') {
+        project.status = 'completed';
+    }
+    
     localStorage.setItem('projects', JSON.stringify(projects));
     
-    alert('收款記錄成功！');
+    // 清除編輯索引
+    delete form.dataset.editIndex;
+    
     closePaymentModal();
     location.reload();
 }
