@@ -60,18 +60,27 @@
                 </div>
             </div>
 
+            <!-- 搜尋和篩選 -->
             <div style="margin-bottom: 20px;">
                 <input type="text" id="searchInput" placeholder="🔍 搜尋店名、地址..." 
                        style="padding: 10px 15px; border: 2px solid var(--border); border-radius: 8px; width: 300px;">
                 <select id="statusFilter" style="padding: 10px 15px; border: 2px solid var(--border); border-radius: 8px; margin-left: 10px;">
-                    <option value="">全部狀態</option>
-                    <option value="draft">草稿中</option>
-                    <option value="quoted">已報價</option>
-                    <option value="signed">已簽約</option>
-                    <option value="construction">施工中</option>
-                    <option value="completed">已完工</option>
-                    <option value="paid">已結清</option>
+                    <option value="">🔍 全部狀態</option>
+                    <option value="draft">📝 草稿中</option>
+                    <option value="quoted">📋 已報價</option>
+                    <option value="signed">✍️ 已簽約</option>
+                    <option value="construction">🔨 施工中</option>
+                    <option value="completed">✅ 已完工（待收尾款）</option>
+                    <option value="paid">💰 已結清（已結案）</option>
                 </select>
+            </div>
+
+            <!-- 快速篩選按鈕 -->
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn" onclick="quickFilter('')" style="padding: 8px 16px; font-size: 0.9em;">📋 全部</button>
+                <button class="btn" onclick="quickFilter('construction')" style="padding: 8px 16px; font-size: 0.9em;">🔨 施工中</button>
+                <button class="btn" onclick="quickFilter('completed')" style="padding: 8px 16px; font-size: 0.9em;">✅ 已完工</button>
+                <button class="btn" onclick="quickFilter('paid')" style="padding: 8px 16px; font-size: 0.9em; background: var(--success); color: white;">💰 已結案</button>
             </div>
 
             <table class="table" id="projectsTable">
@@ -166,7 +175,7 @@
                 const progress = calculateProgress(project);
                 
                 return `
-                    <tr onclick="location.href='project.html?id=${project.id}'" style="cursor: pointer;">
+                    <tr>
                         <td><strong>${project.id}</strong></td>
                         <td>${project.storeName}</td>
                         <td>${project.address}</td>
@@ -183,7 +192,7 @@
                             <small style="color: #666;">已收: $${project.paidAmount.toLocaleString()}</small>
                         </td>
                         <td>
-                            <button class="btn" style="padding: 6px 12px; font-size: 0.9em;" onclick="event.stopPropagation(); viewProject('${project.id}')">
+                            <button class="btn btn-primary" style="padding: 8px 16px; font-size: 0.9em;" onclick="viewProject('${project.id}')">
                                 查看
                             </button>
                         </td>
@@ -211,6 +220,11 @@
         function logout() {
             localStorage.removeItem('currentUser');
             location.href = 'index.html';
+        }
+
+        function quickFilter(status) {
+            document.getElementById('statusFilter').value = status;
+            loadProjects();
         }
 
         // 搜尋和篩選
