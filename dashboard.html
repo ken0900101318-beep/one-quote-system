@@ -209,11 +209,19 @@
         }
 
         function calculateProgress(project) {
+            // 如果是施工中且有實際施工進度，使用實際進度
+            if (project.status === 'construction' && project.progress && project.progress.length > 0) {
+                const totalProgress = project.progress.reduce((sum, item) => sum + (item.progress || 0), 0);
+                const avgProgress = Math.round(totalProgress / project.progress.length);
+                return avgProgress;
+            }
+            
+            // 否則使用狀態預設進度
             const statusProgress = {
                 'draft': 0,
                 'quoted': 10,
                 'signed': 20,
-                'construction': 50,
+                'construction': 30,
                 'completed': 90,
                 'paid': 100
             };
