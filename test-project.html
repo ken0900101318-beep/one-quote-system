@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>測試頁面 - 專案數據</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">ONE桌遊報價管理系統 - 測試頁面</div>
+        <a href="dashboard.html" class="btn btn-secondary">← 返回儀表板</a>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h1>🧪 專案數據測試</h1>
+            <div id="output" style="font-family: monospace; white-space: pre-wrap;"></div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="ensure-data.js"></script>
+    <script>
+        let output = '';
+        
+        function log(msg) {
+            output += msg + '\n';
+            document.getElementById('output').textContent = output;
+        }
+
+        log('=== 開始測試 ===\n');
+
+        // 確保數據初始化
+        if (typeof ensureDataInitialized === 'function') {
+            log('✅ ensureDataInitialized 函數存在');
+            ensureDataInitialized();
+            log('✅ 已執行 ensureDataInitialized()');
+        } else {
+            log('❌ ensureDataInitialized 函數不存在');
+        }
+
+        // 讀取數據
+        const projectsJson = localStorage.getItem('projects');
+        const usersJson = localStorage.getItem('users');
+        
+        log('\n=== 數據存在檢查 ===');
+        log('Projects JSON 長度: ' + (projectsJson ? projectsJson.length : 0));
+        log('Users JSON 長度: ' + (usersJson ? usersJson.length : 0));
+
+        // 解析數據
+        let projects, users;
+        try {
+            projects = JSON.parse(projectsJson || '[]');
+            users = JSON.parse(usersJson || '[]');
+            log('\n✅ 數據解析成功');
+            log('專案數量: ' + projects.length);
+            log('使用者數量: ' + users.length);
+        } catch (e) {
+            log('\n❌ 數據解析失敗: ' + e.message);
+        }
+
+        // 顯示第一個專案
+        if (projects && projects.length > 0) {
+            const project = projects[0];
+            log('\n=== 第一個專案詳細資訊 ===');
+            log('ID: ' + (project.id || '(無)'));
+            log('店名: ' + (project.storeName || '(無)'));
+            log('地址: ' + (project.address || '(無)'));
+            log('包廂數: ' + (project.rooms || 0));
+            log('開放式: ' + (project.openSeats || 0));
+            log('聯絡人: ' + (project.contact || '(無)'));
+            log('電話: ' + (project.phone || '(無)'));
+            log('狀態: ' + (project.status || '(無)'));
+            log('總價: $' + (project.totalAmount || 0).toLocaleString());
+            log('已收款: $' + (project.paidAmount || 0).toLocaleString());
+            
+            if (project.quoteVersions && project.quoteVersions.length > 0) {
+                const quote = project.quoteVersions[0];
+                log('\n報價版本: ' + (quote.version || '(無)'));
+                log('報價項目數: ' + (quote.items ? quote.items.length : 0));
+                
+                if (quote.items && quote.items.length > 0) {
+                    log('\n前 3 個報價項目:');
+                    quote.items.slice(0, 3).forEach((item, idx) => {
+                        log((idx + 1) + '. ' + (item.name || '(無名稱)') + 
+                            ' - 數量:' + (item.quantity || 0) + 
+                            ' - 單價:$' + (item.price || 0).toLocaleString() +
+                            ' - 小計:$' + (item.total || 0).toLocaleString());
+                    });
+                }
+            } else {
+                log('\n❌ 沒有報價版本數據');
+            }
+            
+            if (project.payments && project.payments.length > 0) {
+                log('\n收款記錄數: ' + project.payments.length);
+            } else {
+                log('\n收款記錄: 0 筆');
+            }
+        } else {
+            log('\n❌ 沒有專案數據');
+        }
+
+        log('\n=== 測試完成 ===');
+    </script>
+</body>
+</html>
