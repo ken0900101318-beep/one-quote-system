@@ -353,10 +353,12 @@
             grid.innerHTML = filtered.map(item => `
                 <div class="item-card ${selectedItems.find(i => i.id === item.id) ? 'selected' : ''}" 
                      onclick="toggleItem('${item.id}')">
-                    <strong>${item.name}</strong>
-                    <div style="color: #666; font-size: 0.9em; margin-top: 5px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 5px;">
+                        <strong style="flex: 1;">${item.name}</strong>
+                        <span style="background: #e2e8f0; color: #4a5568; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; white-space: nowrap;">${item.subCategory || '其他'}</span>
+                    </div>
+                    <div style="color: #666; font-size: 0.9em;">
                         <div>單價：$${item.price.toLocaleString()} / ${item.unit}</div>
-                        <div style="font-size: 0.85em; color: #999;">${item.category}</div>
                     </div>
                 </div>
             `).join('');

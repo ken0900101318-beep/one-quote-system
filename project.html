@@ -406,13 +406,52 @@
                 </tr>
             `).join('');
             
-            // 載入價格表到下拉選單
+            // 載入價格表到下拉選單（按分類分組）
             const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
             const newItemSelect = document.getElementById('newItemSelect');
-            newItemSelect.innerHTML = '<option value="">-- 請選擇 --</option>' + 
-                priceTable.map((item, idx) => 
-                    `<option value="${idx}">${item.name} (${item.unit})</option>`
-                ).join('');
+            
+            // 按照大分類和子分類分組
+            const grouped = {};
+            priceTable.forEach((item, idx) => {
+                const category = item.category || '未分類';
+                const subCategory = item.subCategory || '其他';
+                
+                if (!grouped[category]) grouped[category] = {};
+                if (!grouped[category][subCategory]) grouped[category][subCategory] = [];
+                
+                grouped[category][subCategory].push({ ...item, idx });
+            });
+            
+            // 生成分組選項
+            let optionsHTML = '<option value="">-- 請選擇項目 --</option>';
+            
+            // 先顯示公司分類
+            if (grouped['公司']) {
+                optionsHTML += '<optgroup label="🏢 公司">';
+                Object.keys(grouped['公司']).sort().forEach(subCat => {
+                    optionsHTML += `<optgroup label="　└ ${subCat}">`;
+                    grouped['公司'][subCat].forEach(item => {
+                        optionsHTML += `<option value="${item.idx}">　　${item.name} ($${item.price.toLocaleString()} / ${item.unit})</option>`;
+                    });
+                    optionsHTML += '</optgroup>';
+                });
+                optionsHTML += '</optgroup>';
+            }
+            
+            // 再顯示工班分類
+            if (grouped['工班']) {
+                optionsHTML += '<optgroup label="🔨 工班">';
+                Object.keys(grouped['工班']).sort().forEach(subCat => {
+                    optionsHTML += `<optgroup label="　└ ${subCat}">`;
+                    grouped['工班'][subCat].forEach(item => {
+                        optionsHTML += `<option value="${item.idx}">　　${item.name} ($${item.price.toLocaleString()} / ${item.unit})</option>`;
+                    });
+                    optionsHTML += '</optgroup>';
+                });
+                optionsHTML += '</optgroup>';
+            }
+            
+            newItemSelect.innerHTML = optionsHTML;
             
             // 監聽選擇變更
             newItemSelect.onchange = function() {
