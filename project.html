@@ -934,22 +934,65 @@
         document.getElementById('userName').textContent = currentUser.avatar + ' ' + currentUser.name;
         document.getElementById('userRole').textContent = roleNames[currentUser.role];
 
-        // 🔧 在讀取數據前確保已初始化
+        // 🔧 強制數據初始化
+        console.log('=== 開始載入專案數據 ===');
+        
+        // 檢查並初始化數據
+        let initAttempted = false;
         if (typeof ensureDataInitialized === 'function') {
+            console.log('執行 ensureDataInitialized()...');
             ensureDataInitialized();
+            initAttempted = true;
+        } else {
+            console.error('❌ ensureDataInitialized 函數不存在！');
+        }
+        
+        // 檢查數據是否存在
+        let projectsData = localStorage.getItem('projects');
+        let usersData = localStorage.getItem('users');
+        
+        console.log('Projects 數據:', projectsData ? '✅ 存在' : '❌ 不存在');
+        console.log('Users 數據:', usersData ? '✅ 存在' : '❌ 不存在');
+        
+        // 如果數據不存在且沒有初始化，強制初始化
+        if ((!projectsData || !usersData) && typeof initializeData === 'function') {
+            console.log('⚠️ 數據缺失，強制執行 initializeData()...');
+            initializeData();
+            projectsData = localStorage.getItem('projects');
+            usersData = localStorage.getItem('users');
+            console.log('初始化後 Projects:', projectsData ? '✅ 存在' : '❌ 仍不存在');
+            console.log('初始化後 Users:', usersData ? '✅ 存在' : '❌ 仍不存在');
         }
 
         const urlParams = new URLSearchParams(window.location.search);
         const projectId = urlParams.get('id');
+        console.log('專案 ID:', projectId);
 
-        const projects = JSON.parse(localStorage.getItem('projects') || '[]');
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        const projects = JSON.parse(projectsData || '[]');
+        const users = JSON.parse(usersData || '[]');
+        
+        console.log('專案數量:', projects.length);
+        console.log('使用者數量:', users.length);
+        
         const project = projects.find(p => p.id === projectId);
 
         if (!project) {
-            alert('專案不存在！\n\n可能原因：\n1. 數據尚未載入\n2. 專案 ID 不正確\n\n請重新整理頁面或返回儀表板。');
-            location.href = 'dashboard.html';
+            console.error('❌ 找不到專案:', projectId);
+            console.log('可用專案 IDs:', projects.map(p => p.id).join(', '));
+            
+            alert('專案不存在！\n\n專案 ID: ' + projectId + '\n可用專案: ' + projects.length + ' 個\n\n請檢查 Console 查看詳細資訊。');
+            
+            // 不立即跳轉，讓用戶看 Console
+            setTimeout(() => {
+                if (confirm('要返回儀表板嗎？')) {
+                    location.href = 'dashboard.html';
+                }
+            }, 1000);
+            throw new Error('專案不存在');
         }
+        
+        console.log('✅ 找到專案:', project.storeName || '(無店名)');
+        console.log('專案數據:', project);
 
         const statusLabels = {
             'draft': '草稿中',
@@ -961,15 +1004,26 @@
         };
 
         // 顯示基本資訊
-        document.getElementById('projectTitle').textContent = `${project.id} - ${project.storeName}`;
-        document.getElementById('projectStatus').textContent = statusLabels[project.status];
-        document.getElementById('projectStatus').className = 'status-badge status-' + project.status;
-        document.getElementById('storeName').textContent = project.storeName;
-        document.getElementById('address').textContent = project.address;
+        console.log('=== 開始顯示專案資訊 ===');
+        console.log('ID:', project.id);
+        console.log('店名:', project.storeName);
+        console.log('地址:', project.address);
+        console.log('包廂數:', project.rooms);
+        console.log('開放式:', project.openSeats);
+        console.log('聯絡人:', project.contact);
+        console.log('電話:', project.phone);
+        console.log('狀態:', project.status);
+        console.log('總價:', project.totalAmount);
+        
+        document.getElementById('projectTitle').textContent = `${project.id || '未知'} - ${project.storeName || '未命名'}`;
+        document.getElementById('projectStatus').textContent = statusLabels[project.status] || '未知狀態';
+        document.getElementById('projectStatus').className = 'status-badge status-' + (project.status || 'draft');
+        document.getElementById('storeName').textContent = project.storeName || '-';
+        document.getElementById('address').textContent = project.address || '-';
         document.getElementById('rooms').textContent = project.rooms || 0;
         document.getElementById('openSeats').textContent = project.openSeats || 0;
-        document.getElementById('contact').textContent = project.contact;
-        document.getElementById('phone').textContent = project.phone;
+        document.getElementById('contact').textContent = project.contact || '-';
+        document.getElementById('phone').textContent = project.phone || '-';
         
         const assignee = users.find(u => u.id === project.assignee);
         document.getElementById('assignee').textContent = assignee ? assignee.name : '-';
