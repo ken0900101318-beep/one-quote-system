@@ -107,6 +107,7 @@
                 <h3 style="margin-bottom: 20px;">🎯 專案操作</h3>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                     <button class="btn btn-primary" onclick="openEditModal(projectId)">✏️ 編輯專案</button>
+                    <button class="btn btn-primary" onclick="openQuoteEditModal(projectId)">📝 修改報價數量</button>
                     <button class="btn btn-primary" onclick="openStatusModal(projectId)">🔄 修改狀態</button>
                     <button class="btn btn-primary" onclick="openPaymentModal(projectId)">💰 記錄收款</button>
                     <button class="btn btn-primary" onclick="openProgressModal(projectId)">📊 更新進度</button>
@@ -266,9 +267,179 @@
         </div>
     </div>
 
+    <!-- 修改報價數量 Modal -->
+    <div class="modal" id="quoteEditModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; padding: 20px;">
+            <div style="background: white; border-radius: 15px; padding: 30px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto;">
+                <h3>📝 修改報價數量</h3>
+                <input type="hidden" id="quoteEditProjectId">
+                
+                <div style="background: #fffbeb; border: 2px solid #fbbf24; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                    <strong>💡 說明：</strong>
+                    <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
+                        <li>調整施工項目的實際數量</li>
+                        <li>系統會自動重新計算總金額</li>
+                        <li>原報價會保留為 v1，修改後建立 v2 版本</li>
+                        <li>所有歷史版本都會保留，可追溯</li>
+                    </ul>
+                </div>
+
+                <div style="margin: 20px 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4>報價項目清單</h4>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #059669;">
+                            新總額：$<span id="newTotalAmount">0</span>
+                        </div>
+                    </div>
+                    
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f3f4f6;">
+                                <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb;">項目名稱</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 120px;">原數量</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 120px;">新數量</th>
+                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 100px;">單價</th>
+                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 120px;">新小計</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quoteItemsList"></tbody>
+                    </table>
+                </div>
+
+                <div style="margin: 20px 0;">
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">變更原因：</label>
+                    <textarea id="quoteEditReason" rows="3" placeholder="例如：實際施工後數量調整..." style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="closeQuoteEditModal()" style="flex: 1; background: #e2e8f0; color: #4a5568;">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveQuoteEdit()" style="flex: 1;">確認修改（建立新版本）</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="actions.js"></script>
     <script src="data.js"></script>
     <script>
+        // 修改報價數量功能
+        function openQuoteEditModal(id) {
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === id);
+            if (!project) return;
+            
+            document.getElementById('quoteEditProjectId').value = id;
+            
+            // 取得最新版本的報價項目
+            const latestVersion = project.quoteVersions[project.quoteVersions.length - 1];
+            const items = latestVersion.items || [];
+            
+            // 渲染項目清單
+            const tbody = document.getElementById('quoteItemsList');
+            tbody.innerHTML = items.map((item, index) => `
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb;">${item.name}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; color: #6b7280;">${item.quantity}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">
+                        <input type="number" 
+                               id="newQty-${index}" 
+                               value="${item.quantity}" 
+                               min="0" 
+                               step="0.1"
+                               onchange="recalculateQuoteTotal()"
+                               data-price="${item.price}"
+                               style="width: 80px; padding: 5px; border: 2px solid #e2e8f0; border-radius: 4px; text-align: center;">
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right;">$${item.price.toLocaleString()}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold;" id="newSubtotal-${index}">$${item.total.toLocaleString()}</td>
+                </tr>
+            `).join('');
+            
+            recalculateQuoteTotal();
+            document.getElementById('quoteEditModal').classList.add('show');
+        }
+        
+        function closeQuoteEditModal() {
+            document.getElementById('quoteEditModal').classList.remove('show');
+        }
+        
+        function recalculateQuoteTotal() {
+            let total = 0;
+            const tbody = document.getElementById('quoteItemsList');
+            const rows = tbody.querySelectorAll('tr');
+            
+            rows.forEach((row, index) => {
+                const qtyInput = document.getElementById(`newQty-${index}`);
+                if (qtyInput) {
+                    const qty = parseFloat(qtyInput.value) || 0;
+                    const price = parseFloat(qtyInput.dataset.price) || 0;
+                    const subtotal = qty * price;
+                    
+                    document.getElementById(`newSubtotal-${index}`).textContent = `$${subtotal.toLocaleString()}`;
+                    total += subtotal;
+                }
+            });
+            
+            document.getElementById('newTotalAmount').textContent = total.toLocaleString();
+        }
+        
+        function saveQuoteEdit() {
+            const projectId = document.getElementById('quoteEditProjectId').value;
+            const reason = document.getElementById('quoteEditReason').value || '數量調整';
+            
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            if (!project) return;
+            
+            const latestVersion = project.quoteVersions[project.quoteVersions.length - 1];
+            const oldItems = latestVersion.items || [];
+            
+            // 收集新數量
+            const newItems = oldItems.map((item, index) => {
+                const qtyInput = document.getElementById(`newQty-${index}`);
+                const newQty = parseFloat(qtyInput.value) || 0;
+                const newTotal = newQty * item.price;
+                
+                return {
+                    ...item,
+                    quantity: newQty,
+                    total: newTotal
+                };
+            });
+            
+            // 計算新總額
+            const newTotalAmount = newItems.reduce((sum, item) => sum + item.total, 0);
+            
+            // 建立新版本
+            const newVersion = {
+                version: 'v' + (project.quoteVersions.length + 1),
+                date: new Date().toISOString().split('T')[0],
+                totalAmount: newTotalAmount,
+                operator: JSON.parse(localStorage.getItem('currentUser')).id,
+                reason: reason,
+                note: `數量調整（v${project.quoteVersions.length} → v${project.quoteVersions.length + 1}）`,
+                items: newItems
+            };
+            
+            project.quoteVersions.push(newVersion);
+            project.totalAmount = newTotalAmount;
+            
+            // 記錄到時間軸
+            if (!project.statusLogs) project.statusLogs = [];
+            project.statusLogs.push({
+                date: newVersion.date,
+                status: '報價修改',
+                operator: newVersion.operator,
+                note: `${reason}，總額：$${latestVersion.totalAmount.toLocaleString()} → $${newTotalAmount.toLocaleString()}`
+            });
+            
+            localStorage.setItem('projects', JSON.stringify(projects));
+            
+            alert(`報價已更新！\\n\\n原總額：$${latestVersion.totalAmount.toLocaleString()}\\n新總額：$${newTotalAmount.toLocaleString()}\\n版本：${newVersion.version}`);
+            closeQuoteEditModal();
+            location.reload();
+        }
+        
         // 編輯專案功能
         function openEditModal(id) {
             const projects = JSON.parse(localStorage.getItem('projects') || '[]');
