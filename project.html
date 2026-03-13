@@ -927,15 +927,20 @@
         }
     </style>
     <script>
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser) location.href = 'index.html';
+        // 🔧 關鍵修復：等待 DOM 載入完成再執行
+        window.addEventListener('DOMContentLoaded', function() {
+            try {
+                console.log('=== DOM 載入完成，開始執行 ===');
+                
+                // 先檢查登入狀態
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                if (!currentUser) {
+                    location.href = 'index.html';
+                    return;
+                }
 
-        const roleNames = {'admin': '主管', 'staff': '員工', 'viewer': '會計（查看）'};
-        document.getElementById('userName').textContent = currentUser.avatar + ' ' + currentUser.name;
-        document.getElementById('userRole').textContent = roleNames[currentUser.role];
-
-        // 🔧 強制數據初始化
-        console.log('=== 開始載入專案數據 ===');
+                // 🔧 立即執行數據初始化（在操作 DOM 之前）
+                console.log('=== 開始載入專案數據 ===');
         
         // 檢查並初始化數據
         let initAttempted = false;
@@ -993,6 +998,14 @@
         
         console.log('✅ 找到專案:', project.storeName || '(無店名)');
         console.log('專案數據:', project);
+
+                // ✅ 數據載入成功後，才設置使用者資訊 DOM
+                const roleNames = {'admin': '主管', 'staff': '員工', 'viewer': '會計（查看）'};
+                const userNameEl = document.getElementById('userName');
+                const userRoleEl = document.getElementById('userRole');
+                
+                if (userNameEl) userNameEl.textContent = (currentUser.avatar || '👤') + ' ' + (currentUser.name || '訪客');
+                if (userRoleEl) userRoleEl.textContent = roleNames[currentUser.role] || '未知';
 
         const statusLabels = {
             'draft': '草稿中',
@@ -1240,6 +1253,13 @@
             alert(`✅ 已回復到 ${targetVersion.version}！\\n\\n建立新版本：${newVersion.version}\\n總額：$${newVersion.totalAmount.toLocaleString()}`);
             location.reload();
         }
+
+            } catch (error) {
+                // 錯誤處理
+                console.error('❌ 頁面載入錯誤:', error);
+                alert('頁面載入失敗！\\n\\n錯誤：' + error.message + '\\n\\n請重新整理頁面或返回儀表板。');
+            }
+        }); // DOMContentLoaded 結束
     </script>
 </body>
 </html>
