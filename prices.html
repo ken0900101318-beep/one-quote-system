@@ -397,6 +397,11 @@
     <script src="data.js"></script>
     <script src="ensure-data.js"></script>
     <script>
+        // 🔧 在讀取數據前確保已初始化
+        if (typeof ensureDataInitialized === 'function') {
+            ensureDataInitialized();
+        }
+
         let priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
         let editingItemId = null;
         let collapsedCategories = JSON.parse(localStorage.getItem('collapsedCategories') || '{}');

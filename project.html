@@ -934,6 +934,11 @@
         document.getElementById('userName').textContent = currentUser.avatar + ' ' + currentUser.name;
         document.getElementById('userRole').textContent = roleNames[currentUser.role];
 
+        // 🔧 在讀取數據前確保已初始化
+        if (typeof ensureDataInitialized === 'function') {
+            ensureDataInitialized();
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         const projectId = urlParams.get('id');
 
@@ -942,7 +947,7 @@
         const project = projects.find(p => p.id === projectId);
 
         if (!project) {
-            alert('專案不存在');
+            alert('專案不存在！\n\n可能原因：\n1. 數據尚未載入\n2. 專案 ID 不正確\n\n請重新整理頁面或返回儀表板。');
             location.href = 'dashboard.html';
         }
 

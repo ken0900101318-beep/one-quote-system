@@ -302,6 +302,11 @@
     <script src="data.js"></script>
     <script src="ensure-data.js"></script>
     <script>
+        // 🔧 在讀取數據前確保已初始化
+        if (typeof ensureDataInitialized === 'function') {
+            ensureDataInitialized();
+        }
+
         let currentStep = 1;
         let selectedItems = [];
         let priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
