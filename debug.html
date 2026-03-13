@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統診斷 - ONE桌遊報價管理系統</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .debug-section {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .debug-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #cbd5e0;
+        }
+        .debug-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-left: 4px solid #667eea;
+            font-family: monospace;
+        }
+        .debug-success {
+            border-left-color: #48bb78;
+            background: #f0fff4;
+        }
+        .debug-error {
+            border-left-color: #f56565;
+            background: #fff5f5;
+        }
+        .debug-warning {
+            border-left-color: #ed8936;
+            background: #fffaf0;
+        }
+        .btn-refresh {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 20px 10px;
+        }
+        .btn-clear {
+            background: #f56565;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 20px 10px;
+        }
+        .btn-init {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 20px 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" style="width: 35px; height: 35px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">
+            ONE桌遊報價管理系統 - 系統診斷
+        </div>
+        <div>
+            <a href="dashboard.html" class="btn btn-secondary">← 返回儀表板</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h1>🔍 系統診斷工具</h1>
+            <p style="color: #666; margin-bottom: 30px;">此頁面顯示系統數據狀態，幫助診斷數據空白問題</p>
+            
+            <div style="margin-bottom: 20px;">
+                <button class="btn-refresh" onclick="location.reload()">🔄 重新整理</button>
+                <button class="btn-init" onclick="forceInit()">⚡ 強制初始化數據</button>
+                <button class="btn-clear" onclick="clearData()">🗑️ 清除所有數據</button>
+            </div>
+
+            <div id="debugOutput"></div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="ensure-data.js"></script>
+    <script>
+        function runDiagnostics() {
+            let html = '';
+            let issues = [];
+
+            // 檢查 1: localStorage 可用性
+            html += '<div class="debug-section">';
+            html += '<div class="debug-title">✅ 步驟 1：localStorage 可用性檢查</div>';
+            try {
+                localStorage.setItem('test', 'test');
+                localStorage.removeItem('test');
+                html += '<div class="debug-item debug-success">✅ localStorage 可用</div>';
+            } catch (e) {
+                html += '<div class="debug-item debug-error">❌ localStorage 不可用: ' + e.message + '</div>';
+                issues.push('localStorage 不可用');
+            }
+            html += '</div>';
+
+            // 檢查 2: 核心函數存在
+            html += '<div class="debug-section">';
+            html += '<div class="debug-title">✅ 步驟 2：核心函數檢查</div>';
+            html += '<div class="debug-item ' + (typeof initializeData === 'function' ? 'debug-success' : 'debug-error') + '">';
+            html += (typeof initializeData === 'function' ? '✅' : '❌') + ' initializeData 函數';
+            html += '</div>';
+            html += '<div class="debug-item ' + (typeof ensureDataInitialized === 'function' ? 'debug-success' : 'debug-error') + '">';
+            html += (typeof ensureDataInitialized === 'function' ? '✅' : '❌') + ' ensureDataInitialized 函數';
+            html += '</div>';
+            html += '</div>';
+
+            // 檢查 3: 數據存在性
+            html += '<div class="debug-section">';
+            html += '<div class="debug-title">✅ 步驟 3：數據存在性檢查</div>';
+            
+            const hasProjects = localStorage.getItem('projects');
+            const hasPriceTable = localStorage.getItem('priceTable');
+            const hasUsers = localStorage.getItem('users');
+            
+            html += '<div class="debug-item ' + (hasProjects ? 'debug-success' : 'debug-error') + '">';
+            html += (hasProjects ? '✅' : '❌') + ' projects 數據: ' + (hasProjects ? (hasProjects.length / 1024).toFixed(2) + ' KB' : '不存在');
+            html += '</div>';
+            
+            html += '<div class="debug-item ' + (hasPriceTable ? 'debug-success' : 'debug-error') + '">';
+            html += (hasPriceTable ? '✅' : '❌') + ' priceTable 數據: ' + (hasPriceTable ? (hasPriceTable.length / 1024).toFixed(2) + ' KB' : '不存在');
+            html += '</div>';
+            
+            html += '<div class="debug-item ' + (hasUsers ? 'debug-success' : 'debug-error') + '">';
+            html += (hasUsers ? '✅' : '❌') + ' users 數據: ' + (hasUsers ? (hasUsers.length / 1024).toFixed(2) + ' KB' : '不存在');
+            html += '</div>';
+            
+            if (!hasProjects || !hasPriceTable || !hasUsers) {
+                issues.push('核心數據缺失');
+            }
+            html += '</div>';
+
+            // 檢查 4: 數據內容
+            html += '<div class="debug-section">';
+            html += '<div class="debug-title">✅ 步驟 4：數據內容檢查</div>';
+            
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            
+            html += '<div class="debug-item ' + (projects.length > 0 ? 'debug-success' : 'debug-error') + '">';
+            html += '📊 專案數量: ' + projects.length + ' 個';
+            html += '</div>';
+            
+            html += '<div class="debug-item ' + (priceTable.length > 0 ? 'debug-success' : 'debug-error') + '">';
+            html += '💰 價格項目: ' + priceTable.length + ' 個';
+            html += '</div>';
+            
+            html += '<div class="debug-item ' + (users.length > 0 ? 'debug-success' : 'debug-error') + '">';
+            html += '👥 使用者數量: ' + users.length + ' 個';
+            html += '</div>';
+            
+            if (projects.length === 0 || priceTable.length === 0 || users.length === 0) {
+                issues.push('數據內容為空');
+            }
+            html += '</div>';
+
+            // 檢查 5: 專案詳細資訊
+            if (projects.length > 0) {
+                html += '<div class="debug-section">';
+                html += '<div class="debug-title">✅ 步驟 5：專案列表</div>';
+                projects.forEach((p, idx) => {
+                    html += '<div class="debug-item debug-success">';
+                    html += (idx + 1) + '. ' + (p.id || '無ID') + ' - ' + (p.storeName || '未命名') + ' ($' + (p.totalAmount || 0).toLocaleString() + ')';
+                    html += '</div>';
+                });
+                html += '</div>';
+
+                // 檢查第一個專案的完整數據
+                const firstProject = projects[0];
+                html += '<div class="debug-section">';
+                html += '<div class="debug-title">✅ 步驟 6：範例專案完整數據 (' + (firstProject.id || '無ID') + ')</div>';
+                html += '<div class="debug-item"><strong>ID:</strong> ' + (firstProject.id || '❌ 無') + '</div>';
+                html += '<div class="debug-item"><strong>店名:</strong> ' + (firstProject.storeName || '❌ 無') + '</div>';
+                html += '<div class="debug-item"><strong>地址:</strong> ' + (firstProject.address || '❌ 無') + '</div>';
+                html += '<div class="debug-item"><strong>包廂數:</strong> ' + (firstProject.rooms || 0) + '</div>';
+                html += '<div class="debug-item"><strong>總價:</strong> $' + (firstProject.totalAmount || 0).toLocaleString() + '</div>';
+                html += '<div class="debug-item"><strong>報價項目:</strong> ' + (firstProject.quoteVersions && firstProject.quoteVersions.length > 0 && firstProject.quoteVersions[0].items ? firstProject.quoteVersions[0].items.length + ' 項' : '❌ 無') + '</div>';
+                html += '<div class="debug-item"><strong>收款記錄:</strong> ' + (firstProject.payments ? firstProject.payments.length + ' 筆' : '0 筆') + '</div>';
+                html += '<div class="debug-item"><strong>狀態:</strong> ' + (firstProject.status || '❌ 無') + '</div>';
+                html += '</div>';
+            }
+
+            // 總結
+            html += '<div class="debug-section">';
+            html += '<div class="debug-title">📊 診斷總結</div>';
+            if (issues.length === 0) {
+                html += '<div class="debug-item debug-success" style="font-size: 1.2em; padding: 20px;">';
+                html += '✅ 所有檢查通過！數據正常！';
+                html += '<br><br>如果專案頁面還是空白，請：<br>';
+                html += '1. 清除瀏覽器快取<br>';
+                html += '2. 重新整理頁面<br>';
+                html += '3. 查看 Console 日誌';
+                html += '</div>';
+            } else {
+                html += '<div class="debug-item debug-error" style="font-size: 1.2em; padding: 20px;">';
+                html += '❌ 發現 ' + issues.length + ' 個問題：<br>';
+                issues.forEach((issue, idx) => {
+                    html += (idx + 1) + '. ' + issue + '<br>';
+                });
+                html += '<br><strong>建議：點擊「強制初始化數據」按鈕</strong>';
+                html += '</div>';
+            }
+            html += '</div>';
+
+            document.getElementById('debugOutput').innerHTML = html;
+        }
+
+        function forceInit() {
+            if (!confirm('確定要強制初始化數據嗎？\n\n⚠️ 這會清除舊數據並重新載入初始數據！')) {
+                return;
+            }
+            
+            console.log('開始強制初始化...');
+            localStorage.removeItem('quoteSystemInitialized');
+            
+            if (typeof initializeData === 'function') {
+                initializeData();
+                alert('✅ 數據初始化完成！\n\n請重新整理頁面查看結果。');
+                location.reload();
+            } else {
+                alert('❌ 初始化函數不存在！\n\n請確認 data.js 已正確載入。');
+            }
+        }
+
+        function clearData() {
+            if (!confirm('確定要清除所有數據嗎？\n\n⚠️ 這會刪除所有專案、價格和使用者數據！')) {
+                return;
+            }
+            
+            localStorage.clear();
+            alert('✅ 所有數據已清除！\n\n請點擊「強制初始化數據」重新載入。');
+            location.reload();
+        }
+
+        // 頁面載入時執行診斷
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('=== 系統診斷工具啟動 ===');
+            runDiagnostics();
+        });
+    </script>
+</body>
+</html>
