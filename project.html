@@ -297,15 +297,50 @@
                         <thead>
                             <tr style="background: #f3f4f6;">
                                 <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb;">項目名稱</th>
-                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 100px;">原數量</th>
-                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 100px;">新數量</th>
-                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 100px;">原單價</th>
-                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 100px;">新單價</th>
-                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 120px;">新小計</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 90px;">原數量</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 90px;">新數量</th>
+                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 90px;">原單價</th>
+                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 90px;">新單價</th>
+                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 110px;">新小計</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 60px;">操作</th>
                             </tr>
                         </thead>
                         <tbody id="quoteItemsList"></tbody>
                     </table>
+                </div>
+
+                <!-- 新增項目區塊 -->
+                <div style="margin: 20px 0; padding: 15px; background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 8px;">
+                    <h4 style="margin-bottom: 15px;">➕ 新增項目</h4>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: end;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">選擇項目</label>
+                            <select id="newItemSelect" style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px;">
+                                <option value="">-- 請選擇 --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">數量</label>
+                            <input type="number" id="newItemQty" min="0" step="0.1" placeholder="0" 
+                                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">單價</label>
+                            <input type="number" id="newItemPrice" min="0" placeholder="0" 
+                                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">小計</label>
+                            <input type="text" id="newItemTotal" readonly 
+                                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px; background: #f3f4f6;">
+                        </div>
+                        <div>
+                            <button onclick="addQuoteItem()" class="btn btn-primary" 
+                                    style="padding: 8px 16px; white-space: nowrap;">
+                                ➕ 加入
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div style="margin: 20px 0;">
@@ -362,8 +397,42 @@
                                style="width: 90px; padding: 5px; border: 2px solid #e2e8f0; border-radius: 4px; text-align: right;">
                     </td>
                     <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold;" id="newSubtotal-${index}">$${item.total.toLocaleString()}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">
+                        <button onclick="deleteQuoteItem(${index})" 
+                                style="padding: 5px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            🗑️
+                        </button>
+                    </td>
                 </tr>
             `).join('');
+            
+            // 載入價格表到下拉選單
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            const newItemSelect = document.getElementById('newItemSelect');
+            newItemSelect.innerHTML = '<option value="">-- 請選擇 --</option>' + 
+                priceTable.map((item, idx) => 
+                    `<option value="${idx}">${item.name} (${item.unit})</option>`
+                ).join('');
+            
+            // 監聽選擇變更
+            newItemSelect.onchange = function() {
+                const idx = this.value;
+                if (idx === '') {
+                    document.getElementById('newItemPrice').value = '';
+                    return;
+                }
+                const item = priceTable[idx];
+                document.getElementById('newItemPrice').value = item.price;
+                calculateNewItemTotal();
+            };
+            
+            // 監聽數量和單價變更
+            document.getElementById('newItemQty').oninput = calculateNewItemTotal;
+            document.getElementById('newItemPrice').oninput = calculateNewItemTotal;
+            
+            // 清空新增項目暫存
+            quoteItemsToDelete = [];
+            newQuoteItems = [];
             
             recalculateQuoteTotal();
             document.getElementById('quoteEditModal').classList.add('show');
@@ -371,14 +440,149 @@
         
         function closeQuoteEditModal() {
             document.getElementById('quoteEditModal').classList.remove('show');
+            quoteItemsToDelete = [];
+            newQuoteItems = [];
+        }
+        
+        // 報價項目刪除和新增的暫存
+        let quoteItemsToDelete = [];
+        let newQuoteItems = [];
+        
+        // 計算新增項目小計
+        function calculateNewItemTotal() {
+            const qty = parseFloat(document.getElementById('newItemQty').value) || 0;
+            const price = parseFloat(document.getElementById('newItemPrice').value) || 0;
+            document.getElementById('newItemTotal').value = '$' + (qty * price).toLocaleString();
+        }
+        
+        // 刪除報價項目
+        function deleteQuoteItem(index) {
+            if (!confirm('確定要刪除此項目嗎？')) return;
+            
+            if (!quoteItemsToDelete.includes(index)) {
+                quoteItemsToDelete.push(index);
+            }
+            
+            // 隱藏該行
+            const rows = document.querySelectorAll('#quoteItemsList tr');
+            if (rows[index]) {
+                rows[index].style.opacity = '0.3';
+                rows[index].style.textDecoration = 'line-through';
+            }
+            
+            recalculateQuoteTotal();
+        }
+        
+        // 新增報價項目
+        function addQuoteItem() {
+            const selectIdx = document.getElementById('newItemSelect').value;
+            if (selectIdx === '') {
+                alert('請選擇項目！');
+                return;
+            }
+            
+            const qty = parseFloat(document.getElementById('newItemQty').value);
+            if (!qty || qty <= 0) {
+                alert('請輸入數量！');
+                return;
+            }
+            
+            const price = parseFloat(document.getElementById('newItemPrice').value);
+            if (!price || price <= 0) {
+                alert('請輸入單價！');
+                return;
+            }
+            
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            const item = priceTable[selectIdx];
+            
+            const newItem = {
+                itemId: 'ITEM-NEW-' + (newQuoteItems.length + 1),
+                name: item.name,
+                quantity: qty,
+                price: price,
+                total: qty * price,
+                note: '新增項目'
+            };
+            
+            newQuoteItems.push(newItem);
+            
+            // 加到表格
+            const tbody = document.getElementById('quoteItemsList');
+            const newRowIndex = tbody.querySelectorAll('tr').length;
+            const newRow = `
+                <tr style="background: #ecfdf5;" data-new-item="${newQuoteItems.length - 1}">
+                    <td style="padding: 10px; border: 1px solid #e5e7eb;">${newItem.name} <span style="color: #059669; font-weight: bold;">✨ 新增</span></td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; color: #6b7280;">-</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; font-weight: bold;">${newItem.quantity}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; color: #6b7280;">-</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold;">$${newItem.price.toLocaleString()}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold; color: #059669;">$${newItem.total.toLocaleString()}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">
+                        <button onclick="removeNewItem(${newQuoteItems.length - 1})" 
+                                style="padding: 5px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', newRow);
+            
+            // 清空表單
+            document.getElementById('newItemSelect').value = '';
+            document.getElementById('newItemQty').value = '';
+            document.getElementById('newItemPrice').value = '';
+            document.getElementById('newItemTotal').value = '';
+            
+            recalculateQuoteTotal();
+            
+            alert('✅ 項目已加入！記得點擊「確認修改」儲存變更。');
+        }
+        
+        // 移除新增的項目
+        function removeNewItem(index) {
+            newQuoteItems.splice(index, 1);
+            
+            // 重新載入（簡單方式）
+            const tbody = document.getElementById('quoteItemsList');
+            const rows = tbody.querySelectorAll('tr[data-new-item]');
+            rows.forEach(row => row.remove());
+            
+            // 重新加入剩餘的新項目
+            newQuoteItems.forEach((item, idx) => {
+                const newRow = `
+                    <tr style="background: #ecfdf5;" data-new-item="${idx}">
+                        <td style="padding: 10px; border: 1px solid #e5e7eb;">${item.name} <span style="color: #059669; font-weight: bold;">✨ 新增</span></td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; color: #6b7280;">-</td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; font-weight: bold;">${item.quantity}</td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; color: #6b7280;">-</td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold;">$${item.price.toLocaleString()}</td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold; color: #059669;">$${item.total.toLocaleString()}</td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">
+                            <button onclick="removeNewItem(${idx})" 
+                                    style="padding: 5px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', newRow);
+            });
+            
+            recalculateQuoteTotal();
         }
         
         function recalculateQuoteTotal() {
             let total = 0;
             const tbody = document.getElementById('quoteItemsList');
-            const rows = tbody.querySelectorAll('tr');
+            const rows = tbody.querySelectorAll('tr:not([data-new-item])'); // 排除新增項目
             
             rows.forEach((row, index) => {
+                // 跳過被刪除的項目
+                if (quoteItemsToDelete.includes(index)) {
+                    return;
+                }
+                
                 const qtyInput = document.getElementById(`newQty-${index}`);
                 const priceInput = document.getElementById(`newPrice-${index}`);
                 
@@ -387,9 +591,17 @@
                     const price = parseFloat(priceInput.value) || 0;
                     const subtotal = qty * price;
                     
-                    document.getElementById(`newSubtotal-${index}`).textContent = `$${subtotal.toLocaleString()}`;
+                    const subtotalEl = document.getElementById(`newSubtotal-${index}`);
+                    if (subtotalEl) {
+                        subtotalEl.textContent = `$${subtotal.toLocaleString()}`;
+                    }
                     total += subtotal;
                 }
+            });
+            
+            // 加入新增項目的總額
+            newQuoteItems.forEach(item => {
+                total += item.total;
             });
             
             document.getElementById('newTotalAmount').textContent = total.toLocaleString();
@@ -406,34 +618,46 @@
             const latestVersion = project.quoteVersions[project.quoteVersions.length - 1];
             const oldItems = latestVersion.items || [];
             
-            // 收集新數量和新單價
-            const newItems = oldItems.map((item, index) => {
-                const qtyInput = document.getElementById(`newQty-${index}`);
-                const priceInput = document.getElementById(`newPrice-${index}`);
-                const newQty = parseFloat(qtyInput.value) || 0;
-                const newPrice = parseFloat(priceInput.value) || 0;
-                const newTotal = newQty * newPrice;
-                
-                return {
-                    ...item,
-                    quantity: newQty,
-                    price: newPrice,
-                    total: newTotal
-                };
-            });
+            // 收集修改後的項目（排除被刪除的）
+            const updatedItems = oldItems
+                .filter((item, index) => !quoteItemsToDelete.includes(index))
+                .map((item, index) => {
+                    const qtyInput = document.getElementById(`newQty-${index}`);
+                    const priceInput = document.getElementById(`newPrice-${index}`);
+                    
+                    if (!qtyInput || !priceInput) return item;
+                    
+                    const newQty = parseFloat(qtyInput.value) || 0;
+                    const newPrice = parseFloat(priceInput.value) || 0;
+                    
+                    return {
+                        ...item,
+                        quantity: newQty,
+                        price: newPrice,
+                        total: newQty * newPrice
+                    };
+                });
+            
+            // 加入新增的項目
+            const finalItems = [...updatedItems, ...newQuoteItems];
             
             // 計算新總額
-            const newTotalAmount = newItems.reduce((sum, item) => sum + item.total, 0);
+            const newTotalAmount = finalItems.reduce((sum, item) => sum + item.total, 0);
             
             // 建立新版本
+            const changeNote = [];
+            if (quoteItemsToDelete.length > 0) changeNote.push(`刪除 ${quoteItemsToDelete.length} 項`);
+            if (newQuoteItems.length > 0) changeNote.push(`新增 ${newQuoteItems.length} 項`);
+            const changeSummary = changeNote.length > 0 ? `（${changeNote.join('，')}）` : '';
+            
             const newVersion = {
                 version: 'v' + (project.quoteVersions.length + 1),
                 date: new Date().toISOString().split('T')[0],
                 totalAmount: newTotalAmount,
                 operator: JSON.parse(localStorage.getItem('currentUser')).id,
                 reason: reason,
-                note: `數量調整（v${project.quoteVersions.length} → v${project.quoteVersions.length + 1}）`,
-                items: newItems
+                note: `報價調整${changeSummary}`,
+                items: finalItems
             };
             
             project.quoteVersions.push(newVersion);
@@ -445,12 +669,16 @@
                 date: newVersion.date,
                 status: '報價修改',
                 operator: newVersion.operator,
-                note: `${reason}，總額：$${latestVersion.totalAmount.toLocaleString()} → $${newTotalAmount.toLocaleString()}`
+                note: `${reason}，總額：$${latestVersion.totalAmount.toLocaleString()} → $${newTotalAmount.toLocaleString()}${changeSummary}`
             });
             
             localStorage.setItem('projects', JSON.stringify(projects));
             
-            alert(`報價已更新！\\n\\n原總額：$${latestVersion.totalAmount.toLocaleString()}\\n新總額：$${newTotalAmount.toLocaleString()}\\n版本：${newVersion.version}`);
+            // 清空暫存
+            quoteItemsToDelete = [];
+            newQuoteItems = [];
+            
+            alert(`✅ 報價已更新！\n\n原總額：$${latestVersion.totalAmount.toLocaleString()}\n新總額：$${newTotalAmount.toLocaleString()}\n版本：${newVersion.version}${changeNote.length > 0 ? '\n\n變更：' + changeNote.join('，') : ''}`);
             closeQuoteEditModal();
             location.reload();
         }

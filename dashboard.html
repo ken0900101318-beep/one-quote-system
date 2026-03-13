@@ -197,6 +197,11 @@
                             <button class="btn btn-primary" style="padding: 8px 16px; font-size: 0.9em;" onclick="viewProject('${project.id}')">
                                 查看
                             </button>
+                            ${currentUser.role === 'admin' ? `
+                            <button class="btn" style="padding: 8px 16px; font-size: 0.9em; background: #ef4444; color: white; margin-left: 5px;" onclick="deleteProject('${project.id}')">
+                                🗑️ 刪除
+                            </button>
+                            ` : ''}
                         </td>
                     </tr>
                 `;
@@ -226,6 +231,24 @@
 
         function quickFilter(status) {
             document.getElementById('statusFilter').value = status;
+            loadProjects();
+        }
+
+        // 刪除專案
+        function deleteProject(projectId) {
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            
+            if (!project) return;
+            
+            if (!confirm(`確定要刪除專案「${project.storeName}」嗎？\n\n⚠️ 刪除後無法復原！\n\n包含：\n- 報價明細\n- 收款記錄\n- 施工進度\n- 所有歷史版本`)) {
+                return;
+            }
+            
+            const filtered = projects.filter(p => p.id !== projectId);
+            localStorage.setItem('projects', JSON.stringify(filtered));
+            
+            alert('✅ 專案已刪除！');
             loadProjects();
         }
 
