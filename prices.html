@@ -332,12 +332,12 @@
                     <input type="number" id="itemPrice" required min="0" placeholder="例如：3700">
                 </div>
                 
-                <div class="form-row">
+                <div class="form-row" id="costFormRow">
                     <label>成本</label>
                     <input type="number" id="itemCost" min="0" placeholder="例如：3000">
                 </div>
                 
-                <div class="form-row">
+                <div class="form-row" id="friendPriceFormRow">
                     <label>友情價</label>
                     <input type="number" id="itemFriendPrice" min="0" placeholder="例如：3300">
                 </div>
@@ -400,6 +400,20 @@
         let editingItemId = null;
         let collapsedCategories = JSON.parse(localStorage.getItem('collapsedCategories') || '{}');
         let collapsedSubcategories = JSON.parse(localStorage.getItem('collapsedSubcategories') || '{}');
+        
+        // 權限控制：檢查是否能看到成本
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const canSeeCost = currentUser.role === 'admin' || currentUser.role === 'viewer';
+        
+        // 根據權限隱藏表單欄位
+        window.addEventListener('DOMContentLoaded', function() {
+            if (!canSeeCost) {
+                const costRow = document.getElementById('costFormRow');
+                const friendPriceRow = document.getElementById('friendPriceFormRow');
+                if (costRow) costRow.style.display = 'none';
+                if (friendPriceRow) friendPriceRow.style.display = 'none';
+            }
+        });
         
         function renderPrices() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
@@ -473,6 +487,10 @@
             const highlightName = searchTerm 
                 ? item.name.replace(new RegExp(searchTerm, 'gi'), match => `<span class="search-highlight">${match}</span>`)
                 : item.name;
+            
+            // 獲取當前用戶角色
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const canSeeCost = currentUser.role === 'admin' || currentUser.role === 'viewer';
 
             return `
                 <div class="price-item">
@@ -480,8 +498,8 @@
                         <div class="item-name">${highlightName}</div>
                         <div class="item-details">
                             <span class="item-price">$${item.price.toLocaleString()} / ${item.unit}</span>
-                            ${item.cost ? `<span>成本: $${item.cost.toLocaleString()}</span>` : ''}
-                            ${item.friendPrice ? `<span>友情價: $${item.friendPrice.toLocaleString()}</span>` : ''}
+                            ${canSeeCost && item.cost ? `<span style="color: #e53e3e;">成本: $${item.cost.toLocaleString()}</span>` : ''}
+                            ${canSeeCost && item.friendPrice ? `<span style="color: #38a169;">友情價: $${item.friendPrice.toLocaleString()}</span>` : ''}
                         </div>
                     </div>
                     <div class="item-actions">
@@ -537,6 +555,13 @@
             editingItemId = null;
             document.getElementById('modalTitle').textContent = '新增項目';
             document.getElementById('editForm').reset();
+            
+            // 根據權限顯示/隱藏成本欄位
+            const costRow = document.getElementById('costFormRow');
+            const friendPriceRow = document.getElementById('friendPriceFormRow');
+            if (costRow) costRow.style.display = canSeeCost ? 'block' : 'none';
+            if (friendPriceRow) friendPriceRow.style.display = canSeeCost ? 'block' : 'none';
+            
             document.getElementById('editModal').classList.add('show');
         }
 
@@ -553,6 +578,13 @@
             document.getElementById('itemUnit').value = item.unit;
             document.getElementById('itemCategory').value = item.category;
             document.getElementById('itemSubCategory').value = item.subCategory || '';
+            
+            // 根據權限顯示/隱藏成本欄位
+            const costRow = document.getElementById('costFormRow');
+            const friendPriceRow = document.getElementById('friendPriceFormRow');
+            if (costRow) costRow.style.display = canSeeCost ? 'block' : 'none';
+            if (friendPriceRow) friendPriceRow.style.display = canSeeCost ? 'block' : 'none';
+            
             document.getElementById('editModal').classList.add('show');
         }
 
