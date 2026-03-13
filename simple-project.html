@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專案詳情 - ONE桌遊報價管理系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" style="width: 35px; height: 35px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">
+            ONE桌遊報價管理系統
+        </div>
+        <a href="dashboard.html" class="btn btn-secondary">← 返回儀表板</a>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h1 id="projectTitle">載入中...</h1>
+            
+            <!-- 基本資訊 -->
+            <h3>📋 基本資訊</h3>
+            <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                    <div><strong>店名：</strong><span id="storeName">-</span></div>
+                    <div><strong>地址：</strong><span id="address">-</span></div>
+                    <div><strong>包廂數：</strong><span id="rooms">-</span></div>
+                    <div><strong>開放式：</strong><span id="openSeats">-</span></div>
+                    <div><strong>聯絡人：</strong><span id="contact">-</span></div>
+                    <div><strong>電話：</strong><span id="phone">-</span></div>
+                </div>
+            </div>
+
+            <!-- 收款資訊 -->
+            <h3>💰 收款明細</h3>
+            <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>合約總價：</span><strong id="totalAmount">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>已收金額：</span><strong id="paidAmount" style="color: var(--success);">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>待收金額：</span><strong id="pendingAmount" style="color: var(--danger);">$0</strong>
+                </div>
+            </div>
+
+            <!-- 報價明細 -->
+            <h3>📋 報價明細</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>項目名稱</th>
+                        <th>數量</th>
+                        <th>單價</th>
+                        <th>小計</th>
+                    </tr>
+                </thead>
+                <tbody id="quoteItemsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="ensure-data.js"></script>
+    <script>
+        // 確保數據初始化
+        if (typeof ensureDataInitialized === 'function') {
+            ensureDataInitialized();
+        }
+
+        // 讀取數據
+        const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+        
+        console.log('專案數量:', projects.length);
+        
+        if (projects.length === 0) {
+            document.getElementById('projectTitle').textContent = '沒有專案數據';
+            alert('沒有專案數據！\n\n請先使用診斷工具初始化數據。');
+        } else {
+            // 顯示第一個專案
+            const project = projects[0];
+            
+            console.log('顯示專案:', project);
+            
+            // 基本資訊
+            document.getElementById('projectTitle').textContent = (project.id || '未知') + ' - ' + (project.storeName || '未命名');
+            document.getElementById('storeName').textContent = project.storeName || '-';
+            document.getElementById('address').textContent = project.address || '-';
+            document.getElementById('rooms').textContent = project.rooms || 0;
+            document.getElementById('openSeats').textContent = project.openSeats || 0;
+            document.getElementById('contact').textContent = project.contact || '-';
+            document.getElementById('phone').textContent = project.phone || '-';
+            
+            // 收款資訊
+            const totalAmount = project.totalAmount || 0;
+            const paidAmount = project.paidAmount || 0;
+            const pendingAmount = totalAmount - paidAmount;
+            
+            document.getElementById('totalAmount').textContent = '$' + totalAmount.toLocaleString();
+            document.getElementById('paidAmount').textContent = '$' + paidAmount.toLocaleString();
+            document.getElementById('pendingAmount').textContent = '$' + pendingAmount.toLocaleString();
+            
+            // 報價明細
+            const quoteItemsBody = document.getElementById('quoteItemsBody');
+            
+            if (project.quoteVersions && project.quoteVersions.length > 0) {
+                const latestQuote = project.quoteVersions[project.quoteVersions.length - 1];
+                
+                if (latestQuote.items && latestQuote.items.length > 0) {
+                    quoteItemsBody.innerHTML = latestQuote.items.map(item => `
+                        <tr>
+                            <td>${item.name || '-'}</td>
+                            <td>${item.quantity || 0}</td>
+                            <td>$${(item.price || 0).toLocaleString()}</td>
+                            <td><strong>$${(item.total || 0).toLocaleString()}</strong></td>
+                        </tr>
+                    `).join('') + `
+                        <tr style="background: #f7fafc; font-weight: bold;">
+                            <td colspan="3" style="text-align: right;">總計</td>
+                            <td>$${totalAmount.toLocaleString()}</td>
+                        </tr>
+                    `;
+                } else {
+                    quoteItemsBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">沒有報價項目</td></tr>';
+                }
+            } else {
+                quoteItemsBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">沒有報價版本</td></tr>';
+            }
+            
+            console.log('✅ 專案顯示完成');
+        }
+    </script>
+</body>
+</html>
