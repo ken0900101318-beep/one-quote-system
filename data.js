@@ -18,8 +18,8 @@ function initializeData() {
     // 價格表數據
     const priceTable = [
         { id: 'ITEM-001', name: '加盟費用', price: 283200, cost: 0, friendPrice: 0, unit: '式', category: '公司', subCategory: '系統設備' },
-        { id: 'ITEM-002', name: '智能門鎖', price: 7000, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '系統設備' },
-        { id: 'ITEM-003', name: 'ONE客製木門含探視孔', price: 8000, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '系統設備' },
+        { id: 'ITEM-002', name: '智能門鎖', price: 7000, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '門' },
+        { id: 'ITEM-003', name: 'ONE客製木門含探視孔', price: 8000, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '門' },
         { id: 'ITEM-004', name: '智能控電多8組', price: 3000, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '系統設備' },
         { id: 'ITEM-005', name: '藍芽喇叭多8組', price: 2000, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '系統設備' },
         { id: 'ITEM-006', name: '門牌燈多8組', price: 800, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '系統設備' },
@@ -37,7 +37,7 @@ function initializeData() {
         { id: 'ITEM-018', name: '飲料櫃', price: 8000, cost: 0, friendPrice: 0, unit: '組', category: '公司', subCategory: '其他設備' },
         { id: 'ITEM-019', name: '垃圾桶', price: 1, cost: 0, friendPrice: 0, unit: '個', category: '公司', subCategory: '其他設備' },
         { id: 'ITEM-020', name: '焊接椅子含組裝搬運', price: 10000, cost: 0, friendPrice: 0, unit: '式', category: '公司', subCategory: '其他設備' },
-        { id: 'ITEM-021', name: '門弓器', price: 1500, cost: 1000, friendPrice: 0, unit: '組', category: '公司', subCategory: '其他設備' },
+        { id: 'ITEM-021', name: '門弓器', price: 1500, cost: 1000, friendPrice: 0, unit: '組', category: '公司', subCategory: '門' },
         { id: 'ITEM-022', name: '輕隔間(15MM石膏板＋60Ｋ延綿）', price: 3700, cost: 3000, friendPrice: 3300, unit: '坪', category: '工班', subCategory: '輕隔間' },
         { id: 'ITEM-023', name: '輕隔間(15MM石膏板＋100Ｋ延綿）', price: 3800, cost: 0, friendPrice: 0, unit: '坪', category: '工班', subCategory: '輕隔間' },
         { id: 'ITEM-024', name: '輕隔間樓層搬運費', price: 5000, cost: 5000, friendPrice: 0, unit: '次', category: '工班', subCategory: '輕隔間' },
