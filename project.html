@@ -760,11 +760,12 @@
             document.getElementById('progressModal').classList.add('show');
             
             const progressItems = currentProject.constructionProgress || [
-                { item: '現場勘查', progress: 0 },
-                { item: '水電配置', progress: 0 },
-                { item: '裝潢施工', progress: 0 },
-                { item: '設備安裝', progress: 0 },
-                { item: '清潔驗收', progress: 0 }
+                { item: '隔間', progress: 0 },
+                { item: '水電', progress: 0 },
+                { item: '壁紙', progress: 0 },
+                { item: '冷氣', progress: 0 },
+                { item: '麻將桌', progress: 0 },
+                { item: '配對驗收', progress: 0 }
             ];
             
             const html = progressItems.map((p, idx) => `
@@ -788,11 +789,12 @@
 
         function saveProgress() {
             const progressItems = currentProject.constructionProgress || [
-                { item: '現場勘查', progress: 0 },
-                { item: '水電配置', progress: 0 },
-                { item: '裝潢施工', progress: 0 },
-                { item: '設備安裝', progress: 0 },
-                { item: '清潔驗收', progress: 0 }
+                { item: '隔間', progress: 0 },
+                { item: '水電', progress: 0 },
+                { item: '壁紙', progress: 0 },
+                { item: '冷氣', progress: 0 },
+                { item: '麻將桌', progress: 0 },
+                { item: '配對驗收', progress: 0 }
             ];
             
             progressItems.forEach((p, idx) => {
