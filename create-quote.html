@@ -50,7 +50,7 @@
         .category-tabs {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             flex-wrap: wrap;
         }
         
@@ -61,11 +61,53 @@
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s;
+            font-size: 0.95em;
         }
         
         .category-tab.active {
             background: var(--primary);
             color: white;
+        }
+        
+        .category-tab.main-category {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .category-tab.main-category.active {
+            background: linear-gradient(135deg, #764ba2, #667eea);
+        }
+        
+        .sub-category-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 10px;
+        }
+        
+        .sub-category-tab {
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+        
+        .sub-category-tab:hover {
+            border-color: var(--primary);
+            transform: translateY(-1px);
+        }
+        
+        .sub-category-tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
         }
         
         .items-grid {
@@ -242,6 +284,7 @@
             <h2>🛍️ 選擇項目</h2>
             
             <div class="category-tabs" id="categoryTabs"></div>
+            <div class="sub-category-tabs" id="subCategoryTabs"></div>
             
             <div class="items-grid" id="itemsGrid"></div>
             
@@ -311,6 +354,8 @@
         let selectedItems = [];
         let priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
         let users = JSON.parse(localStorage.getItem('users') || '[]');
+        let currentMainCategory = ''; // 當前選擇的主分類
+        let currentSubCategory = ''; // 當前選擇的子分類
         
         // 初始化
         function init() {
@@ -323,38 +368,112 @@
                 assigneeSelect.appendChild(option);
             });
             
-            // 載入分類標籤
+            // 載入主分類標籤
             const categories = [...new Set(priceTable.map(item => item.category))];
             const categoryTabs = document.getElementById('categoryTabs');
             
             const allTab = document.createElement('button');
             allTab.className = 'category-tab active';
-            allTab.textContent = '全部';
-            allTab.onclick = () => filterCategory('');
+            allTab.textContent = '📋 全部';
+            allTab.onclick = () => filterMainCategory('');
             categoryTabs.appendChild(allTab);
             
             categories.forEach(cat => {
                 const tab = document.createElement('button');
-                tab.className = 'category-tab';
-                tab.textContent = cat;
-                tab.onclick = () => filterCategory(cat);
+                tab.className = 'category-tab main-category';
+                tab.textContent = cat === '公司' ? '🏢 公司' : '👷 工班';
+                tab.onclick = () => filterMainCategory(cat);
                 categoryTabs.appendChild(tab);
             });
             
-            renderItems('');
+            // 初始顯示所有子分類
+            loadSubCategories('');
+            renderItems('', '');
         }
         
-        function filterCategory(category) {
+        // 主分類篩選
+        function filterMainCategory(category) {
+            currentMainCategory = category;
+            currentSubCategory = '';
+            
+            // 更新主分類標籤樣式
             document.querySelectorAll('.category-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
             event.target.classList.add('active');
-            renderItems(category);
+            
+            // 載入對應的子分類
+            loadSubCategories(category);
+            
+            // 重新渲染項目
+            renderItems(category, '');
         }
         
-        function renderItems(category) {
-            const filtered = category ? priceTable.filter(item => item.category === category) : priceTable;
+        // 載入子分類標籤
+        function loadSubCategories(mainCategory) {
+            const filtered = mainCategory ? priceTable.filter(item => item.category === mainCategory) : priceTable;
+            const subCategories = [...new Set(filtered.map(item => item.subCategory).filter(Boolean))];
+            
+            const subCategoryTabs = document.getElementById('subCategoryTabs');
+            
+            if (subCategories.length === 0) {
+                subCategoryTabs.innerHTML = '<p style="margin: 0; color: #999;">無子分類</p>';
+                return;
+            }
+            
+            subCategoryTabs.innerHTML = '';
+            
+            // 全部子分類
+            const allSubTab = document.createElement('button');
+            allSubTab.className = 'sub-category-tab active';
+            allSubTab.textContent = '全部';
+            allSubTab.onclick = () => filterSubCategory('');
+            subCategoryTabs.appendChild(allSubTab);
+            
+            // 各子分類
+            subCategories.sort().forEach(subCat => {
+                const tab = document.createElement('button');
+                tab.className = 'sub-category-tab';
+                tab.textContent = subCat;
+                tab.onclick = () => filterSubCategory(subCat);
+                subCategoryTabs.appendChild(tab);
+            });
+        }
+        
+        // 子分類篩選
+        function filterSubCategory(subCategory) {
+            currentSubCategory = subCategory;
+            
+            // 更新子分類標籤樣式
+            document.querySelectorAll('.sub-category-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 重新渲染項目
+            renderItems(currentMainCategory, subCategory);
+        }
+        
+        // 渲染項目列表
+        function renderItems(mainCategory, subCategory) {
+            let filtered = priceTable;
+            
+            // 先按主分類篩選
+            if (mainCategory) {
+                filtered = filtered.filter(item => item.category === mainCategory);
+            }
+            
+            // 再按子分類篩選
+            if (subCategory) {
+                filtered = filtered.filter(item => item.subCategory === subCategory);
+            }
+            
             const grid = document.getElementById('itemsGrid');
+            
+            if (filtered.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">無符合的項目</p>';
+                return;
+            }
             
             grid.innerHTML = filtered.map(item => `
                 <div class="item-card ${selectedItems.find(i => i.id === item.id) ? 'selected' : ''}" 
@@ -386,7 +505,8 @@
             }
             
             updateSelectedItems();
-            renderItems(document.querySelector('.category-tab.active').textContent === '全部' ? '' : document.querySelector('.category-tab.active').textContent);
+            // 使用當前的主分類和子分類重新渲染
+            renderItems(currentMainCategory, currentSubCategory);
         }
         
         function updateSelectedItems() {
