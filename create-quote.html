@@ -496,11 +496,40 @@
             if (index > -1) {
                 selectedItems.splice(index, 1);
             } else {
+                // 讀取包廂數和開放桌數
+                const rooms = parseInt(document.getElementById('rooms').value) || 0;
+                const openSeats = parseInt(document.getElementById('openSeats').value) || 0;
+                
+                // 智能預設數量
+                let defaultQuantity = 1;
+                
+                // 包廂數量的項目：智能門鎖、ONE木門、藍牙喇叭、門牌燈、智能控電
+                if (item.name.includes('智能門鎖') || 
+                    item.name.includes('ONE客製木門') || 
+                    item.name.includes('木門') ||
+                    item.name.includes('藍牙喇叭') || 
+                    item.name.includes('藍芽喇叭') ||
+                    item.name.includes('門牌燈') ||
+                    item.name.includes('智能控電')) {
+                    defaultQuantity = rooms;
+                }
+                
+                // 包廂數 + 開放桌數的項目：麻將桌、麻將椅、門弓器
+                if (item.name.includes('麻將桌') || 
+                    item.name.includes('麻將椅') ||
+                    item.name.includes('門弓器')) {
+                    defaultQuantity = rooms + openSeats;
+                }
+                
+                // 確保至少為 1
+                if (defaultQuantity < 1) defaultQuantity = 1;
+                
                 selectedItems.push({
                     ...item,
-                    quantity: 1,
+                    quantity: defaultQuantity,
                     customPrice: item.price,
-                    total: item.price
+                    total: item.price * defaultQuantity,
+                    isFree: false
                 });
             }
             
@@ -517,22 +546,46 @@
                 <div class="selected-item">
                     <div style="flex: 1;">
                         <strong>${item.name}</strong>
-                        <div style="color: #666; font-size: 0.9em;">單價：$${item.price.toLocaleString()} / ${item.unit}</div>
+                        <div style="color: #666; font-size: 0.9em;">
+                            ${item.isFree ? '<span style="color: #10b981; font-weight: bold;">🎁 公司贈送</span>' : `單價：$${item.price.toLocaleString()} / ${item.unit}`}
+                        </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <input type="number" class="quantity-input" min="1" value="${item.quantity}" 
                                onchange="updateQuantity(${index}, this.value)">
                         <span>${item.unit}</span>
                         <strong style="width: 100px; text-align: right;">$${item.total.toLocaleString()}</strong>
+                        ${!item.isFree ? `<button class="btn" style="padding: 6px 12px; background: #10b981; color: white;" onclick="setFreeItem(${index})">🎁 贈送</button>` : `<button class="btn" style="padding: 6px 12px; background: #f59e0b; color: white;" onclick="restorePriceItem(${index})">↩️ 恢復</button>`}
                         <button class="btn btn-danger" style="padding: 6px 12px;" onclick="removeItem(${index})">移除</button>
                     </div>
                 </div>
             `).join('');
         }
         
+        // 設定為公司贈送（金額變 0）
+        function setFreeItem(index) {
+            selectedItems[index].isFree = true;
+            selectedItems[index].customPrice = 0;
+            selectedItems[index].total = 0;
+            updateSelectedItems();
+        }
+        
+        // 恢復原價
+        function restorePriceItem(index) {
+            selectedItems[index].isFree = false;
+            selectedItems[index].customPrice = selectedItems[index].price;
+            selectedItems[index].total = selectedItems[index].price * selectedItems[index].quantity;
+            updateSelectedItems();
+        }
+        
         function updateQuantity(index, quantity) {
             selectedItems[index].quantity = parseFloat(quantity);
-            selectedItems[index].total = selectedItems[index].customPrice * parseFloat(quantity);
+            // 如果不是贈送品，重新計算總價
+            if (!selectedItems[index].isFree) {
+                selectedItems[index].total = selectedItems[index].customPrice * parseFloat(quantity);
+            } else {
+                selectedItems[index].total = 0;
+            }
             updateSelectedItems();
         }
         
