@@ -322,6 +322,24 @@
                             <span>小計：</span>
                             <strong>$<span id="subtotal">0</span></strong>
                         </div>
+                        <div class="summary-row" id="globalSalesRow" style="display: none;">
+                            <span style="color: #3b82f6;">業務優惠：</span>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <strong style="color: #3b82f6;">-$<span id="globalSalesAmount">0</span></strong>
+                                <button class="btn" style="padding: 4px 8px; font-size: 0.8em;" onclick="setGlobalSalesDiscount()">修改</button>
+                            </div>
+                        </div>
+                        <div class="summary-row" id="globalCompanyRow" style="display: none;">
+                            <span style="color: #10b981;">公司優惠：</span>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <strong style="color: #10b981;">-$<span id="globalCompanyAmount">0</span></strong>
+                                <button class="btn" style="padding: 4px 8px; font-size: 0.8em;" onclick="setGlobalCompanyDiscount()">修改</button>
+                            </div>
+                        </div>
+                        <div class="summary-row">
+                            <button class="btn" style="padding: 8px 12px; background: #3b82f6; color: white; margin-right: 5px;" onclick="setGlobalSalesDiscount()">💼 整單業務優惠</button>
+                            <button class="btn" style="padding: 8px 12px; background: #10b981; color: white;" onclick="setGlobalCompanyDiscount()">🏢 整單公司優惠</button>
+                        </div>
                         <div class="summary-row total">
                             <span>總計：</span>
                             <strong>$<span id="grandTotal">0</span></strong>
@@ -356,6 +374,8 @@
         let users = JSON.parse(localStorage.getItem('users') || '[]');
         let currentMainCategory = ''; // 當前選擇的主分類
         let currentSubCategory = ''; // 當前選擇的子分類
+        let globalSalesDiscount = 0; // 整單業務優惠
+        let globalCompanyDiscount = 0; // 整單公司優惠
         
         // 初始化
         function init() {
@@ -529,7 +549,9 @@
                     quantity: defaultQuantity,
                     customPrice: item.price,
                     total: item.price * defaultQuantity,
-                    isFree: false
+                    isFree: false,
+                    salesDiscount: 0,      // 業務優惠金額
+                    companyDiscount: 0     // 公司優惠金額
                 });
             }
             
@@ -542,24 +564,43 @@
             document.getElementById('selectedCount').textContent = selectedItems.length;
             
             const list = document.getElementById('selectedItemsList');
-            list.innerHTML = selectedItems.map((item, index) => `
+            list.innerHTML = selectedItems.map((item, index) => {
+                const originalTotal = item.quantity * item.price;
+                const afterDiscount = originalTotal - item.salesDiscount - item.companyDiscount;
+                const hasDiscount = item.salesDiscount > 0 || item.companyDiscount > 0;
+                
+                return `
                 <div class="selected-item">
                     <div style="flex: 1;">
                         <strong>${item.name}</strong>
                         <div style="color: #666; font-size: 0.9em;">
                             ${item.isFree ? '<span style="color: #10b981; font-weight: bold;">🎁 公司贈送</span>' : `單價：$${item.price.toLocaleString()} / ${item.unit}`}
                         </div>
+                        ${hasDiscount && !item.isFree ? `
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            原價：$${originalTotal.toLocaleString()}
+                            ${item.salesDiscount > 0 ? `<br><span style="color: #3b82f6;">業務優惠：-$${item.salesDiscount.toLocaleString()}</span>` : ''}
+                            ${item.companyDiscount > 0 ? `<br><span style="color: #10b981;">公司優惠：-$${item.companyDiscount.toLocaleString()}</span>` : ''}
+                        </div>
+                        ` : ''}
                     </div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                         <input type="number" class="quantity-input" min="1" value="${item.quantity}" 
                                onchange="updateQuantity(${index}, this.value)">
                         <span>${item.unit}</span>
-                        <strong style="width: 100px; text-align: right;">$${item.total.toLocaleString()}</strong>
-                        ${!item.isFree ? `<button class="btn" style="padding: 6px 12px; background: #10b981; color: white;" onclick="setFreeItem(${index})">🎁 贈送</button>` : `<button class="btn" style="padding: 6px 12px; background: #f59e0b; color: white;" onclick="restorePriceItem(${index})">↩️ 恢復</button>`}
-                        <button class="btn btn-danger" style="padding: 6px 12px;" onclick="removeItem(${index})">移除</button>
+                        <strong style="width: 100px; text-align: right;">$${(item.isFree ? 0 : afterDiscount).toLocaleString()}</strong>
+                        ${!item.isFree ? `
+                        <button class="btn" style="padding: 6px 10px; background: #3b82f6; color: white; font-size: 0.85em;" onclick="setSalesDiscount(${index})">💼 業務優惠</button>
+                        <button class="btn" style="padding: 6px 10px; background: #10b981; color: white; font-size: 0.85em;" onclick="setCompanyDiscount(${index})">🏢 公司優惠</button>
+                        <button class="btn" style="padding: 6px 10px; background: #8b5cf6; color: white; font-size: 0.85em;" onclick="setFreeItem(${index})">🎁 贈送</button>
+                        ` : `
+                        <button class="btn" style="padding: 6px 10px; background: #f59e0b; color: white; font-size: 0.85em;" onclick="restorePriceItem(${index})">↩️ 恢復</button>
+                        `}
+                        <button class="btn btn-danger" style="padding: 6px 10px; font-size: 0.85em;" onclick="removeItem(${index})">移除</button>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
         // 設定為公司贈送（金額變 0）
@@ -575,6 +616,95 @@
             selectedItems[index].isFree = false;
             selectedItems[index].customPrice = selectedItems[index].price;
             selectedItems[index].total = selectedItems[index].price * selectedItems[index].quantity;
+            selectedItems[index].salesDiscount = 0;
+            selectedItems[index].companyDiscount = 0;
+            updateSelectedItems();
+        }
+        
+        // 設定業務優惠
+        function setSalesDiscount(index) {
+            const item = selectedItems[index];
+            const originalTotal = item.quantity * item.price;
+            
+            const type = prompt('選擇優惠方式：\n1 = 固定金額\n2 = 折扣比例（例如：9折）', '1');
+            if (!type) return;
+            
+            if (type === '1') {
+                const amount = prompt(`業務優惠金額（原價：$${originalTotal.toLocaleString()}）:`, '0');
+                if (amount === null) return;
+                
+                const discount = parseFloat(amount);
+                if (isNaN(discount) || discount < 0) {
+                    alert('請輸入有效的金額！');
+                    return;
+                }
+                
+                if (discount > originalTotal) {
+                    alert('優惠金額不能超過原價！');
+                    return;
+                }
+                
+                selectedItems[index].salesDiscount = discount;
+            } else if (type === '2') {
+                const percent = prompt('折扣（例如：9 = 9折，85 = 85折）:', '9');
+                if (percent === null) return;
+                
+                const discount = parseFloat(percent);
+                if (isNaN(discount) || discount <= 0 || discount >= 100) {
+                    alert('請輸入有效的折扣（1-99）！');
+                    return;
+                }
+                
+                selectedItems[index].salesDiscount = Math.round(originalTotal * (100 - discount) / 100);
+            } else {
+                alert('請輸入 1 或 2');
+                return;
+            }
+            
+            updateSelectedItems();
+        }
+        
+        // 設定公司優惠
+        function setCompanyDiscount(index) {
+            const item = selectedItems[index];
+            const originalTotal = item.quantity * item.price;
+            const afterSales = originalTotal - item.salesDiscount;
+            
+            const type = prompt('選擇優惠方式：\n1 = 固定金額\n2 = 折扣比例（例如：9折）', '1');
+            if (!type) return;
+            
+            if (type === '1') {
+                const amount = prompt(`公司優惠金額（扣除業務優惠後：$${afterSales.toLocaleString()}）:`, '0');
+                if (amount === null) return;
+                
+                const discount = parseFloat(amount);
+                if (isNaN(discount) || discount < 0) {
+                    alert('請輸入有效的金額！');
+                    return;
+                }
+                
+                if (discount > afterSales) {
+                    alert('優惠金額不能超過扣除業務優惠後的金額！');
+                    return;
+                }
+                
+                selectedItems[index].companyDiscount = discount;
+            } else if (type === '2') {
+                const percent = prompt('折扣（例如：9 = 9折，85 = 85折）:', '9');
+                if (percent === null) return;
+                
+                const discount = parseFloat(percent);
+                if (isNaN(discount) || discount <= 0 || discount >= 100) {
+                    alert('請輸入有效的折扣（1-99）！');
+                    return;
+                }
+                
+                selectedItems[index].companyDiscount = Math.round(afterSales * (100 - discount) / 100);
+            } else {
+                alert('請輸入 1 或 2');
+                return;
+            }
+            
             updateSelectedItems();
         }
         
@@ -644,21 +774,155 @@
         
         function renderFinalSummary() {
             const list = document.getElementById('finalItemsList');
-            const total = selectedItems.reduce((sum, item) => sum + item.total, 0);
             
-            list.innerHTML = selectedItems.map(item => `
-                <div style="padding: 12px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between;">
-                    <div>
+            // 計算小計（每個項目扣除單項優惠後的金額）
+            const subtotal = selectedItems.reduce((sum, item) => {
+                const originalTotal = item.quantity * item.price;
+                const afterDiscount = originalTotal - item.salesDiscount - item.companyDiscount;
+                return sum + (item.isFree ? 0 : afterDiscount);
+            }, 0);
+            
+            // 計算總計（小計扣除整單優惠）
+            const grandTotal = subtotal - globalSalesDiscount - globalCompanyDiscount;
+            
+            list.innerHTML = selectedItems.map(item => {
+                const originalTotal = item.quantity * item.price;
+                const afterDiscount = originalTotal - item.salesDiscount - item.companyDiscount;
+                const hasDiscount = item.salesDiscount > 0 || item.companyDiscount > 0;
+                
+                return `
+                <div style="padding: 12px; border-bottom: 1px solid #e2e8f0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                         <strong>${item.name}</strong>
-                        <div style="color: #666; font-size: 0.9em;">${item.quantity} ${item.unit} × $${item.customPrice.toLocaleString()}</div>
+                        <strong>$${(item.isFree ? 0 : afterDiscount).toLocaleString()}</strong>
                     </div>
-                    <strong>$${item.total.toLocaleString()}</strong>
+                    <div style="color: #666; font-size: 0.9em;">
+                        ${item.quantity} ${item.unit} × $${item.price.toLocaleString()}
+                        ${item.isFree ? ' = <span style="color: #10b981; font-weight: bold;">公司贈送</span>' : ''}
+                    </div>
+                    ${hasDiscount && !item.isFree ? `
+                    <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                        原價：$${originalTotal.toLocaleString()}
+                        ${item.salesDiscount > 0 ? `<br><span style="color: #3b82f6;">業務優惠：-$${item.salesDiscount.toLocaleString()}</span>` : ''}
+                        ${item.companyDiscount > 0 ? `<br><span style="color: #10b981;">公司優惠：-$${item.companyDiscount.toLocaleString()}</span>` : ''}
+                    </div>
+                    ` : ''}
                 </div>
-            `).join('');
+                `;
+            }).join('');
             
             document.getElementById('totalItems').textContent = selectedItems.length;
-            document.getElementById('subtotal').textContent = total.toLocaleString();
-            document.getElementById('grandTotal').textContent = total.toLocaleString();
+            document.getElementById('subtotal').textContent = subtotal.toLocaleString();
+            
+            // 顯示/隱藏整單優惠行
+            if (globalSalesDiscount > 0) {
+                document.getElementById('globalSalesRow').style.display = 'flex';
+                document.getElementById('globalSalesAmount').textContent = globalSalesDiscount.toLocaleString();
+            } else {
+                document.getElementById('globalSalesRow').style.display = 'none';
+            }
+            
+            if (globalCompanyDiscount > 0) {
+                document.getElementById('globalCompanyRow').style.display = 'flex';
+                document.getElementById('globalCompanyAmount').textContent = globalCompanyDiscount.toLocaleString();
+            } else {
+                document.getElementById('globalCompanyRow').style.display = 'none';
+            }
+            
+            document.getElementById('grandTotal').textContent = grandTotal.toLocaleString();
+        }
+        
+        // 設定整單業務優惠
+        function setGlobalSalesDiscount() {
+            const subtotal = selectedItems.reduce((sum, item) => {
+                const originalTotal = item.quantity * item.price;
+                const afterDiscount = originalTotal - item.salesDiscount - item.companyDiscount;
+                return sum + (item.isFree ? 0 : afterDiscount);
+            }, 0);
+            
+            const type = prompt('選擇整單業務優惠方式：\n1 = 固定金額\n2 = 折扣比例（例如：9折）', '1');
+            if (!type) return;
+            
+            if (type === '1') {
+                const amount = prompt(`整單業務優惠金額（小計：$${subtotal.toLocaleString()}）:`, globalSalesDiscount || '0');
+                if (amount === null) return;
+                
+                const discount = parseFloat(amount);
+                if (isNaN(discount) || discount < 0) {
+                    alert('請輸入有效的金額！');
+                    return;
+                }
+                
+                if (discount > subtotal) {
+                    alert('優惠金額不能超過小計！');
+                    return;
+                }
+                
+                globalSalesDiscount = discount;
+            } else if (type === '2') {
+                const percent = prompt('整單折扣（例如：9 = 9折，85 = 85折）:', '9');
+                if (percent === null) return;
+                
+                const discount = parseFloat(percent);
+                if (isNaN(discount) || discount <= 0 || discount >= 100) {
+                    alert('請輸入有效的折扣（1-99）！');
+                    return;
+                }
+                
+                globalSalesDiscount = Math.round(subtotal * (100 - discount) / 100);
+            } else {
+                alert('請輸入 1 或 2');
+                return;
+            }
+            
+            renderFinalSummary();
+        }
+        
+        // 設定整單公司優惠
+        function setGlobalCompanyDiscount() {
+            const subtotal = selectedItems.reduce((sum, item) => {
+                const originalTotal = item.quantity * item.price;
+                const afterDiscount = originalTotal - item.salesDiscount - item.companyDiscount;
+                return sum + (item.isFree ? 0 : afterDiscount);
+            }, 0);
+            const afterGlobalSales = subtotal - globalSalesDiscount;
+            
+            const type = prompt('選擇整單公司優惠方式：\n1 = 固定金額\n2 = 折扣比例（例如：9折）', '1');
+            if (!type) return;
+            
+            if (type === '1') {
+                const amount = prompt(`整單公司優惠金額（扣除整單業務優惠後：$${afterGlobalSales.toLocaleString()}）:`, globalCompanyDiscount || '0');
+                if (amount === null) return;
+                
+                const discount = parseFloat(amount);
+                if (isNaN(discount) || discount < 0) {
+                    alert('請輸入有效的金額！');
+                    return;
+                }
+                
+                if (discount > afterGlobalSales) {
+                    alert('優惠金額不能超過扣除整單業務優惠後的金額！');
+                    return;
+                }
+                
+                globalCompanyDiscount = discount;
+            } else if (type === '2') {
+                const percent = prompt('整單折扣（例如：9 = 9折，85 = 85折）:', '9');
+                if (percent === null) return;
+                
+                const discount = parseFloat(percent);
+                if (isNaN(discount) || discount <= 0 || discount >= 100) {
+                    alert('請輸入有效的折扣（1-99）！');
+                    return;
+                }
+                
+                globalCompanyDiscount = Math.round(afterGlobalSales * (100 - discount) / 100);
+            } else {
+                alert('請輸入 1 或 2');
+                return;
+            }
+            
+            renderFinalSummary();
         }
         
         function saveQuote() {
