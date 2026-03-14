@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>儀表板 - ONE桌遊報價管理系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 導航列 -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" style="width: 35px; height: 35px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">
+            ONE桌遊報價管理系統
+        </div>
+        <div class="navbar-user">
+            <div class="user-info">
+                <div class="user-name" id="userName"></div>
+                <div class="user-role" id="userRole"></div>
+            </div>
+            <button class="btn-logout" onclick="logout()">登出</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 統計卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">📝 總專案數</div>
+                <div class="stat-value" id="totalProjects">-</div>
+            </div>
+            <div class="stat-card" style="border-left-color: var(--warning);">
+                <div class="stat-label">🔨 施工中</div>
+                <div class="stat-value" id="constructionProjects">-</div>
+            </div>
+            <div class="stat-card" style="border-left-color: var(--success);">
+                <div class="stat-label">💰 本月收款</div>
+                <div class="stat-value" id="monthlyRevenue">-</div>
+            </div>
+            <div class="stat-card" style="border-left-color: var(--danger);">
+                <div class="stat-label">📊 待收款</div>
+                <div class="stat-value" id="pendingAmount">-</div>
+            </div>
+        </div>
+
+        <!-- 專案列表 -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🏗️ 專案管理</h2>
+                <div>
+                    <button class="btn btn-primary" onclick="location.href='create-quote.html'" id="newQuoteBtn">
+                        ➕ 新增報價
+                    </button>
+                    <button class="btn" onclick="location.href='prices.html'" style="margin-left: 10px;" id="pricesBtn">
+                        💰 價格管理
+                    </button>
+                    <button class="btn" onclick="location.href='stats.html'" style="margin-left: 10px;">
+                        📊 數據統計
+                    </button>
+                </div>
+            </div>
+
+            <!-- 搜尋和篩選 -->
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="searchInput" placeholder="🔍 搜尋店名、地址..." 
+                       style="padding: 10px 15px; border: 2px solid var(--border); border-radius: 8px; width: 300px;">
+                <select id="statusFilter" style="padding: 10px 15px; border: 2px solid var(--border); border-radius: 8px; margin-left: 10px;">
+                    <option value="">🔍 全部狀態</option>
+                    <option value="draft">📝 草稿中</option>
+                    <option value="quoted">📋 已報價</option>
+                    <option value="signed">✍️ 已簽約</option>
+                    <option value="construction">🔨 施工中</option>
+                    <option value="completed">✅ 已完工（待收尾款）</option>
+                    <option value="paid">💰 已結清（已結案）</option>
+                </select>
+            </div>
+
+            <!-- 快速篩選按鈕 -->
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn" onclick="quickFilter('')" style="padding: 8px 16px; font-size: 0.9em;">📋 全部</button>
+                <button class="btn" onclick="quickFilter('construction')" style="padding: 8px 16px; font-size: 0.9em;">🔨 施工中</button>
+                <button class="btn" onclick="quickFilter('completed')" style="padding: 8px 16px; font-size: 0.9em;">✅ 已完工</button>
+                <button class="btn" onclick="quickFilter('paid')" style="padding: 8px 16px; font-size: 0.9em; background: var(--success); color: white;">💰 已結案</button>
+            </div>
+
+            <table class="table" id="projectsTable">
+                <thead>
+                    <tr>
+                        <th>專案編號</th>
+                        <th>店名</th>
+                        <th>地址</th>
+                        <th>狀態</th>
+                        <th>負責人</th>
+                        <th>進度</th>
+                        <th>金額</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="projectsBody">
+                    <!-- 動態載入 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="ensure-data.js"></script>
+    <script>
+        // 檢查登入狀態
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'index.html';
+        }
+
+        // 顯示使用者資訊
+        const roleNames = {
+            'admin': '主管',
+            'staff': '員工',
+            'viewer': '會計（查看）'
+        };
+        document.getElementById('userName').textContent = currentUser.avatar + ' ' + currentUser.name;
+        document.getElementById('userRole').textContent = roleNames[currentUser.role];
+
+        // 根據權限顯示/隱藏按鈕
+        if (currentUser.role === 'viewer') {
+            document.getElementById('newQuoteBtn').style.display = 'none';
+            document.getElementById('pricesBtn').style.display = 'none';
+        }
+
+        // 🔧 確保數據已初始化（解決手機無數據問題）
+        function ensureDataInitialized() {
+            const projects = localStorage.getItem('projects');
+            const priceTable = localStorage.getItem('priceTable');
+            const users = localStorage.getItem('users');
+            
+            // 如果任一核心數據不存在，觸發初始化
+            if (!projects || !priceTable || !users) {
+                console.log('⚠️ 數據缺失，正在初始化...');
+                
+                // 確保 initializeData 函數存在並執行
+                if (typeof initializeData === 'function') {
+                    // 移除舊標記，強制重新初始化
+                    localStorage.removeItem('quoteSystemInitialized');
+                    initializeData();
+                    console.log('✅ 數據初始化完成');
+                } else {
+                    console.error('❌ initializeData 函數不存在！請確認 data.js 已載入。');
+                    alert('系統數據載入失敗，請重新整理頁面！');
+                }
+            }
+        }
+
+        // 在載入專案前先確保數據存在
+        ensureDataInitialized();
+
+        // 載入專案數據
+        function loadProjects() {
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            
+            // 更新統計
+            document.getElementById('totalProjects').textContent = projects.length;
+            document.getElementById('constructionProjects').textContent = projects.filter(p => p.status === 'construction').length;
+            
+            // 動態獲取當月（YYYY-MM 格式）
+            const thisMonth = new Date().toISOString().slice(0, 7);
+            const monthlyPayments = projects.reduce((sum, p) => {
+                return sum + (p.payments || [])
+                    .filter(pay => pay.date.startsWith(thisMonth))
+                    .reduce((s, pay) => s + pay.amount, 0);
+            }, 0);
+            document.getElementById('monthlyRevenue').textContent = '$' + monthlyPayments.toLocaleString();
+            
+            const pendingAmount = projects.reduce((sum, p) => sum + (p.totalAmount - p.paidAmount), 0);
+            document.getElementById('pendingAmount').textContent = '$' + pendingAmount.toLocaleString();
+
+            // 渲染專案列表
+            renderProjects(projects, users);
+        }
+
+        function renderProjects(projects, users) {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            const filteredProjects = projects.filter(p => {
+                const matchSearch = p.storeName.toLowerCase().includes(searchTerm) || 
+                                  p.address.toLowerCase().includes(searchTerm);
+                const matchStatus = !statusFilter || p.status === statusFilter;
+                return matchSearch && matchStatus;
+            });
+
+            const statusLabels = {
+                'draft': '草稿中',
+                'quoted': '已報價',
+                'signed': '已簽約',
+                'construction': '施工中',
+                'completed': '已完工',
+                'paid': '已結清'
+            };
+
+            const tbody = document.getElementById('projectsBody');
+            tbody.innerHTML = filteredProjects.map(project => {
+                const assignee = users.find(u => u.id === project.assignee);
+                const progress = calculateProgress(project);
+                
+                return `
+                    <tr>
+                        <td><strong>${project.id}</strong></td>
+                        <td>${project.storeName}</td>
+                        <td>${project.address}</td>
+                        <td><span class="status-badge status-${project.status}">${statusLabels[project.status]}</span></td>
+                        <td>${assignee ? assignee.name : '-'}</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${progress}%"></div>
+                            </div>
+                            <small>${progress}%</small>
+                        </td>
+                        <td>
+                            <strong>$${project.totalAmount.toLocaleString()}</strong><br>
+                            <small style="color: #666;">已收: $${project.paidAmount.toLocaleString()}</small>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary" style="padding: 8px 16px; font-size: 0.9em;" onclick="viewProject('${project.id}')">
+                                查看
+                            </button>
+                            ${currentUser.role === 'admin' ? `
+                            <button class="btn" style="padding: 8px 16px; font-size: 0.9em; background: #ef4444; color: white; margin-left: 5px;" onclick="deleteProject('${project.id}')">
+                                🗑️ 刪除
+                            </button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function calculateProgress(project) {
+            // 如果是施工中且有實際施工進度，使用實際進度
+            if (project.status === 'construction' && project.progress && project.progress.length > 0) {
+                const totalProgress = project.progress.reduce((sum, item) => sum + (item.progress || 0), 0);
+                const avgProgress = Math.round(totalProgress / project.progress.length);
+                return avgProgress;
+            }
+            
+            // 否則使用狀態預設進度
+            const statusProgress = {
+                'draft': 0,
+                'quoted': 10,
+                'signed': 20,
+                'construction': 30,
+                'completed': 90,
+                'paid': 100
+            };
+            return statusProgress[project.status] || 0;
+        }
+
+        function viewProject(id) {
+            location.href = 'project.html?id=' + id;
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            location.href = 'index.html';
+        }
+
+        function quickFilter(status) {
+            document.getElementById('statusFilter').value = status;
+            loadProjects();
+        }
+
+        // 刪除專案
+        function deleteProject(projectId) {
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            
+            if (!project) return;
+            
+            if (!confirm(`確定要刪除專案「${project.storeName}」嗎？\n\n⚠️ 刪除後無法復原！\n\n包含：\n- 報價明細\n- 收款記錄\n- 施工進度\n- 所有歷史版本`)) {
+                return;
+            }
+            
+            const filtered = projects.filter(p => p.id !== projectId);
+            localStorage.setItem('projects', JSON.stringify(filtered));
+            
+            alert('✅ 專案已刪除！');
+            loadProjects();
+        }
+
+        // 搜尋和篩選
+        document.getElementById('searchInput').addEventListener('input', loadProjects);
+        document.getElementById('statusFilter').addEventListener('change', loadProjects);
+
+        // 初始載入
+        loadProjects();
+    </script>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>完整測試 - ONE桌遊報價系統</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+        }
+        .test-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ccc;
+        }
+        .pass {
+            background: #d1fae5;
+            border-left-color: #065f46;
+        }
+        .fail {
+            background: #fee2e2;
+            border-left-color: #991b1b;
+        }
+        .running {
+            background: #fef3c7;
+            border-left-color: #92400e;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            margin: 5px;
+            background: #667eea;
+            color: white;
+        }
+        pre {
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 5px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 完整系統測試</h1>
+        <button class="btn" onclick="runAllTests()">▶️ 執行所有測試</button>
+        <div id="results"></div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="ensure-data.js"></script>
+    <script>
+        const tests = [];
+        
+        function addTest(name, testFn) {
+            tests.push({ name, testFn });
+        }
+        
+        function log(html) {
+            document.getElementById('results').innerHTML += html;
+        }
+        
+        async function runAllTests() {
+            document.getElementById('results').innerHTML = '<h2>測試結果：</h2>';
+            
+            let passed = 0;
+            let failed = 0;
+            
+            for (const test of tests) {
+                log(`<div class="test-item running">🔄 測試中: ${test.name}</div>`);
+                
+                try {
+                    const result = await test.testFn();
+                    if (result.pass) {
+                        passed++;
+                        log(`<div class="test-item pass">✅ ${test.name}<br><small>${result.message || ''}</small></div>`);
+                    } else {
+                        failed++;
+                        log(`<div class="test-item fail">❌ ${test.name}<br><small>${result.message || '測試失敗'}</small></div>`);
+                    }
+                } catch (error) {
+                    failed++;
+                    log(`<div class="test-item fail">❌ ${test.name}<br><small>錯誤: ${error.message}</small></div>`);
+                }
+                
+                // 清除 running 狀態
+                const runningItems = document.querySelectorAll('.running');
+                runningItems.forEach(item => item.remove());
+            }
+            
+            log(`<h3>測試完成：✅ ${passed} 個通過 | ❌ ${failed} 個失敗</h3>`);
+        }
+        
+        // 測試 1: 數據初始化
+        addTest('數據初始化', () => {
+            if (typeof ensureDataInitialized === 'function') {
+                ensureDataInitialized();
+            }
+            
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            
+            return {
+                pass: projects.length > 0 && users.length > 0 && priceTable.length > 0,
+                message: `專案: ${projects.length}, 使用者: ${users.length}, 價格: ${priceTable.length}`
+            };
+        });
+        
+        // 測試 2: data.js 載入
+        addTest('data.js 載入', () => {
+            return {
+                pass: typeof initializeData === 'function',
+                message: 'initializeData 函數存在'
+            };
+        });
+        
+        // 測試 3: ensure-data.js 載入
+        addTest('ensure-data.js 載入', () => {
+            return {
+                pass: typeof ensureDataInitialized === 'function',
+                message: 'ensureDataInitialized 函數存在'
+            };
+        });
+        
+        // 測試 4: 專案數據結構
+        addTest('專案數據結構', () => {
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            
+            if (projects.length === 0) {
+                return { pass: false, message: '沒有專案數據' };
+            }
+            
+            const p = projects[0];
+            const hasRequired = p.id && p.storeName && p.totalAmount !== undefined;
+            
+            return {
+                pass: hasRequired,
+                message: `第一個專案: ${p.id} - ${p.storeName || '未命名'}`
+            };
+        });
+        
+        // 測試 5: 價格數據
+        addTest('價格數據', () => {
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            
+            return {
+                pass: priceTable.length >= 50,
+                message: `${priceTable.length} 個價格項目`
+            };
+        });
+        
+        // 測試 6: 使用者數據
+        addTest('使用者數據', () => {
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const hasAdmin = users.some(u => u.role === 'admin');
+            
+            return {
+                pass: users.length >= 3 && hasAdmin,
+                message: `${users.length} 個使用者，包含主管`
+            };
+        });
+        
+        // 測試 7: style.css Modal 樣式
+        addTest('Modal CSS 樣式', async () => {
+            try {
+                const response = await fetch('style.css');
+                const css = await response.text();
+                const hasModal = css.includes('.modal') && css.includes('.modal-content');
+                
+                return {
+                    pass: hasModal,
+                    message: hasModal ? 'Modal 樣式存在' : 'Modal 樣式缺失'
+                };
+            } catch (error) {
+                return { pass: false, message: '無法載入 style.css' };
+            }
+        });
+        
+        // 測試 8: project.html 存在
+        addTest('project.html 存在', async () => {
+            try {
+                const response = await fetch('project.html');
+                return {
+                    pass: response.ok,
+                    message: `HTTP ${response.status}`
+                };
+            } catch (error) {
+                return { pass: false, message: '檔案不存在' };
+            }
+        });
+        
+        // 測試 9: dashboard.html 存在
+        addTest('dashboard.html 存在', async () => {
+            try {
+                const response = await fetch('dashboard.html');
+                return {
+                    pass: response.ok,
+                    message: `HTTP ${response.status}`
+                };
+            } catch (error) {
+                return { pass: false, message: '檔案不存在' };
+            }
+        });
+        
+        // 測試 10: actions.js 存在
+        addTest('actions.js 存在', async () => {
+            try {
+                const response = await fetch('actions.js');
+                return {
+                    pass: response.ok,
+                    message: `HTTP ${response.status}`
+                };
+            } catch (error) {
+                return { pass: false, message: '檔案不存在' };
+            }
+        });
+    </script>
+</body>
+</html>

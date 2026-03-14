@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>價格管理 - ONE桌遊報價管理系統</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .modal-close {
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .modal-close:hover {
+            color: var(--danger);
+        }
+        
+        .form-row {
+            margin-bottom: 15px;
+        }
+        
+        .form-row label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .form-row input,
+        .form-row select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        
+        .form-row input:focus,
+        .form-row select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        /* 分組樣式 */
+        .category-group {
+            margin-bottom: 30px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .category-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .category-header:hover {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+        }
+
+        .category-header.collapsed {
+            background: #f7fafc;
+            color: #4a5568;
+        }
+
+        .category-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-count {
+            background: rgba(255,255,255,0.3);
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.85em;
+        }
+
+        .category-header.collapsed .category-count {
+            background: #e2e8f0;
+        }
+
+        .category-toggle {
+            font-size: 1.5em;
+            transition: transform 0.3s;
+        }
+
+        .category-header.collapsed .category-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .category-content {
+            max-height: 5000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .category-content.collapsed {
+            max-height: 0;
+        }
+
+        /* 細分類 */
+        .subcategory-group {
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .subcategory-header {
+            background: #f7fafc;
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .subcategory-header:hover {
+            background: #edf2f7;
+        }
+
+        .subcategory-title {
+            font-weight: 600;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .subcategory-count {
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            color: #4a5568;
+        }
+
+        .subcategory-toggle {
+            font-size: 1.2em;
+            color: #a0aec0;
+            transition: transform 0.3s;
+        }
+
+        .subcategory-header.collapsed .subcategory-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .subcategory-content {
+            max-height: 3000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .subcategory-content.collapsed {
+            max-height: 0;
+        }
+
+        /* 項目列表 */
+        .item-list {
+            padding: 10px;
+            background: white;
+        }
+
+        .price-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+
+        .price-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+            transform: translateX(5px);
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .item-details {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9em;
+            color: #718096;
+        }
+
+        .item-price {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .item-actions button {
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+
+        .search-highlight {
+            background: yellow;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" style="width: 35px; height: 35px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">
+            ONE桌遊報價管理系統
+        </div>
+        <div class="navbar-user">
+            <button class="btn-logout" onclick="location.href='dashboard.html'">← 返回</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">💰 價格資料庫</h2>
+                <button class="btn btn-primary" onclick="openAddModal()">➕ 新增項目</button>
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <input type="text" id="searchInput" placeholder="🔍 搜尋項目名稱..." 
+                       style="padding: 12px 20px; border: 2px solid var(--border); border-radius: 8px; width: 400px; font-size: 1em;">
+            </div>
+
+            <!-- 分組顯示區域 -->
+            <div id="groupedPrices"></div>
+        </div>
+    </div>
+
+    <!-- 新增/編輯 Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">新增項目</h3>
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+            </div>
+            
+            <form id="editForm">
+                <div class="form-row">
+                    <label>項目名稱 *</label>
+                    <input type="text" id="itemName" required placeholder="例如：輕隔間(15MM石膏板)">
+                </div>
+                
+                <div class="form-row">
+                    <label>單價 *</label>
+                    <input type="number" id="itemPrice" required min="0" placeholder="例如：3700">
+                </div>
+                
+                <div class="form-row" id="costFormRow">
+                    <label>成本</label>
+                    <input type="number" id="itemCost" min="0" placeholder="例如：3000">
+                </div>
+                
+                <div class="form-row" id="friendPriceFormRow">
+                    <label>友情價</label>
+                    <input type="number" id="itemFriendPrice" min="0" placeholder="例如：3300">
+                </div>
+                
+                <div class="form-row">
+                    <label>單位 *</label>
+                    <select id="itemUnit" required>
+                        <option value="坪">坪</option>
+                        <option value="式">式</option>
+                        <option value="組">組</option>
+                        <option value="台">台</option>
+                        <option value="套">套</option>
+                        <option value="箱">箱</option>
+                        <option value="顆">顆</option>
+                        <option value="米">米</option>
+                        <option value="次">次</option>
+                        <option value="片">片</option>
+                        <option value="個">個</option>
+                        <option value="支">支</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <label>分類 *</label>
+                    <select id="itemCategory" required>
+                        <option value="工班">工班</option>
+                        <option value="公司">公司</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <label>細分類</label>
+                    <select id="itemSubCategory">
+                        <option value="木工">木工</option>
+                        <option value="地板">地板</option>
+                        <option value="壁紙">壁紙</option>
+                        <option value="水電">水電</option>
+                        <option value="冷氣">冷氣</option>
+                        <option value="冷氣配件">冷氣配件</option>
+                        <option value="系統設備">系統設備</option>
+                        <option value="桌遊">桌遊</option>
+                        <option value="循環扇">循環扇</option>
+                        <option value="監視器">監視器</option>
+                        <option value="麻將桌">麻將桌</option>
+                        <option value="消防">消防</option>
+                    </select>
+                </div>
+                
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script>
+        let priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+        let editingItemId = null;
+        let collapsedCategories = JSON.parse(localStorage.getItem('collapsedCategories') || '{}');
+        let collapsedSubcategories = JSON.parse(localStorage.getItem('collapsedSubcategories') || '{}');
+        
+        // 權限控制：檢查是否能看到成本
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const canSeeCost = currentUser.role === 'admin' || currentUser.role === 'viewer';
+        
+        // 根據權限隱藏表單欄位
+        window.addEventListener('DOMContentLoaded', function() {
+            if (!canSeeCost) {
+                const costRow = document.getElementById('costFormRow');
+                const friendPriceRow = document.getElementById('friendPriceFormRow');
+                if (costRow) costRow.style.display = 'none';
+                if (friendPriceRow) friendPriceRow.style.display = 'none';
+            }
+        });
+        
+        function renderPrices() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            // 過濾項目
+            const filtered = priceTable.filter(item => 
+                item.name.toLowerCase().includes(searchTerm)
+            );
+
+            // 按分類分組
+            const grouped = {};
+            filtered.forEach(item => {
+                const category = item.category || '未分類';
+                const subCategory = item.subCategory || '其他';
+                
+                if (!grouped[category]) {
+                    grouped[category] = {};
+                }
+                if (!grouped[category][subCategory]) {
+                    grouped[category][subCategory] = [];
+                }
+                grouped[category][subCategory].push(item);
+            });
+
+            // 渲染分組
+            const container = document.getElementById('groupedPrices');
+            container.innerHTML = Object.keys(grouped).sort().map(category => {
+                const categoryItems = grouped[category];
+                const totalCount = Object.values(categoryItems).flat().length;
+                const isCollapsed = collapsedCategories[category] || false;
+                
+                return `
+                    <div class="category-group">
+                        <div class="category-header ${isCollapsed ? 'collapsed' : ''}" onclick="toggleCategory('${category}')">
+                            <div class="category-title">
+                                <span>${getCategoryIcon(category)} ${category}</span>
+                                <span class="category-count">${totalCount} 項</span>
+                            </div>
+                            <span class="category-toggle">▼</span>
+                        </div>
+                        <div class="category-content ${isCollapsed ? 'collapsed' : ''}">
+                            ${Object.keys(categoryItems).sort().map(subCategory => {
+                                const items = categoryItems[subCategory];
+                                const subKey = `${category}-${subCategory}`;
+                                const isSubCollapsed = collapsedSubcategories[subKey] || false;
+                                
+                                return `
+                                    <div class="subcategory-group">
+                                        <div class="subcategory-header ${isSubCollapsed ? 'collapsed' : ''}" onclick="toggleSubcategory('${category}', '${subCategory}')">
+                                            <div class="subcategory-title">
+                                                <span>${getSubCategoryIcon(subCategory)} ${subCategory}</span>
+                                                <span class="subcategory-count">${items.length}</span>
+                                            </div>
+                                            <span class="subcategory-toggle">▼</span>
+                                        </div>
+                                        <div class="subcategory-content ${isSubCollapsed ? 'collapsed' : ''}">
+                                            <div class="item-list">
+                                                ${items.map(item => renderItem(item, searchTerm)).join('')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderItem(item, searchTerm) {
+            const highlightName = searchTerm 
+                ? item.name.replace(new RegExp(searchTerm, 'gi'), match => `<span class="search-highlight">${match}</span>`)
+                : item.name;
+            
+            // 獲取當前用戶角色
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const canSeeCost = currentUser.role === 'admin' || currentUser.role === 'viewer';
+
+            return `
+                <div class="price-item">
+                    <div class="item-info">
+                        <div class="item-name">${highlightName}</div>
+                        <div class="item-details">
+                            <span class="item-price">$${item.price.toLocaleString()} / ${item.unit}</span>
+                            ${canSeeCost && item.cost ? `<span style="color: #e53e3e;">成本: $${item.cost.toLocaleString()}</span>` : ''}
+                            ${canSeeCost && item.friendPrice ? `<span style="color: #38a169;">友情價: $${item.friendPrice.toLocaleString()}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn btn-primary" onclick="editItem('${item.id}')">✏️ 編輯</button>
+                        <button class="btn btn-danger" onclick="deleteItem('${item.id}')">🗑️ 刪除</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getCategoryIcon(category) {
+            const icons = {
+                '工班': '🔨',
+                '公司': '🏢',
+                '未分類': '📦'
+            };
+            return icons[category] || '📁';
+        }
+
+        function getSubCategoryIcon(subCategory) {
+            const icons = {
+                '木工': '🪵',
+                '地板': '🟫',
+                '壁紙': '🎨',
+                '水電': '💡',
+                '冷氣': '❄️',
+                '冷氣配件': '🔧',
+                '系統設備': '💻',
+                '桌遊': '🎲',
+                '循環扇': '🌀',
+                '監視器': '📹',
+                '麻將桌': '🀄',
+                '消防': '🔥',
+                '其他': '📌'
+            };
+            return icons[subCategory] || '•';
+        }
+
+        function toggleCategory(category) {
+            collapsedCategories[category] = !collapsedCategories[category];
+            localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
+            renderPrices();
+        }
+
+        function toggleSubcategory(category, subCategory) {
+            const key = `${category}-${subCategory}`;
+            collapsedSubcategories[key] = !collapsedSubcategories[key];
+            localStorage.setItem('collapsedSubcategories', JSON.stringify(collapsedSubcategories));
+            renderPrices();
+        }
+
+        function openAddModal() {
+            editingItemId = null;
+            document.getElementById('modalTitle').textContent = '新增項目';
+            document.getElementById('editForm').reset();
+            
+            // 根據權限顯示/隱藏成本欄位
+            const costRow = document.getElementById('costFormRow');
+            const friendPriceRow = document.getElementById('friendPriceFormRow');
+            if (costRow) costRow.style.display = canSeeCost ? 'block' : 'none';
+            if (friendPriceRow) friendPriceRow.style.display = canSeeCost ? 'block' : 'none';
+            
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function editItem(id) {
+            const item = priceTable.find(i => i.id === id);
+            if (!item) return;
+            
+            editingItemId = id;
+            document.getElementById('modalTitle').textContent = '編輯項目';
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemPrice').value = item.price;
+            document.getElementById('itemCost').value = item.cost || '';
+            document.getElementById('itemFriendPrice').value = item.friendPrice || '';
+            document.getElementById('itemUnit').value = item.unit;
+            document.getElementById('itemCategory').value = item.category;
+            document.getElementById('itemSubCategory').value = item.subCategory || '';
+            
+            // 根據權限顯示/隱藏成本欄位
+            const costRow = document.getElementById('costFormRow');
+            const friendPriceRow = document.getElementById('friendPriceFormRow');
+            if (costRow) costRow.style.display = canSeeCost ? 'block' : 'none';
+            if (friendPriceRow) friendPriceRow.style.display = canSeeCost ? 'block' : 'none';
+            
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function deleteItem(id) {
+            const item = priceTable.find(i => i.id === id);
+            if (!item) return;
+            
+            if (confirm(`確定要刪除「${item.name}」嗎？`)) {
+                priceTable = priceTable.filter(i => i.id !== id);
+                localStorage.setItem('priceTable', JSON.stringify(priceTable));
+                renderPrices();
+                alert('刪除成功！');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('show');
+            editingItemId = null;
+        }
+
+        document.getElementById('editForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('itemName').value,
+                price: parseFloat(document.getElementById('itemPrice').value),
+                cost: parseFloat(document.getElementById('itemCost').value) || 0,
+                friendPrice: parseFloat(document.getElementById('itemFriendPrice').value) || 0,
+                unit: document.getElementById('itemUnit').value,
+                category: document.getElementById('itemCategory').value,
+                subCategory: document.getElementById('itemSubCategory').value
+            };
+            
+            if (editingItemId) {
+                // 編輯現有項目
+                const index = priceTable.findIndex(i => i.id === editingItemId);
+                if (index !== -1) {
+                    priceTable[index] = { ...priceTable[index], ...formData };
+                    alert('修改成功！');
+                }
+            } else {
+                // 新增項目
+                const newItem = {
+                    id: 'ITEM-' + String(priceTable.length + 1).padStart(3, '0'),
+                    sort: priceTable.length + 1,
+                    ...formData
+                };
+                priceTable.push(newItem);
+                alert('新增成功！');
+            }
+            
+            localStorage.setItem('priceTable', JSON.stringify(priceTable));
+            closeModal();
+            renderPrices();
+        });
+
+        document.getElementById('searchInput').addEventListener('input', renderPrices);
+        
+        // 點擊 modal 外部關閉
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+        
+        renderPrices();
+    </script>
+</body>
+</html>

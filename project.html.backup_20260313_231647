@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專案詳情 - ONE桌遊報價管理系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" style="width: 35px; height: 35px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">
+            ONE桌遊報價管理系統
+        </div>
+        <div class="navbar-user">
+            <div class="user-info">
+                <div class="user-name" id="userName"></div>
+                <div class="user-role" id="userRole"></div>
+            </div>
+            <button class="btn-logout" onclick="location.href='dashboard.html'">← 返回列表</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title" id="projectTitle">📋 專案詳情</h2>
+                <div>
+                    <span id="projectStatus" class="status-badge"></span>
+                </div>
+            </div>
+
+            <!-- 基本資訊 -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div>
+                    <strong>店名：</strong><span id="storeName"></span><br>
+                    <strong>地址：</strong><span id="address"></span><br>
+                    <strong>包廂數：</strong><span id="rooms"></span> 間<br>
+                    <strong>開放式：</strong><span id="openSeats"></span> 桌<br>
+                </div>
+                <div>
+                    <strong>聯絡人：</strong><span id="contact"></span><br>
+                    <strong>電話：</strong><span id="phone"></span><br>
+                    <strong>負責人：</strong><span id="assignee"></span><br>
+                </div>
+                <div>
+                    <strong>簽約日期：</strong><span id="signDate"></span><br>
+                    <strong>開工日期：</strong><span id="startDate"></span><br>
+                    <strong>預計完工：</strong><span id="expectedEndDate"></span><br>
+                </div>
+            </div>
+
+            <!-- 收款進度 -->
+            <h3>💰 收款明細</h3>
+            <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>合約總價：</span><strong id="totalAmount">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>已收金額：</span><strong id="paidAmount" style="color: var(--success);">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <span>待收金額：</span><strong id="pendingAmount" style="color: var(--danger);">$0</strong>
+                </div>
+                <div class="progress-bar" style="height: 20px;">
+                    <div class="progress-fill" id="paymentProgress"></div>
+                </div>
+                <div style="text-align: center; margin-top: 5px;" id="paymentPercent">0%</div>
+            </div>
+
+            <!-- 收款記錄 -->
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>期別</th>
+                        <th>金額</th>
+                        <th>付款方式</th>
+                        <th>收款人</th>
+                        <th>發票號碼</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="paymentsBody"></tbody>
+            </table>
+
+            <!-- 獲利分析（只有主管和會計能看） -->
+            <div id="profitAnalysis" style="display: none;">
+                <h3 style="margin-top: 40px;">📊 獲利分析</h3>
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; color: white; margin: 20px 0;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.3);">
+                                <span style="opacity: 0.9;">報價總額：</span>
+                                <strong style="font-size: 1.2em;" id="profitTotalAmount">$0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.3);">
+                                <span style="opacity: 0.9;">總成本：</span>
+                                <strong style="font-size: 1.2em; color: #fbbf24;" id="profitTotalCost">$0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="opacity: 0.9;">成本占比：</span>
+                                <strong style="font-size: 1.1em;" id="profitCostRatio">0%</strong>
+                            </div>
+                        </div>
+                        <div style="border-left: 2px solid rgba(255,255,255,0.3); padding-left: 20px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.3);">
+                                <span style="opacity: 0.9;">毛利：</span>
+                                <strong style="font-size: 1.4em; color: #34d399;" id="profitGrossProfit">$0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="opacity: 0.9;">毛利率：</span>
+                                <strong style="font-size: 1.6em; color: #34d399;" id="profitGrossMargin">0%</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.9em; opacity: 0.8;">
+                        💡 提示：成本來自價格表的成本欄位，若成本為 0 則該項目不計入成本計算
+                    </div>
+                </div>
+            </div>
+
+            <!-- 報價明細 -->
+            <h3 style="margin-top: 40px;">📋 報價明細</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>項目名稱</th>
+                        <th>數量</th>
+                        <th>單價</th>
+                        <th>小計</th>
+                        <th>備註</th>
+                    </tr>
+                </thead>
+                <tbody id="quoteItemsBody"></tbody>
+            </table>
+
+            <!-- 時間軸 -->
+            <h3 style="margin-top: 40px;">📅 專案時間軸</h3>
+            <div id="timeline" style="margin-top: 20px;"></div>
+
+            <!-- 操作按鈕區 -->
+            <div style="margin-top: 40px; padding-top: 30px; border-top: 2px solid #e2e8f0;">
+                <h3 style="margin-bottom: 20px;">🎯 專案操作</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <button class="btn btn-primary" onclick="openEditModal(projectId)">✏️ 編輯專案</button>
+                    <button class="btn btn-primary" onclick="openQuoteEditModal(projectId)">📝 修改報價數量</button>
+                    <button class="btn btn-primary" onclick="openStatusModal(projectId)">🔄 修改狀態</button>
+                    <button class="btn btn-primary" onclick="openPaymentModal(projectId)">💰 記錄收款</button>
+                    <button class="btn btn-primary" onclick="openProgressModal(projectId)">📊 更新進度</button>
+                    <button class="btn btn-primary" onclick="markAsCompleted(projectId)">✅ 標記完工</button>
+                    <button class="btn btn-primary" onclick="window.print()">📄 匯出PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 收款 Modal -->
+    <div class="modal" id="paymentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+            <div style="background: white; border-radius: 15px; padding: 30px; max-width: 500px; width: 90%;">
+                <h3>💰 記錄收款</h3>
+                <form id="paymentForm" onsubmit="event.preventDefault(); savePayment();">
+                    <input type="hidden" id="paymentProjectId">
+                    <div style="margin: 15px 0;">
+                        <label>收款日期</label>
+                        <input type="date" id="paymentDate" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                    </div>
+                    <div style="margin: 15px 0;">
+                        <label>期別</label>
+                        <select id="paymentType" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                            <option value="訂金">訂金</option>
+                            <option value="開工款">開工款</option>
+                            <option value="驗收款">驗收款</option>
+                            <option value="尾款">尾款</option>
+                        </select>
+                    </div>
+                    <div style="margin: 15px 0;">
+                        <label>收款金額</label>
+                        <input type="number" id="paymentAmount" required min="1" placeholder="例如：200000" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                    </div>
+                    <div style="margin: 15px 0;">
+                        <label>付款方式</label>
+                        <select id="paymentMethod" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                            <option value="銀行轉帳">銀行轉帳</option>
+                            <option value="現金">現金</option>
+                            <option value="支票">支票</option>
+                        </select>
+                    </div>
+                    <div style="margin: 15px 0;">
+                        <label>銀行帳號/支票號碼（選填）</label>
+                        <input type="text" id="paymentBank" placeholder="例如：007-1234567890" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                    </div>
+                    <div style="margin: 15px 0;">
+                        <label>發票號碼（選填）</label>
+                        <input type="text" id="paymentInvoice" placeholder="例如：AB12345678" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                    </div>
+                    <div style="margin: 15px 0;">
+                        <label>備註</label>
+                        <textarea id="paymentNote" rows="2" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="button" class="btn" onclick="closePaymentModal()" style="flex: 1; background: #e2e8f0; color: #4a5568;">取消</button>
+                        <button type="submit" class="btn btn-primary" style="flex: 1;">確認收款</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 進度更新 Modal -->
+    <div class="modal" id="progressModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+            <div style="background: white; border-radius: 15px; padding: 30px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+                <h3>📊 更新施工進度</h3>
+                <input type="hidden" id="progressProjectId">
+                <div id="progressList" style="margin: 20px 0;"></div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="closeProgressModal()" style="flex: 1; background: #e2e8f0; color: #4a5568;">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveProgress()" style="flex: 1;">儲存進度</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 編輯專案 Modal -->
+    <div class="modal" id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+            <div style="background: white; border-radius: 15px; padding: 30px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+                <h3>✏️ 編輯專案資料</h3>
+                <form id="editForm" onsubmit="event.preventDefault(); saveProjectEdit();">
+                    <input type="hidden" id="editProjectId">
+                    <div style="margin: 15px 0;">
+                        <label>店名 *</label>
+                        <input type="text" id="editStoreName" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                    </div>
+                    <div style="margin: 15px 0;">
+                        <label>地址 *</label>
+                        <input type="text" id="editAddress" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0;">
+                        <div>
+                            <label>聯絡人</label>
+                            <input type="text" id="editContact" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                        </div>
+                        <div>
+                            <label>電話</label>
+                            <input type="text" id="editPhone" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 15px 0;">
+                        <div>
+                            <label>包廂數</label>
+                            <input type="number" id="editRooms" min="0" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                        </div>
+                        <div>
+                            <label>開放式</label>
+                            <input type="number" id="editOpenSeats" min="0" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                        </div>
+                        <div>
+                            <label>坪數</label>
+                            <input type="number" id="editArea" min="0" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                        </div>
+                    </div>
+                    <div style="margin: 15px 0;">
+                        <label>報價總額</label>
+                        <input type="number" id="editTotalAmount" min="0" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="button" class="btn" onclick="closeEditModal()" style="flex: 1; background: #e2e8f0; color: #4a5568;">取消</button>
+                        <button type="submit" class="btn btn-primary" style="flex: 1;">儲存修改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改狀態 Modal -->
+    <div class="modal" id="statusModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+            <div style="background: white; border-radius: 15px; padding: 30px; max-width: 500px; width: 90%;">
+                <h3>🔄 修改專案狀態</h3>
+                <input type="hidden" id="statusProjectId">
+                <div style="margin: 20px 0;">
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">選擇新狀態：</label>
+                    <select id="newStatus" required style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1em;">
+                        <option value="draft">📝 草稿中</option>
+                        <option value="quoted">📋 已報價</option>
+                        <option value="signed">✍️ 已簽約</option>
+                        <option value="construction">🔨 施工中</option>
+                        <option value="completed">✅ 已完工</option>
+                        <option value="paid">💰 已結清</option>
+                    </select>
+                </div>
+                <div style="margin: 20px 0;">
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">備註說明：</label>
+                    <textarea id="statusNote" rows="3" placeholder="說明狀態變更原因..." style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="closeStatusModal()" style="flex: 1; background: #e2e8f0; color: #4a5568;">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveStatusChange()" style="flex: 1;">確認修改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改報價數量 Modal -->
+    <div class="modal" id="quoteEditModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; padding: 20px;">
+            <div style="background: white; border-radius: 15px; padding: 30px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto;">
+                <h3>📝 修改報價數量</h3>
+                <input type="hidden" id="quoteEditProjectId">
+                
+                <div style="background: #fffbeb; border: 2px solid #fbbf24; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                    <strong>💡 說明：</strong>
+                    <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
+                        <li>調整施工項目的實際數量</li>
+                        <li>系統會自動重新計算總金額</li>
+                        <li>原報價會保留為 v1，修改後建立 v2 版本</li>
+                        <li>所有歷史版本都會保留，可追溯</li>
+                    </ul>
+                </div>
+
+                <div style="margin: 20px 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4>報價項目清單</h4>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #059669;">
+                            新總額：$<span id="newTotalAmount">0</span>
+                        </div>
+                    </div>
+                    
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f3f4f6;">
+                                <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb;">項目名稱</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 90px;">原數量</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 90px;">新數量</th>
+                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 90px;">原單價</th>
+                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 90px;">新單價</th>
+                                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; width: 110px;">新小計</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; width: 60px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quoteItemsList"></tbody>
+                    </table>
+                </div>
+
+                <!-- 新增項目區塊 -->
+                <div style="margin: 20px 0; padding: 15px; background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 8px;">
+                    <h4 style="margin-bottom: 15px;">➕ 新增項目</h4>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: end;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">選擇項目</label>
+                            <select id="newItemSelect" style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px;">
+                                <option value="">-- 請選擇 --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">數量</label>
+                            <input type="number" id="newItemQty" min="0" step="0.1" placeholder="0" 
+                                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">單價</label>
+                            <input type="number" id="newItemPrice" min="0" placeholder="0" 
+                                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">小計</label>
+                            <input type="text" id="newItemTotal" readonly 
+                                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px; background: #f3f4f6;">
+                        </div>
+                        <div>
+                            <button onclick="addQuoteItem()" class="btn btn-primary" 
+                                    style="padding: 8px 16px; white-space: nowrap;">
+                                ➕ 加入
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin: 20px 0;">
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">變更原因：</label>
+                    <textarea id="quoteEditReason" rows="3" placeholder="例如：實際施工後數量調整..." style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="closeQuoteEditModal()" style="flex: 1; background: #e2e8f0; color: #4a5568;">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveQuoteEdit()" style="flex: 1;">確認修改（建立新版本）</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="actions.js"></script>
+    <script src="data.js"></script>
+    <script src="ensure-data.js"></script>
+    <script>
+        // 修改報價數量功能
+        function openQuoteEditModal(id) {
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === id);
+            if (!project) return;
+            
+            document.getElementById('quoteEditProjectId').value = id;
+            
+            // 取得最新版本的報價項目
+            const latestVersion = project.quoteVersions[project.quoteVersions.length - 1];
+            const items = latestVersion.items || [];
+            
+            // 渲染項目清單
+            const tbody = document.getElementById('quoteItemsList');
+            tbody.innerHTML = items.map((item, index) => `
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb;">${item.name}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; color: #6b7280;">${item.quantity}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">
+                        <input type="number" 
+                               id="newQty-${index}" 
+                               value="${item.quantity}" 
+                               min="0" 
+                               step="0.1"
+                               onchange="recalculateQuoteTotal()"
+                               style="width: 80px; padding: 5px; border: 2px solid #e2e8f0; border-radius: 4px; text-align: center;">
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; color: #6b7280;">$${item.price.toLocaleString()}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">
+                        <input type="number" 
+                               id="newPrice-${index}" 
+                               value="${item.price}" 
+                               min="0" 
+                               step="1"
+                               onchange="recalculateQuoteTotal()"
+                               style="width: 90px; padding: 5px; border: 2px solid #e2e8f0; border-radius: 4px; text-align: right;">
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold;" id="newSubtotal-${index}">$${item.total.toLocaleString()}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">
+                        <button onclick="deleteQuoteItem(${index})" 
+                                style="padding: 5px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // 載入價格表到下拉選單（按分類分組）
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            const newItemSelect = document.getElementById('newItemSelect');
+            
+            // 按照大分類和子分類分組
+            const grouped = {};
+            priceTable.forEach((item, idx) => {
+                const category = item.category || '未分類';
+                const subCategory = item.subCategory || '其他';
+                
+                if (!grouped[category]) grouped[category] = {};
+                if (!grouped[category][subCategory]) grouped[category][subCategory] = [];
+                
+                grouped[category][subCategory].push({ ...item, idx });
+            });
+            
+            // 生成分組選項
+            let optionsHTML = '<option value="">-- 請選擇項目 --</option>';
+            
+            // 先顯示公司分類
+            if (grouped['公司']) {
+                optionsHTML += '<optgroup label="🏢 公司">';
+                Object.keys(grouped['公司']).sort().forEach(subCat => {
+                    optionsHTML += `<optgroup label="　└ ${subCat}">`;
+                    grouped['公司'][subCat].forEach(item => {
+                        optionsHTML += `<option value="${item.idx}">　　${item.name} ($${item.price.toLocaleString()} / ${item.unit})</option>`;
+                    });
+                    optionsHTML += '</optgroup>';
+                });
+                optionsHTML += '</optgroup>';
+            }
+            
+            // 再顯示工班分類
+            if (grouped['工班']) {
+                optionsHTML += '<optgroup label="🔨 工班">';
+                Object.keys(grouped['工班']).sort().forEach(subCat => {
+                    optionsHTML += `<optgroup label="　└ ${subCat}">`;
+                    grouped['工班'][subCat].forEach(item => {
+                        optionsHTML += `<option value="${item.idx}">　　${item.name} ($${item.price.toLocaleString()} / ${item.unit})</option>`;
+                    });
+                    optionsHTML += '</optgroup>';
+                });
+                optionsHTML += '</optgroup>';
+            }
+            
+            newItemSelect.innerHTML = optionsHTML;
+            
+            // 監聽選擇變更
+            newItemSelect.onchange = function() {
+                const idx = this.value;
+                if (idx === '') {
+                    document.getElementById('newItemPrice').value = '';
+                    return;
+                }
+                const item = priceTable[idx];
+                document.getElementById('newItemPrice').value = item.price;
+                calculateNewItemTotal();
+            };
+            
+            // 監聽數量和單價變更
+            document.getElementById('newItemQty').oninput = calculateNewItemTotal;
+            document.getElementById('newItemPrice').oninput = calculateNewItemTotal;
+            
+            // 清空新增項目暫存
+            quoteItemsToDelete = [];
+            newQuoteItems = [];
+            
+            recalculateQuoteTotal();
+            document.getElementById('quoteEditModal').classList.add('show');
+        }
+        
+        function closeQuoteEditModal() {
+            document.getElementById('quoteEditModal').classList.remove('show');
+            quoteItemsToDelete = [];
+            newQuoteItems = [];
+        }
+        
+        // 報價項目刪除和新增的暫存
+        let quoteItemsToDelete = [];
+        let newQuoteItems = [];
+        
+        // 計算新增項目小計
+        function calculateNewItemTotal() {
+            const qty = parseFloat(document.getElementById('newItemQty').value) || 0;
+            const price = parseFloat(document.getElementById('newItemPrice').value) || 0;
+            document.getElementById('newItemTotal').value = '$' + (qty * price).toLocaleString();
+        }
+        
+        // 刪除報價項目
+        function deleteQuoteItem(index) {
+            if (!confirm('確定要刪除此項目嗎？')) return;
+            
+            if (!quoteItemsToDelete.includes(index)) {
+                quoteItemsToDelete.push(index);
+            }
+            
+            // 隱藏該行
+            const rows = document.querySelectorAll('#quoteItemsList tr');
+            if (rows[index]) {
+                rows[index].style.opacity = '0.3';
+                rows[index].style.textDecoration = 'line-through';
+            }
+            
+            recalculateQuoteTotal();
+        }
+        
+        // 新增報價項目
+        function addQuoteItem() {
+            const selectIdx = document.getElementById('newItemSelect').value;
+            if (selectIdx === '') {
+                alert('請選擇項目！');
+                return;
+            }
+            
+            const qty = parseFloat(document.getElementById('newItemQty').value);
+            if (!qty || qty <= 0) {
+                alert('請輸入數量！');
+                return;
+            }
+            
+            const price = parseFloat(document.getElementById('newItemPrice').value);
+            if (!price || price <= 0) {
+                alert('請輸入單價！');
+                return;
+            }
+            
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            const item = priceTable[selectIdx];
+            
+            const newItem = {
+                itemId: 'ITEM-NEW-' + (newQuoteItems.length + 1),
+                name: item.name,
+                quantity: qty,
+                price: price,
+                total: qty * price,
+                note: '新增項目'
+            };
+            
+            newQuoteItems.push(newItem);
+            
+            // 加到表格
+            const tbody = document.getElementById('quoteItemsList');
+            const newRowIndex = tbody.querySelectorAll('tr').length;
+            const newRow = `
+                <tr style="background: #ecfdf5;" data-new-item="${newQuoteItems.length - 1}">
+                    <td style="padding: 10px; border: 1px solid #e5e7eb;">${newItem.name} <span style="color: #059669; font-weight: bold;">✨ 新增</span></td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; color: #6b7280;">-</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; font-weight: bold;">${newItem.quantity}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; color: #6b7280;">-</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold;">$${newItem.price.toLocaleString()}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold; color: #059669;">$${newItem.total.toLocaleString()}</td>
+                    <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">
+                        <button onclick="removeNewItem(${newQuoteItems.length - 1})" 
+                                style="padding: 5px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', newRow);
+            
+            // 清空表單
+            document.getElementById('newItemSelect').value = '';
+            document.getElementById('newItemQty').value = '';
+            document.getElementById('newItemPrice').value = '';
+            document.getElementById('newItemTotal').value = '';
+            
+            recalculateQuoteTotal();
+            
+            alert('✅ 項目已加入！記得點擊「確認修改」儲存變更。');
+        }
+        
+        // 移除新增的項目
+        function removeNewItem(index) {
+            newQuoteItems.splice(index, 1);
+            
+            // 重新載入（簡單方式）
+            const tbody = document.getElementById('quoteItemsList');
+            const rows = tbody.querySelectorAll('tr[data-new-item]');
+            rows.forEach(row => row.remove());
+            
+            // 重新加入剩餘的新項目
+            newQuoteItems.forEach((item, idx) => {
+                const newRow = `
+                    <tr style="background: #ecfdf5;" data-new-item="${idx}">
+                        <td style="padding: 10px; border: 1px solid #e5e7eb;">${item.name} <span style="color: #059669; font-weight: bold;">✨ 新增</span></td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; color: #6b7280;">-</td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; font-weight: bold;">${item.quantity}</td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; color: #6b7280;">-</td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold;">$${item.price.toLocaleString()}</td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold; color: #059669;">$${item.total.toLocaleString()}</td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">
+                            <button onclick="removeNewItem(${idx})" 
+                                    style="padding: 5px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', newRow);
+            });
+            
+            recalculateQuoteTotal();
+        }
+        
+        function recalculateQuoteTotal() {
+            let total = 0;
+            const tbody = document.getElementById('quoteItemsList');
+            const rows = tbody.querySelectorAll('tr:not([data-new-item])'); // 排除新增項目
+            
+            rows.forEach((row, index) => {
+                // 跳過被刪除的項目
+                if (quoteItemsToDelete.includes(index)) {
+                    return;
+                }
+                
+                const qtyInput = document.getElementById(`newQty-${index}`);
+                const priceInput = document.getElementById(`newPrice-${index}`);
+                
+                if (qtyInput && priceInput) {
+                    const qty = parseFloat(qtyInput.value) || 0;
+                    const price = parseFloat(priceInput.value) || 0;
+                    const subtotal = qty * price;
+                    
+                    const subtotalEl = document.getElementById(`newSubtotal-${index}`);
+                    if (subtotalEl) {
+                        subtotalEl.textContent = `$${subtotal.toLocaleString()}`;
+                    }
+                    total += subtotal;
+                }
+            });
+            
+            // 加入新增項目的總額
+            newQuoteItems.forEach(item => {
+                total += item.total;
+            });
+            
+            document.getElementById('newTotalAmount').textContent = total.toLocaleString();
+        }
+        
+        function saveQuoteEdit() {
+            const projectId = document.getElementById('quoteEditProjectId').value;
+            const reason = document.getElementById('quoteEditReason').value || '報價調整';
+            
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            if (!project) return;
+            
+            const latestVersion = project.quoteVersions[project.quoteVersions.length - 1];
+            const oldItems = latestVersion.items || [];
+            
+            // 收集修改後的項目（排除被刪除的）
+            const updatedItems = oldItems
+                .filter((item, index) => !quoteItemsToDelete.includes(index))
+                .map((item, index) => {
+                    const qtyInput = document.getElementById(`newQty-${index}`);
+                    const priceInput = document.getElementById(`newPrice-${index}`);
+                    
+                    if (!qtyInput || !priceInput) return item;
+                    
+                    const newQty = parseFloat(qtyInput.value) || 0;
+                    const newPrice = parseFloat(priceInput.value) || 0;
+                    
+                    return {
+                        ...item,
+                        quantity: newQty,
+                        price: newPrice,
+                        total: newQty * newPrice
+                    };
+                });
+            
+            // 加入新增的項目
+            const finalItems = [...updatedItems, ...newQuoteItems];
+            
+            // 計算新總額
+            const newTotalAmount = finalItems.reduce((sum, item) => sum + item.total, 0);
+            
+            // 建立新版本
+            const changeNote = [];
+            if (quoteItemsToDelete.length > 0) changeNote.push(`刪除 ${quoteItemsToDelete.length} 項`);
+            if (newQuoteItems.length > 0) changeNote.push(`新增 ${newQuoteItems.length} 項`);
+            const changeSummary = changeNote.length > 0 ? `（${changeNote.join('，')}）` : '';
+            
+            const newVersion = {
+                version: 'v' + (project.quoteVersions.length + 1),
+                date: new Date().toISOString().split('T')[0],
+                totalAmount: newTotalAmount,
+                operator: JSON.parse(localStorage.getItem('currentUser')).id,
+                reason: reason,
+                note: `報價調整${changeSummary}`,
+                items: finalItems
+            };
+            
+            project.quoteVersions.push(newVersion);
+            project.totalAmount = newTotalAmount;
+            
+            // 記錄到時間軸
+            if (!project.statusLogs) project.statusLogs = [];
+            project.statusLogs.push({
+                date: newVersion.date,
+                status: '報價修改',
+                operator: newVersion.operator,
+                note: `${reason}，總額：$${latestVersion.totalAmount.toLocaleString()} → $${newTotalAmount.toLocaleString()}${changeSummary}`
+            });
+            
+            localStorage.setItem('projects', JSON.stringify(projects));
+            
+            // 清空暫存
+            quoteItemsToDelete = [];
+            newQuoteItems = [];
+            
+            alert(`✅ 報價已更新！\n\n原總額：$${latestVersion.totalAmount.toLocaleString()}\n新總額：$${newTotalAmount.toLocaleString()}\n版本：${newVersion.version}${changeNote.length > 0 ? '\n\n變更：' + changeNote.join('，') : ''}`);
+            closeQuoteEditModal();
+            location.reload();
+        }
+        
+        // 編輯收款記錄
+        function editPayment(projectId, paymentIndex) {
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            if (!project || !project.payments || !project.payments[paymentIndex]) return;
+            
+            const payment = project.payments[paymentIndex];
+            
+            // 填入現有數據到收款 Modal
+            document.getElementById('paymentProjectId').value = projectId;
+            document.getElementById('paymentDate').value = payment.date;
+            document.getElementById('paymentType').value = payment.type;
+            document.getElementById('paymentAmount').value = payment.amount;
+            document.getElementById('paymentMethod').value = payment.method;
+            document.getElementById('paymentBank').value = payment.bankAccount || '';
+            document.getElementById('paymentInvoice').value = payment.invoice || '';
+            document.getElementById('paymentNote').value = payment.note || '';
+            
+            // 儲存索引供 savePayment 使用
+            document.getElementById('paymentForm').dataset.editIndex = paymentIndex;
+            
+            // 打開 Modal
+            document.getElementById('paymentModal').classList.add('show');
+        }
+        
+        // 刪除收款記錄
+        function deletePayment(projectId, paymentIndex) {
+            if (!confirm('確定要刪除這筆收款記錄嗎？')) return;
+            
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            if (!project || !project.payments) return;
+            
+            const deletedPayment = project.payments[paymentIndex];
+            
+            // 扣除已收金額
+            project.paidAmount -= deletedPayment.amount;
+            
+            // 刪除收款記錄
+            project.payments.splice(paymentIndex, 1);
+            
+            // 記錄到時間軸
+            if (!project.statusLogs) project.statusLogs = [];
+            project.statusLogs.push({
+                date: new Date().toISOString().split('T')[0],
+                status: '刪除收款記錄',
+                operator: JSON.parse(localStorage.getItem('currentUser')).id,
+                note: `刪除 ${deletedPayment.type} $${deletedPayment.amount.toLocaleString()}，已收款調整為 $${project.paidAmount.toLocaleString()}`
+            });
+            
+            // 如果已收款小於總額且狀態是已結清，改回已完工
+            if (project.paidAmount < project.totalAmount && project.status === 'paid') {
+                project.status = 'completed';
+            }
+            
+            localStorage.setItem('projects', JSON.stringify(projects));
+            
+            alert('收款記錄已刪除！');
+            location.reload();
+        }
+        
+        // 編輯專案功能
+        function openEditModal(id) {
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === id);
+            if (!project) return;
+            
+            document.getElementById('editProjectId').value = id;
+            document.getElementById('editStoreName').value = project.storeName;
+            document.getElementById('editAddress').value = project.address;
+            document.getElementById('editContact').value = project.contact || '';
+            document.getElementById('editPhone').value = project.phone || '';
+            document.getElementById('editRooms').value = project.rooms || 0;
+            document.getElementById('editOpenSeats').value = project.openSeats || 0;
+            document.getElementById('editArea').value = project.area || 0;
+            document.getElementById('editTotalAmount').value = project.totalAmount || 0;
+            
+            document.getElementById('editModal').classList.add('show');
+        }
+        
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('show');
+        }
+        
+        function saveProjectEdit() {
+            const projectId = document.getElementById('editProjectId').value;
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            
+            if (!project) return;
+            
+            project.storeName = document.getElementById('editStoreName').value;
+            project.address = document.getElementById('editAddress').value;
+            project.contact = document.getElementById('editContact').value;
+            project.phone = document.getElementById('editPhone').value;
+            project.rooms = parseInt(document.getElementById('editRooms').value) || 0;
+            project.openSeats = parseInt(document.getElementById('editOpenSeats').value) || 0;
+            project.area = parseInt(document.getElementById('editArea').value) || 0;
+            project.totalAmount = parseFloat(document.getElementById('editTotalAmount').value) || 0;
+            
+            // 記錄到時間軸
+            if (!project.statusLogs) project.statusLogs = [];
+            project.statusLogs.push({
+                date: new Date().toISOString().split('T')[0],
+                status: '專案資料修改',
+                operator: JSON.parse(localStorage.getItem('currentUser')).id,
+                note: '更新基本資料'
+            });
+            
+            localStorage.setItem('projects', JSON.stringify(projects));
+            
+            alert('修改成功！');
+            closeEditModal();
+            location.reload();
+        }
+        
+        // 修改狀態功能
+        function openStatusModal(id) {
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === id);
+            if (!project) return;
+            
+            document.getElementById('statusProjectId').value = id;
+            document.getElementById('newStatus').value = project.status;
+            
+            document.getElementById('statusModal').classList.add('show');
+        }
+        
+        function closeStatusModal() {
+            document.getElementById('statusModal').classList.remove('show');
+        }
+        
+        function saveStatusChange() {
+            const projectId = document.getElementById('statusProjectId').value;
+            const newStatus = document.getElementById('newStatus').value;
+            const note = document.getElementById('statusNote').value || '手動修改狀態';
+            
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            
+            if (!project) return;
+            
+            const oldStatus = project.status;
+            project.status = newStatus;
+            
+            // 記錄到時間軸
+            if (!project.statusLogs) project.statusLogs = [];
+            project.statusLogs.push({
+                date: new Date().toISOString().split('T')[0],
+                status: '狀態變更',
+                operator: JSON.parse(localStorage.getItem('currentUser')).id,
+                note: `${oldStatus} → ${newStatus}: ${note}`
+            });
+            
+            localStorage.setItem('projects', JSON.stringify(projects));
+            
+            alert('狀態已修改！');
+            closeStatusModal();
+            location.reload();
+        }
+    </script>
+    <style>
+        .modal.show { display: block !important; }
+        @media print {
+            .navbar, .btn, button, .modal { display: none !important; }
+        }
+    </style>
+    <script>
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) location.href = 'index.html';
+
+        const roleNames = {'admin': '主管', 'staff': '員工', 'viewer': '會計（查看）'};
+        document.getElementById('userName').textContent = currentUser.avatar + ' ' + currentUser.name;
+        document.getElementById('userRole').textContent = roleNames[currentUser.role];
+
+        // 🔧 強制數據初始化
+        console.log('=== 開始載入專案數據 ===');
+        
+        // 檢查並初始化數據
+        let initAttempted = false;
+        if (typeof ensureDataInitialized === 'function') {
+            console.log('執行 ensureDataInitialized()...');
+            ensureDataInitialized();
+            initAttempted = true;
+        } else {
+            console.error('❌ ensureDataInitialized 函數不存在！');
+        }
+        
+        // 檢查數據是否存在
+        let projectsData = localStorage.getItem('projects');
+        let usersData = localStorage.getItem('users');
+        
+        console.log('Projects 數據:', projectsData ? '✅ 存在' : '❌ 不存在');
+        console.log('Users 數據:', usersData ? '✅ 存在' : '❌ 不存在');
+        
+        // 如果數據不存在且沒有初始化，強制初始化
+        if ((!projectsData || !usersData) && typeof initializeData === 'function') {
+            console.log('⚠️ 數據缺失，強制執行 initializeData()...');
+            initializeData();
+            projectsData = localStorage.getItem('projects');
+            usersData = localStorage.getItem('users');
+            console.log('初始化後 Projects:', projectsData ? '✅ 存在' : '❌ 仍不存在');
+            console.log('初始化後 Users:', usersData ? '✅ 存在' : '❌ 仍不存在');
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('id');
+        console.log('專案 ID:', projectId);
+
+        const projects = JSON.parse(projectsData || '[]');
+        const users = JSON.parse(usersData || '[]');
+        
+        console.log('專案數量:', projects.length);
+        console.log('使用者數量:', users.length);
+        
+        const project = projects.find(p => p.id === projectId);
+
+        if (!project) {
+            console.error('❌ 找不到專案:', projectId);
+            console.log('可用專案 IDs:', projects.map(p => p.id).join(', '));
+            
+            alert('專案不存在！\n\n專案 ID: ' + projectId + '\n可用專案: ' + projects.length + ' 個\n\n請檢查 Console 查看詳細資訊。');
+            
+            // 不立即跳轉，讓用戶看 Console
+            setTimeout(() => {
+                if (confirm('要返回儀表板嗎？')) {
+                    location.href = 'dashboard.html';
+                }
+            }, 1000);
+            throw new Error('專案不存在');
+        }
+        
+        console.log('✅ 找到專案:', project.storeName || '(無店名)');
+        console.log('專案數據:', project);
+
+        const statusLabels = {
+            'draft': '草稿中',
+            'quoted': '已報價',
+            'signed': '已簽約',
+            'construction': '施工中',
+            'completed': '已完工',
+            'paid': '已結清'
+        };
+
+        // 顯示基本資訊
+        console.log('=== 開始顯示專案資訊 ===');
+        console.log('ID:', project.id);
+        console.log('店名:', project.storeName);
+        console.log('地址:', project.address);
+        console.log('包廂數:', project.rooms);
+        console.log('開放式:', project.openSeats);
+        console.log('聯絡人:', project.contact);
+        console.log('電話:', project.phone);
+        console.log('狀態:', project.status);
+        console.log('總價:', project.totalAmount);
+        
+        document.getElementById('projectTitle').textContent = `${project.id || '未知'} - ${project.storeName || '未命名'}`;
+        document.getElementById('projectStatus').textContent = statusLabels[project.status] || '未知狀態';
+        document.getElementById('projectStatus').className = 'status-badge status-' + (project.status || 'draft');
+        document.getElementById('storeName').textContent = project.storeName || '-';
+        document.getElementById('address').textContent = project.address || '-';
+        document.getElementById('rooms').textContent = project.rooms || 0;
+        document.getElementById('openSeats').textContent = project.openSeats || 0;
+        document.getElementById('contact').textContent = project.contact || '-';
+        document.getElementById('phone').textContent = project.phone || '-';
+        
+        const assignee = users.find(u => u.id === project.assignee);
+        document.getElementById('assignee').textContent = assignee ? assignee.name : '-';
+        document.getElementById('signDate').textContent = project.signDate || '-';
+        document.getElementById('startDate').textContent = project.startDate || '-';
+        document.getElementById('expectedEndDate').textContent = project.expectedEndDate || '-';
+
+        // 收款資訊
+        const pending = project.totalAmount - project.paidAmount;
+        const percent = Math.round((project.paidAmount / project.totalAmount) * 100);
+        document.getElementById('totalAmount').textContent = '$' + project.totalAmount.toLocaleString();
+        document.getElementById('paidAmount').textContent = '$' + project.paidAmount.toLocaleString();
+        document.getElementById('pendingAmount').textContent = '$' + pending.toLocaleString();
+        document.getElementById('paymentProgress').style.width = percent + '%';
+        document.getElementById('paymentPercent').textContent = percent + '%';
+
+        // 收款記錄
+        const paymentsBody = document.getElementById('paymentsBody');
+        paymentsBody.innerHTML = (project.payments || []).map((pay, index) => {
+            const receiver = users.find(u => u.id === pay.receiver);
+            return `
+                <tr>
+                    <td>${pay.date}</td>
+                    <td>${pay.type}</td>
+                    <td><strong>$${pay.amount.toLocaleString()}</strong></td>
+                    <td>${pay.method}</td>
+                    <td>${receiver ? receiver.name : '-'}</td>
+                    <td>${pay.invoice || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm" onclick="editPayment(projectId, ${index})" style="padding: 5px 10px; font-size: 0.85em; background: #3b82f6;">✏️ 編輯</button>
+                        <button class="btn btn-sm" onclick="deletePayment(projectId, ${index})" style="padding: 5px 10px; font-size: 0.85em; background: #ef4444; margin-left: 5px;">🗑️ 刪除</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        // 報價明細
+        const latestQuote = project.quoteVersions[project.quoteVersions.length - 1];
+        const quoteItemsBody = document.getElementById('quoteItemsBody');
+        quoteItemsBody.innerHTML = latestQuote.items.map(item => `
+            <tr>
+                <td>${item.name}</td>
+                <td>${item.quantity}</td>
+                <td>$${item.price.toLocaleString()}</td>
+                <td><strong>$${item.total.toLocaleString()}</strong></td>
+                <td>${item.note}</td>
+            </tr>
+        `).join('') + `
+            <tr style="background: #f7fafc; font-weight: bold;">
+                <td colspan="3" style="text-align: right;">總計</td>
+                <td>$${project.totalAmount.toLocaleString()}</td>
+                <td></td>
+            </tr>
+        `;
+
+        // 獲利分析（只有主管和會計能看）
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const canSeeCost = currentUser.role === 'admin' || currentUser.role === 'viewer';
+        
+        if (canSeeCost) {
+            // 顯示獲利分析區塊
+            document.getElementById('profitAnalysis').style.display = 'block';
+            
+            // 計算總成本（從價格表取得每個項目的成本）
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            let totalCost = 0;
+            
+            latestQuote.items.forEach(item => {
+                // 從價格表找到對應項目
+                const priceItem = priceTable.find(p => p.name === item.name);
+                if (priceItem && priceItem.cost) {
+                    // 成本 = 數量 × 單位成本
+                    totalCost += item.quantity * priceItem.cost;
+                }
+            });
+            
+            // 計算獲利數據
+            const grossProfit = project.totalAmount - totalCost;
+            const grossMargin = totalCost > 0 ? (grossProfit / project.totalAmount * 100) : 0;
+            const costRatio = totalCost > 0 ? (totalCost / project.totalAmount * 100) : 0;
+            
+            // 更新顯示
+            document.getElementById('profitTotalAmount').textContent = '$' + project.totalAmount.toLocaleString();
+            document.getElementById('profitTotalCost').textContent = '$' + totalCost.toLocaleString();
+            document.getElementById('profitGrossProfit').textContent = '$' + grossProfit.toLocaleString();
+            document.getElementById('profitGrossMargin').textContent = grossMargin.toFixed(1) + '%';
+            document.getElementById('profitCostRatio').textContent = costRatio.toFixed(1) + '%';
+        }
+
+        // 時間軸
+        const timeline = document.getElementById('timeline');
+        timeline.innerHTML = project.statusLogs.map(log => {
+            const operator = users.find(u => u.id === log.operator);
+            return `
+                <div style="border-left: 3px solid var(--primary); padding-left: 15px; margin-bottom: 20px;">
+                    <div style="color: var(--primary); font-weight: bold;">${log.date} - ${log.status}</div>
+                    <div style="color: #666; margin-top: 5px;">${log.note}</div>
+                    <div style="color: #999; font-size: 0.9em; margin-top: 3px;">操作人: ${operator ? operator.name : '-'}</div>
+                </div>
+            `;
+        }).reverse().join('');
+        
+        // ===== 功能 4：刪除施工進度記錄 =====
+        function deleteProgress(projectId, progressIndex) {
+            if (!confirm('確定要刪除此進度記錄嗎？')) return;
+            
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            
+            if (!project || !project.progress || !project.progress[progressIndex]) return;
+            
+            const deletedItem = project.progress[progressIndex];
+            project.progress.splice(progressIndex, 1);
+            
+            // 記錄到時間軸
+            if (!project.statusLogs) project.statusLogs = [];
+            project.statusLogs.push({
+                date: new Date().toISOString().split('T')[0],
+                status: '刪除進度記錄',
+                operator: JSON.parse(localStorage.getItem('currentUser')).id,
+                note: `刪除「${deletedItem.item}」進度記錄（${deletedItem.progress}%）`
+            });
+            
+            localStorage.setItem('projects', JSON.stringify(projects));
+            
+            alert('✅ 進度記錄已刪除！');
+            location.reload();
+        }
+        
+        // ===== 功能 5：刪除報價版本 =====
+        function deleteQuoteVersion(projectId, versionIndex) {
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            
+            if (!project || !project.quoteVersions) return;
+            
+            // 防呆檢查
+            if (versionIndex === 0) {
+                alert('❌ 不能刪除原始報價（v1）！');
+                return;
+            }
+            
+            if (versionIndex === project.quoteVersions.length - 1) {
+                alert('❌ 不能刪除最新版本！\\n\\n請先建立新版本再刪除此版本。');
+                return;
+            }
+            
+            const deletedVersion = project.quoteVersions[versionIndex];
+            
+            if (!confirm(`確定要刪除「${deletedVersion.version}」嗎？\\n\\n日期：${deletedVersion.date}\\n總額：$${deletedVersion.totalAmount.toLocaleString()}\\n原因：${deletedVersion.reason}\\n\\n⚠️ 刪除後無法復原！`)) {
+                return;
+            }
+            
+            project.quoteVersions.splice(versionIndex, 1);
+            
+            // 重新編號版本
+            project.quoteVersions.forEach((ver, idx) => {
+                ver.version = 'v' + (idx + 1);
+            });
+            
+            // 記錄到時間軸
+            if (!project.statusLogs) project.statusLogs = [];
+            project.statusLogs.push({
+                date: new Date().toISOString().split('T')[0],
+                status: '刪除報價版本',
+                operator: JSON.parse(localStorage.getItem('currentUser')).id,
+                note: `刪除報價版本（原 ${deletedVersion.version}），原因：${deletedVersion.reason}`
+            });
+            
+            localStorage.setItem('projects', JSON.stringify(projects));
+            
+            alert('✅ 報價版本已刪除！\\n\\n版本編號已重新整理。');
+            location.reload();
+        }
+        
+        // ===== 功能 7：回復報價版本 =====
+        function restoreQuoteVersion(projectId, versionIndex) {
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            
+            if (!project || !project.quoteVersions) return;
+            
+            const targetVersion = project.quoteVersions[versionIndex];
+            
+            if (!confirm(`確定要回復到「${targetVersion.version}」嗎？\\n\\n日期：${targetVersion.date}\\n總額：$${targetVersion.totalAmount.toLocaleString()}\\n原因：${targetVersion.reason}\\n\\n這會建立一個新版本（v${project.quoteVersions.length + 1}），保留當前報價的歷史記錄。`)) {
+                return;
+            }
+            
+            // 建立新版本（複製舊版本的內容）
+            const newVersion = {
+                version: 'v' + (project.quoteVersions.length + 1),
+                date: new Date().toISOString().split('T')[0],
+                totalAmount: targetVersion.totalAmount,
+                operator: JSON.parse(localStorage.getItem('currentUser')).id,
+                reason: `回復到 ${targetVersion.version}`,
+                note: `回復報價內容（原版本：${targetVersion.version}，日期：${targetVersion.date}）`,
+                items: JSON.parse(JSON.stringify(targetVersion.items)) // 深拷貝
+            };
+            
+            project.quoteVersions.push(newVersion);
+            project.totalAmount = newVersion.totalAmount;
+            
+            // 記錄到時間軸
+            if (!project.statusLogs) project.statusLogs = [];
+            project.statusLogs.push({
+                date: newVersion.date,
+                status: '回復報價版本',
+                operator: newVersion.operator,
+                note: `回復到 ${targetVersion.version}（${targetVersion.date}），總額：$${newVersion.totalAmount.toLocaleString()}`
+            });
+            
+            localStorage.setItem('projects', JSON.stringify(projects));
+            
+            alert(`✅ 已回復到 ${targetVersion.version}！\\n\\n建立新版本：${newVersion.version}\\n總額：$${newVersion.totalAmount.toLocaleString()}`);
+            location.reload();
+        }
+    </script>
+</body>
+</html>
