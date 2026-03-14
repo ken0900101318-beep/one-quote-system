@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分類設定 - ONE桌遊報價管理系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" style="width: 35px; height: 35px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">
+            ONE桌遊報價管理系統
+        </div>
+        <div class="navbar-user">
+            <div class="user-info">
+                <div class="user-name" id="userName">載入中...</div>
+                <div class="user-role" id="userRole">-</div>
+            </div>
+            <button class="btn-logout" onclick="location.href='dashboard.html'">← 返回首頁</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🗂️ 分類設定</h2>
+            </div>
+
+            <div style="margin-bottom: 30px;">
+                <h3>主分類管理</h3>
+                <div id="mainCategoriesList" style="margin: 20px 0;"></div>
+                <button class="btn btn-primary" onclick="addMainCategory()">➕ 新增主分類</button>
+            </div>
+
+            <div style="margin-bottom: 30px;">
+                <h3>子分類管理</h3>
+                <div style="margin-bottom: 15px;">
+                    <label>選擇主分類：</label>
+                    <select id="mainCategorySelect" onchange="loadSubCategories()" style="padding: 10px; border: 2px solid var(--border); border-radius: 6px; margin-left: 10px;">
+                        <option value="">請選擇...</option>
+                    </select>
+                </div>
+                <div id="subCategoriesList" style="margin: 20px 0;"></div>
+                <button class="btn btn-primary" onclick="addSubCategory()" id="addSubCategoryBtn" style="display: none;">➕ 新增子分類</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="ensure-data.js"></script>
+    <script>
+        // 檢查登入狀態
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'index.html';
+        }
+
+        // 只有主管和員工能進入
+        if (currentUser.role === 'viewer') {
+            alert('您沒有權限訪問此頁面！');
+            window.location.href = 'dashboard.html';
+        }
+
+        // 顯示使用者資訊
+        const roleNames = {
+            'admin': '主管',
+            'staff': '員工',
+            'viewer': '會計（查看）'
+        };
+        document.getElementById('userName').textContent = currentUser.avatar + ' ' + currentUser.name;
+        document.getElementById('userRole').textContent = roleNames[currentUser.role];
+
+        let priceTable = [];
+        let currentMainCategory = '';
+
+        function init() {
+            priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            loadMainCategories();
+        }
+
+        function loadMainCategories() {
+            const mainCategories = [...new Set(priceTable.map(item => item.category))];
+            const mainCategorySelect = document.getElementById('mainCategorySelect');
+            const mainCategoriesList = document.getElementById('mainCategoriesList');
+
+            // 更新下拉選單
+            mainCategorySelect.innerHTML = '<option value="">請選擇...</option>' + 
+                mainCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+
+            // 顯示主分類列表
+            mainCategoriesList.innerHTML = mainCategories.length > 0 ? mainCategories.map(cat => `
+                <div style="display: inline-block; padding: 10px 20px; background: #f7fafc; border-radius: 8px; margin: 5px;">
+                    <strong>${cat}</strong>
+                    <button class="btn btn-sm btn-secondary" onclick="editMainCategory('${cat}')" style="margin-left: 10px;">編輯</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteMainCategory('${cat}')" style="margin-left: 5px;">刪除</button>
+                </div>
+            `).join('') : '<p style="color: #999;">暫無主分類</p>';
+        }
+
+        function loadSubCategories() {
+            const mainCategory = document.getElementById('mainCategorySelect').value;
+            currentMainCategory = mainCategory;
+            
+            if (!mainCategory) {
+                document.getElementById('subCategoriesList').innerHTML = '';
+                document.getElementById('addSubCategoryBtn').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('addSubCategoryBtn').style.display = 'inline-block';
+
+            const subCategories = [...new Set(
+                priceTable
+                    .filter(item => item.category === mainCategory)
+                    .map(item => item.subCategory)
+                    .filter(Boolean)
+            )];
+
+            const subCategoriesList = document.getElementById('subCategoriesList');
+            subCategoriesList.innerHTML = subCategories.length > 0 ? subCategories.map(subCat => `
+                <div style="display: inline-block; padding: 10px 20px; background: #fff; border: 2px solid #e2e8f0; border-radius: 8px; margin: 5px;">
+                    <strong>${subCat}</strong>
+                    <button class="btn btn-sm btn-secondary" onclick="editSubCategory('${subCat}')" style="margin-left: 10px;">編輯</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteSubCategory('${subCat}')" style="margin-left: 5px;">刪除</button>
+                </div>
+            `).join('') : `<p style="color: #999;">「${mainCategory}」暫無子分類</p>`;
+        }
+
+        function addMainCategory() {
+            const name = prompt('新主分類名稱：');
+            if (!name) return;
+
+            // 檢查是否已存在
+            const exists = priceTable.some(item => item.category === name);
+            if (exists) {
+                alert('此主分類已存在！');
+                return;
+            }
+
+            alert('主分類已新增！請在「價格管理」中為此分類新增商品。');
+            loadMainCategories();
+        }
+
+        function editMainCategory(oldName) {
+            const newName = prompt('修改主分類名稱：', oldName);
+            if (!newName || newName === oldName) return;
+
+            // 檢查新名稱是否已存在
+            const exists = priceTable.some(item => item.category === newName && item.category !== oldName);
+            if (exists) {
+                alert('此主分類名稱已存在！');
+                return;
+            }
+
+            // 更新所有項目的主分類
+            priceTable.forEach(item => {
+                if (item.category === oldName) {
+                    item.category = newName;
+                }
+            });
+
+            localStorage.setItem('priceTable', JSON.stringify(priceTable));
+            alert('✅ 主分類已更新');
+            loadMainCategories();
+        }
+
+        function deleteMainCategory(name) {
+            const itemCount = priceTable.filter(item => item.category === name).length;
+            if (itemCount > 0) {
+                if (!confirm(`此主分類下有 ${itemCount} 個商品，確定要刪除嗎？\n刪除後這些商品的分類將被清空。`)) {
+                    return;
+                }
+            }
+
+            // 清空此分類下所有商品的分類（或刪除商品）
+            priceTable.forEach(item => {
+                if (item.category === name) {
+                    item.category = '';
+                }
+            });
+
+            localStorage.setItem('priceTable', JSON.stringify(priceTable));
+            alert('✅ 主分類已刪除');
+            loadMainCategories();
+            loadSubCategories();
+        }
+
+        function addSubCategory() {
+            if (!currentMainCategory) {
+                alert('請先選擇主分類！');
+                return;
+            }
+
+            const name = prompt(`新增「${currentMainCategory}」的子分類：`);
+            if (!name) return;
+
+            // 檢查是否已存在
+            const exists = priceTable.some(item => 
+                item.category === currentMainCategory && item.subCategory === name
+            );
+            if (exists) {
+                alert('此子分類已存在！');
+                return;
+            }
+
+            alert('子分類已新增！請在「價格管理」中為此子分類新增商品。');
+            loadSubCategories();
+        }
+
+        function editSubCategory(oldName) {
+            if (!currentMainCategory) return;
+
+            const newName = prompt('修改子分類名稱：', oldName);
+            if (!newName || newName === oldName) return;
+
+            // 檢查新名稱是否已存在
+            const exists = priceTable.some(item => 
+                item.category === currentMainCategory && 
+                item.subCategory === newName && 
+                item.subCategory !== oldName
+            );
+            if (exists) {
+                alert('此子分類名稱已存在！');
+                return;
+            }
+
+            // 更新所有項目的子分類
+            priceTable.forEach(item => {
+                if (item.category === currentMainCategory && item.subCategory === oldName) {
+                    item.subCategory = newName;
+                }
+            });
+
+            localStorage.setItem('priceTable', JSON.stringify(priceTable));
+            alert('✅ 子分類已更新');
+            loadSubCategories();
+        }
+
+        function deleteSubCategory(name) {
+            if (!currentMainCategory) return;
+
+            const itemCount = priceTable.filter(item => 
+                item.category === currentMainCategory && item.subCategory === name
+            ).length;
+            
+            if (itemCount > 0) {
+                if (!confirm(`此子分類下有 ${itemCount} 個商品，確定要刪除嗎？\n刪除後這些商品的子分類將被清空。`)) {
+                    return;
+                }
+            }
+
+            // 清空此子分類下所有商品的子分類
+            priceTable.forEach(item => {
+                if (item.category === currentMainCategory && item.subCategory === name) {
+                    item.subCategory = '';
+                }
+            });
+
+            localStorage.setItem('priceTable', JSON.stringify(priceTable));
+            alert('✅ 子分類已刪除');
+            loadSubCategories();
+        }
+
+        init();
+    </script>
+</body>
+</html>

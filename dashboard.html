@@ -57,6 +57,12 @@
                     <button class="btn" onclick="location.href='stats.html'" style="margin-left: 10px;">
                         📊 數據統計
                     </button>
+                    <button class="btn" onclick="location.href='category-management.html'" style="margin-left: 10px;" id="categoryBtn">
+                        🗂️ 分類設定
+                    </button>
+                    <button class="btn" onclick="location.href='user-management.html'" style="margin-left: 10px;" id="userBtn">
+                        👥 員工管理
+                    </button>
                 </div>
             </div>
 
@@ -125,6 +131,13 @@
         if (currentUser.role === 'viewer') {
             document.getElementById('newQuoteBtn').style.display = 'none';
             document.getElementById('pricesBtn').style.display = 'none';
+            document.getElementById('categoryBtn').style.display = 'none';
+            document.getElementById('userBtn').style.display = 'none';
+        }
+        
+        // 員工管理只有主管能看
+        if (currentUser.role !== 'admin') {
+            document.getElementById('userBtn').style.display = 'none';
         }
 
         // 🔧 確保數據已初始化（解決手機無數據問題）

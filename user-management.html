@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>員工管理 - ONE桌遊報價管理系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" style="width: 35px; height: 35px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">
+            ONE桌遊報價管理系統
+        </div>
+        <div class="navbar-user">
+            <div class="user-info">
+                <div class="user-name" id="userName">載入中...</div>
+                <div class="user-role" id="userRole">-</div>
+            </div>
+            <button class="btn-logout" onclick="location.href='dashboard.html'">← 返回首頁</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">👥 員工管理</h2>
+                <button class="btn btn-primary" onclick="openAddUserModal()">➕ 新增員工</button>
+            </div>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>頭像</th>
+                        <th>姓名</th>
+                        <th>帳號</th>
+                        <th>權限</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="usersBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 新增/編輯員工 Modal -->
+    <div class="modal" id="userModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">新增員工</h3>
+                <span class="modal-close" onclick="closeUserModal()">×</span>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <div class="form-row">
+                        <label>頭像 Emoji</label>
+                        <input type="text" id="userAvatar" required placeholder="例如：👨‍💼" maxlength="2">
+                    </div>
+                    <div class="form-row">
+                        <label>姓名 *</label>
+                        <input type="text" id="userName" required placeholder="例如：阿建">
+                    </div>
+                    <div class="form-row">
+                        <label>帳號（登入用）*</label>
+                        <input type="text" id="userUsername" required placeholder="例如：ken">
+                    </div>
+                    <div class="form-row">
+                        <label>密碼 *</label>
+                        <input type="password" id="userPassword" required placeholder="至少 6 位數">
+                        <small style="color: #666;">編輯時留空表示不修改密碼</small>
+                    </div>
+                    <div class="form-row">
+                        <label>權限 *</label>
+                        <select id="userRole" required>
+                            <option value="">請選擇...</option>
+                            <option value="admin">主管（可管理所有功能）</option>
+                            <option value="staff">員工（可新增編輯專案）</option>
+                            <option value="viewer">會計（僅查看）</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeUserModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveUser()">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="ensure-data.js"></script>
+    <script>
+        // 檢查登入狀態
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'index.html';
+        }
+
+        // 只有主管能進入
+        if (currentUser.role !== 'admin') {
+            alert('您沒有權限訪問此頁面！');
+            window.location.href = 'dashboard.html';
+        }
+
+        // 顯示使用者資訊
+        const roleNames = {
+            'admin': '主管',
+            'staff': '員工',
+            'viewer': '會計（查看）'
+        };
+        document.getElementById('userName').textContent = currentUser.avatar + ' ' + currentUser.name;
+        document.getElementById('userRole').textContent = roleNames[currentUser.role];
+
+        let users = [];
+        let editingUserId = null;
+
+        function init() {
+            users = JSON.parse(localStorage.getItem('users') || '[]');
+            loadUsers();
+        }
+
+        function loadUsers() {
+            const usersBody = document.getElementById('usersBody');
+            
+            if (users.length === 0) {
+                usersBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">暫無員工資料</td></tr>';
+                return;
+            }
+
+            usersBody.innerHTML = users.map(user => `
+                <tr>
+                    <td style="font-size: 2em;">${user.avatar}</td>
+                    <td><strong>${user.name}</strong></td>
+                    <td>${user.username}</td>
+                    <td>
+                        <span class="status-badge ${user.role === 'admin' ? 'status-signed' : user.role === 'staff' ? 'status-construction' : 'status-quoted'}">
+                            ${roleNames[user.role]}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="editUser('${user.id}')">編輯</button>
+                        ${user.id !== currentUser.id ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${user.id}')">刪除</button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openAddUserModal() {
+            editingUserId = null;
+            document.getElementById('modalTitle').textContent = '新增員工';
+            document.getElementById('userForm').reset();
+            document.getElementById('userPassword').required = true;
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        function editUser(userId) {
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+
+            editingUserId = userId;
+            document.getElementById('modalTitle').textContent = '編輯員工';
+            document.getElementById('userAvatar').value = user.avatar;
+            document.getElementById('userName').value = user.name;
+            document.getElementById('userUsername').value = user.username;
+            document.getElementById('userPassword').value = '';
+            document.getElementById('userPassword').required = false;
+            document.getElementById('userRole').value = user.role;
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        function closeUserModal() {
+            document.getElementById('userForm').reset();
+            document.getElementById('userModal').classList.remove('show');
+            editingUserId = null;
+        }
+
+        function saveUser() {
+            const avatar = document.getElementById('userAvatar').value.trim();
+            const name = document.getElementById('userName').value.trim();
+            const username = document.getElementById('userUsername').value.trim();
+            const password = document.getElementById('userPassword').value;
+            const role = document.getElementById('userRole').value;
+
+            if (!avatar || !name || !username || !role) {
+                alert('請填寫所有必填欄位！');
+                return;
+            }
+
+            if (!editingUserId && !password) {
+                alert('新增員工時密碼為必填！');
+                return;
+            }
+
+            if (password && password.length < 6) {
+                alert('密碼至少需要 6 位數！');
+                return;
+            }
+
+            // 檢查帳號是否重複（編輯時排除自己）
+            const duplicateUser = users.find(u => 
+                u.username === username && u.id !== editingUserId
+            );
+            if (duplicateUser) {
+                alert('此帳號已存在！');
+                return;
+            }
+
+            if (editingUserId) {
+                // 編輯模式
+                const userIndex = users.findIndex(u => u.id === editingUserId);
+                if (userIndex === -1) return;
+
+                users[userIndex].avatar = avatar;
+                users[userIndex].name = name;
+                users[userIndex].username = username;
+                if (password) {
+                    users[userIndex].password = password;
+                }
+                users[userIndex].role = role;
+
+                // 如果修改的是當前登入用戶，更新 currentUser
+                if (editingUserId === currentUser.id) {
+                    const updatedUser = users[userIndex];
+                    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+                }
+
+                alert('✅ 員工資料已更新');
+            } else {
+                // 新增模式
+                const newUser = {
+                    id: 'USR-' + Date.now(),
+                    avatar: avatar,
+                    name: name,
+                    username: username,
+                    password: password,
+                    role: role
+                };
+
+                users.push(newUser);
+                alert('✅ 員工已新增');
+            }
+
+            localStorage.setItem('users', JSON.stringify(users));
+            closeUserModal();
+            loadUsers();
+            
+            // 如果修改了當前用戶，重新載入頁面以更新顯示
+            if (editingUserId === currentUser.id) {
+                location.reload();
+            }
+        }
+
+        function deleteUser(userId) {
+            if (userId === currentUser.id) {
+                alert('無法刪除自己的帳號！');
+                return;
+            }
+
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+
+            if (!confirm(`確定要刪除員工「${user.name}」嗎？`)) {
+                return;
+            }
+
+            users = users.filter(u => u.id !== userId);
+            localStorage.setItem('users', JSON.stringify(users));
+            alert('✅ 員工已刪除');
+            loadUsers();
+        }
+
+        init();
+    </script>
+</body>
+</html>
