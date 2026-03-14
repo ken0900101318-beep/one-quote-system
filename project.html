@@ -5,6 +5,102 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>專案詳情 - ONE桌遊報價管理系統 v1.1</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        @media print {
+            /* 顯示列印專用抬頭 */
+            .print-header {
+                display: block !important;
+            }
+            
+            /* 隱藏導航列和按鈕 */
+            .navbar,
+            .btn,
+            .btn-sm,
+            .btn-logout,
+            .modal,
+            #btnPrintPDF,
+            #btnEditProject,
+            #btnAddPayment,
+            #btnAddQuoteItem,
+            #btnAddDiscount,
+            #btnUpdateProgress {
+                display: none !important;
+            }
+            
+            /* 隱藏操作欄 */
+            table th:last-child,
+            table td:last-child {
+                display: none !important;
+            }
+            
+            /* 調整頁面樣式 */
+            body {
+                background: white !important;
+                padding: 20px !important;
+            }
+            
+            .container {
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            .card {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+            }
+            
+            /* 標題樣式 */
+            .card-header {
+                border-bottom: 2px solid #000 !important;
+                padding-bottom: 10px !important;
+                margin-bottom: 20px !important;
+            }
+            
+            .card-title {
+                font-size: 24px !important;
+                color: #000 !important;
+            }
+            
+            /* 表格樣式 */
+            table {
+                border: 1px solid #000 !important;
+            }
+            
+            table th {
+                background: #f0f0f0 !important;
+                color: #000 !important;
+                border: 1px solid #000 !important;
+            }
+            
+            table td {
+                border: 1px solid #000 !important;
+                color: #000 !important;
+            }
+            
+            /* 狀態標籤 */
+            .status-badge {
+                border: 1px solid #000 !important;
+                padding: 4px 8px !important;
+            }
+            
+            /* 分頁 */
+            @page {
+                size: A4;
+                margin: 15mm;
+            }
+            
+            /* 避免元素跨頁斷裂 */
+            h3, .card-header {
+                page-break-after: avoid !important;
+            }
+            
+            table {
+                page-break-inside: avoid !important;
+            }
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -22,11 +118,21 @@
     </nav>
 
     <div class="container">
+        <!-- 列印時顯示的公司抬頭 -->
+        <div class="print-header" style="display: none;">
+            <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #667eea; padding-bottom: 20px;">
+                <h1 style="margin: 0; color: #667eea; font-size: 28px;">ONE桌遊</h1>
+                <p style="margin: 5px 0; color: #666;">遊戲家資訊科技有限公司</p>
+                <p style="margin: 5px 0; color: #666; font-size: 14px;">專業桌遊空間規劃與設備供應</p>
+            </div>
+        </div>
+        
         <div class="card">
             <div class="card-header">
                 <h2 class="card-title" id="projectTitle">📋 專案詳情</h2>
                 <div>
                     <span id="projectStatus" class="status-badge">-</span>
+                    <button class="btn btn-primary" id="btnPrintPDF" onclick="printProject()" style="margin-right: 10px;">📄 導出PDF</button>
                     <button class="btn btn-secondary" id="btnEditProject" onclick="openEditProjectModal()">✏️ 編輯資訊</button>
                 </div>
             </div>
@@ -403,6 +509,25 @@
                 alert('載入失敗：' + error.message);
             }
         });
+
+        // === v1.6.0 新增：導出PDF（列印） ===
+        function printProject() {
+            // 儲存當前頁面標題
+            const originalTitle = document.title;
+            
+            // 更新標題為專案名稱（會顯示在 PDF 檔名）
+            const storeName = document.getElementById('storeName').textContent || '專案';
+            const projectId = currentProjectId || '';
+            document.title = `${storeName}-報價單-${projectId}`;
+            
+            // 觸發列印
+            window.print();
+            
+            // 恢復原標題
+            setTimeout(() => {
+                document.title = originalTitle;
+            }, 1000);
+        }
 
         function loadProjectInfo() {
             const statusLabels = {
