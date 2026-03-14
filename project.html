@@ -513,18 +513,38 @@
                 : null;
 
             if (latestQuote && latestQuote.items && latestQuote.items.length > 0) {
-                quoteItemsBody.innerHTML = latestQuote.items.map((item, idx) => `
+                quoteItemsBody.innerHTML = latestQuote.items.map((item, idx) => {
+                    const salesDiscount = item.salesDiscount || 0;
+                    const companyDiscount = item.companyDiscount || 0;
+                    const originalTotal = item.quantity * item.price;
+                    const hasDiscount = salesDiscount > 0 || companyDiscount > 0;
+                    const note = item.note || '';
+                    
+                    return `
                     <tr>
-                        <td>${item.name}</td>
+                        <td>
+                            <strong>${item.name}</strong>
+                            ${hasDiscount ? `
+                            <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                                原價：$${originalTotal.toLocaleString()}
+                                ${salesDiscount > 0 ? `<br><span style="color: #3b82f6;">業務優惠：-$${salesDiscount.toLocaleString()}</span>` : ''}
+                                ${companyDiscount > 0 ? `<br><span style="color: #10b981;">公司優惠：-$${companyDiscount.toLocaleString()}</span>` : ''}
+                            </div>
+                            ` : ''}
+                            ${note ? `<div style="font-size: 0.85em; color: #f59e0b; margin-top: 5px;">📝 ${note}</div>` : ''}
+                        </td>
                         <td>${item.quantity}</td>
                         <td>$${item.price.toLocaleString()}</td>
-                        <td>$${item.total.toLocaleString()}</td>
+                        <td><strong>$${item.total.toLocaleString()}</strong></td>
                         <td>
+                            <button class="btn btn-sm" style="background: #3b82f6; color: white; padding: 4px 8px; font-size: 0.8em;" onclick="setItemSalesDiscount(${idx})">💼</button>
+                            <button class="btn btn-sm" style="background: #10b981; color: white; padding: 4px 8px; font-size: 0.8em;" onclick="setItemCompanyDiscount(${idx})">🏢</button>
                             <button class="btn btn-sm btn-secondary" onclick="editQuoteItem(${idx})">編輯</button>
                             <button class="btn btn-sm btn-danger" onclick="deleteQuoteItem(${idx})">刪除</button>
                         </td>
                     </tr>
-                `).join('') + `
+                    `;
+                }).join('') + `
                     <tr style="background: #f7fafc; font-weight: bold;">
                         <td colspan="3" style="text-align: right;">總計</td>
                         <td>$${(currentProject.totalAmount || 0).toLocaleString()}</td>
@@ -753,6 +773,123 @@
             
             loadProjectInfo();
             alert('✅ 已更新');
+        }
+
+        // === v1.4.1 新增：設定項目業務優惠 ===
+        function setItemSalesDiscount(index) {
+            const latestQuote = currentProject.quoteVersions[currentProject.quoteVersions.length - 1];
+            const item = latestQuote.items[index];
+            const originalTotal = item.quantity * item.price;
+            
+            const type = prompt('選擇業務優惠方式：\n1 = 固定金額\n2 = 折扣比例（例如：9折）', '1');
+            if (!type) return;
+            
+            let discount = 0;
+            
+            if (type === '1') {
+                const amount = prompt(`業務優惠金額（原價：$${originalTotal.toLocaleString()}）:`, item.salesDiscount || '0');
+                if (amount === null) return;
+                
+                discount = parseFloat(amount);
+                if (isNaN(discount) || discount < 0) {
+                    alert('請輸入有效的金額！');
+                    return;
+                }
+                
+                if (discount > originalTotal) {
+                    alert('優惠金額不能超過原價！');
+                    return;
+                }
+            } else if (type === '2') {
+                const percent = prompt('折扣（例如：9 = 9折，85 = 85折）:', '9');
+                if (percent === null) return;
+                
+                const percentValue = parseFloat(percent);
+                if (isNaN(percentValue) || percentValue <= 0 || percentValue >= 100) {
+                    alert('請輸入有效的折扣（1-99）！');
+                    return;
+                }
+                
+                discount = Math.round(originalTotal * (100 - percentValue) / 100);
+            } else {
+                alert('請輸入 1 或 2');
+                return;
+            }
+            
+            const oldTotal = item.total;
+            item.salesDiscount = discount;
+            item.total = originalTotal - (item.salesDiscount || 0) - (item.companyDiscount || 0);
+            
+            currentProject.totalAmount = currentProject.totalAmount - oldTotal + item.total;
+            
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const idx = projects.findIndex(p => p.id === currentProjectId);
+            if (idx >= 0) {
+                projects[idx] = currentProject;
+                localStorage.setItem('projects', JSON.stringify(projects));
+            }
+            
+            loadProjectInfo();
+            alert('✅ 業務優惠已設定');
+        }
+
+        // === v1.4.1 新增：設定項目公司優惠 ===
+        function setItemCompanyDiscount(index) {
+            const latestQuote = currentProject.quoteVersions[currentProject.quoteVersions.length - 1];
+            const item = latestQuote.items[index];
+            const originalTotal = item.quantity * item.price;
+            const afterSales = originalTotal - (item.salesDiscount || 0);
+            
+            const type = prompt('選擇公司優惠方式：\n1 = 固定金額\n2 = 折扣比例（例如：9折）', '1');
+            if (!type) return;
+            
+            let discount = 0;
+            
+            if (type === '1') {
+                const amount = prompt(`公司優惠金額（扣除業務優惠後：$${afterSales.toLocaleString()}）:`, item.companyDiscount || '0');
+                if (amount === null) return;
+                
+                discount = parseFloat(amount);
+                if (isNaN(discount) || discount < 0) {
+                    alert('請輸入有效的金額！');
+                    return;
+                }
+                
+                if (discount > afterSales) {
+                    alert('優惠金額不能超過扣除業務優惠後的金額！');
+                    return;
+                }
+            } else if (type === '2') {
+                const percent = prompt('折扣（例如：9 = 9折，85 = 85折）:', '9');
+                if (percent === null) return;
+                
+                const percentValue = parseFloat(percent);
+                if (isNaN(percentValue) || percentValue <= 0 || percentValue >= 100) {
+                    alert('請輸入有效的折扣（1-99）！');
+                    return;
+                }
+                
+                discount = Math.round(afterSales * (100 - percentValue) / 100);
+            } else {
+                alert('請輸入 1 或 2');
+                return;
+            }
+            
+            const oldTotal = item.total;
+            item.companyDiscount = discount;
+            item.total = originalTotal - (item.salesDiscount || 0) - (item.companyDiscount || 0);
+            
+            currentProject.totalAmount = currentProject.totalAmount - oldTotal + item.total;
+            
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const idx = projects.findIndex(p => p.id === currentProjectId);
+            if (idx >= 0) {
+                projects[idx] = currentProject;
+                localStorage.setItem('projects', JSON.stringify(projects));
+            }
+            
+            loadProjectInfo();
+            alert('✅ 公司優惠已設定');
         }
 
         // === v1.1.2 新增：施工進度管理 ===

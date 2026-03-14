@@ -551,7 +551,8 @@
                     total: item.price * defaultQuantity,
                     isFree: false,
                     salesDiscount: 0,      // 業務優惠金額
-                    companyDiscount: 0     // 公司優惠金額
+                    companyDiscount: 0,    // 公司優惠金額
+                    note: ''               // 備註
                 });
             }
             
@@ -570,33 +571,42 @@
                 const hasDiscount = item.salesDiscount > 0 || item.companyDiscount > 0;
                 
                 return `
-                <div class="selected-item">
-                    <div style="flex: 1;">
-                        <strong>${item.name}</strong>
-                        <div style="color: #666; font-size: 0.9em;">
-                            ${item.isFree ? '<span style="color: #10b981; font-weight: bold;">🎁 公司贈送</span>' : `單價：$${item.price.toLocaleString()} / ${item.unit}`}
+                <div class="selected-item" style="display: block; padding: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div style="flex: 1;">
+                            <strong>${item.name}</strong>
+                            <div style="color: #666; font-size: 0.9em;">
+                                ${item.isFree ? '<span style="color: #10b981; font-weight: bold;">🎁 公司贈送</span>' : `單價：$${item.price.toLocaleString()} / ${item.unit}`}
+                            </div>
+                            ${hasDiscount && !item.isFree ? `
+                            <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                                原價：$${originalTotal.toLocaleString()}
+                                ${item.salesDiscount > 0 ? `<br><span style="color: #3b82f6;">業務優惠：-$${item.salesDiscount.toLocaleString()}</span>` : ''}
+                                ${item.companyDiscount > 0 ? `<br><span style="color: #10b981;">公司優惠：-$${item.companyDiscount.toLocaleString()}</span>` : ''}
+                            </div>
+                            ` : ''}
                         </div>
-                        ${hasDiscount && !item.isFree ? `
-                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
-                            原價：$${originalTotal.toLocaleString()}
-                            ${item.salesDiscount > 0 ? `<br><span style="color: #3b82f6;">業務優惠：-$${item.salesDiscount.toLocaleString()}</span>` : ''}
-                            ${item.companyDiscount > 0 ? `<br><span style="color: #10b981;">公司優惠：-$${item.companyDiscount.toLocaleString()}</span>` : ''}
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <input type="number" class="quantity-input" min="1" value="${item.quantity}" 
+                                   onchange="updateQuantity(${index}, this.value)">
+                            <span>${item.unit}</span>
+                            <strong style="width: 100px; text-align: right;">$${(item.isFree ? 0 : afterDiscount).toLocaleString()}</strong>
+                            ${!item.isFree ? `
+                            <button class="btn" style="padding: 6px 10px; background: #3b82f6; color: white; font-size: 0.85em;" onclick="setSalesDiscount(${index})">💼 業務優惠</button>
+                            <button class="btn" style="padding: 6px 10px; background: #10b981; color: white; font-size: 0.85em;" onclick="setCompanyDiscount(${index})">🏢 公司優惠</button>
+                            <button class="btn" style="padding: 6px 10px; background: #8b5cf6; color: white; font-size: 0.85em;" onclick="setFreeItem(${index})">🎁 贈送</button>
+                            ` : `
+                            <button class="btn" style="padding: 6px 10px; background: #f59e0b; color: white; font-size: 0.85em;" onclick="restorePriceItem(${index})">↩️ 恢復</button>
+                            `}
+                            <button class="btn btn-danger" style="padding: 6px 10px; font-size: 0.85em;" onclick="removeItem(${index})">移除</button>
                         </div>
-                        ` : ''}
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                        <input type="number" class="quantity-input" min="1" value="${item.quantity}" 
-                               onchange="updateQuantity(${index}, this.value)">
-                        <span>${item.unit}</span>
-                        <strong style="width: 100px; text-align: right;">$${(item.isFree ? 0 : afterDiscount).toLocaleString()}</strong>
-                        ${!item.isFree ? `
-                        <button class="btn" style="padding: 6px 10px; background: #3b82f6; color: white; font-size: 0.85em;" onclick="setSalesDiscount(${index})">💼 業務優惠</button>
-                        <button class="btn" style="padding: 6px 10px; background: #10b981; color: white; font-size: 0.85em;" onclick="setCompanyDiscount(${index})">🏢 公司優惠</button>
-                        <button class="btn" style="padding: 6px 10px; background: #8b5cf6; color: white; font-size: 0.85em;" onclick="setFreeItem(${index})">🎁 贈送</button>
-                        ` : `
-                        <button class="btn" style="padding: 6px 10px; background: #f59e0b; color: white; font-size: 0.85em;" onclick="restorePriceItem(${index})">↩️ 恢復</button>
-                        `}
-                        <button class="btn btn-danger" style="padding: 6px 10px; font-size: 0.85em;" onclick="removeItem(${index})">移除</button>
+                    <div style="margin-top: 10px;">
+                        <input type="text" 
+                               placeholder="📝 備註（例如：特殊規格、安裝位置等）" 
+                               value="${item.note || ''}"
+                               onchange="updateItemNote(${index}, this.value)"
+                               style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 0.9em;">
                     </div>
                 </div>
                 `;
@@ -717,6 +727,11 @@
                 selectedItems[index].total = 0;
             }
             updateSelectedItems();
+        }
+        
+        // 更新項目備註
+        function updateItemNote(index, note) {
+            selectedItems[index].note = note;
         }
         
         function removeItem(index) {
@@ -963,7 +978,9 @@
                         quantity: item.quantity,
                         price: item.customPrice,
                         total: item.total,
-                        note: ''
+                        salesDiscount: item.salesDiscount || 0,
+                        companyDiscount: item.companyDiscount || 0,
+                        note: item.note || ''
                     }))
                 }],
                 payments: [],
