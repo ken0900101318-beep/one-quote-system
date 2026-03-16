@@ -394,8 +394,7 @@
                 assigneeSelect.appendChild(option);
             });
             
-            // 載入主分類標籤
-            const categories = [...new Set(priceTable.map(item => item.category))];
+            // 載入主分類標籤（改為固定兩個：公司報價、工程行報價）
             const categoryTabs = document.getElementById('categoryTabs');
             
             const allTab = document.createElement('button');
@@ -404,13 +403,19 @@
             allTab.onclick = () => filterMainCategory('');
             categoryTabs.appendChild(allTab);
             
-            categories.forEach(cat => {
-                const tab = document.createElement('button');
-                tab.className = 'category-tab main-category';
-                tab.textContent = cat === '公司' ? '🏢 公司' : '👷 工班';
-                tab.onclick = () => filterMainCategory(cat);
-                categoryTabs.appendChild(tab);
-            });
+            // 公司報價
+            const companyTab = document.createElement('button');
+            companyTab.className = 'category-tab main-category';
+            companyTab.textContent = '🏢 公司報價';
+            companyTab.onclick = () => filterMainCategory('公司');
+            categoryTabs.appendChild(companyTab);
+            
+            // 工程行報價
+            const contractorTab = document.createElement('button');
+            contractorTab.className = 'category-tab main-category';
+            contractorTab.textContent = '🏗️ 工程行報價';
+            contractorTab.onclick = () => filterMainCategory('工班');
+            categoryTabs.appendChild(contractorTab);
             
             // 初始顯示所有子分類
             loadSubCategories('');
