@@ -34,6 +34,11 @@
                 display: none !important;
             }
             
+            /* 隱藏收款明細和獲利分析（給客戶看的報價單不需要） */
+            .no-print {
+                display: none !important;
+            }
+            
             /* 調整頁面樣式 */
             body {
                 background: white !important;
@@ -156,6 +161,7 @@
             </div>
 
             <!-- 收款明細 -->
+            <div class="no-print">
             <h3>💰 收款明細
                 <button class="btn btn-primary btn-sm" id="btnAddPayment" onclick="openPaymentModal(currentProjectId)">➕ 新增收款</button>
             </h3>
@@ -188,9 +194,10 @@
                 </thead>
                 <tbody id="paymentsBody"></tbody>
             </table>
+            </div>
 
             <!-- 獲利分析 -->
-            <div id="profitAnalysis" style="display: none;">
+            <div id="profitAnalysis" class="no-print" style="display: none;">
                 <h3>📊 獲利分析</h3>
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; color: white; margin: 20px 0;">
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
