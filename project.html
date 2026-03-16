@@ -227,7 +227,7 @@
 
             <!-- 公司報價明細 -->
             <h3>📋 公司報價明細
-                <button class="btn btn-secondary btn-sm" id="btnAddQuoteItem" onclick="openAddQuoteItemModal()">➕ 新增項目</button>
+                <button class="btn btn-secondary btn-sm" id="btnAddQuoteItem" onclick="openAddQuoteItemModal('company')">➕ 新增項目</button>
                 <button class="btn btn-sm" id="btnAddDiscount" onclick="addDiscountItem()" style="background: #3b82f6; color: white; margin-left: 10px;">💼 業務折扣</button>
             </h3>
             <table class="table">
@@ -245,7 +245,7 @@
 
             <!-- 工程行報價明細 -->
             <h3 style="margin-top: 30px;">🏗️ 工程行報價明細
-                <button class="btn btn-secondary btn-sm" id="btnAddContractorItem" onclick="openAddQuoteItemModal()">➕ 新增項目</button>
+                <button class="btn btn-secondary btn-sm" id="btnAddContractorItem" onclick="openAddQuoteItemModal('contractor')">➕ 新增項目</button>
                 <button class="btn btn-sm" id="btnAddContractorDiscount" onclick="addDiscountItem()" style="background: #f59e0b; color: white; margin-left: 10px;">🔧 工程折扣</button>
             </h3>
             <table class="table">
@@ -1009,12 +1009,20 @@
             alert('✅ 已刪除');
         }
 
-        function openAddQuoteItemModal() {
+        function openAddQuoteItemModal(category = 'all') {
             const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
             const select = document.getElementById('newQuoteItemSelect');
             
+            // 根據類別篩選項目
+            let filteredItems = priceTable;
+            if (category === 'company') {
+                filteredItems = priceTable.filter(item => item.category === '公司');
+            } else if (category === 'contractor') {
+                filteredItems = priceTable.filter(item => item.category === '工班');
+            }
+            
             select.innerHTML = '<option value="">請選擇...</option>' + 
-                priceTable.map(item => `<option value="${item.name}" data-price="${item.price}">${item.name} - $${item.price.toLocaleString()}</option>`).join('');
+                filteredItems.map(item => `<option value="${item.name}" data-price="${item.price}">${item.name} - $${item.price.toLocaleString()}</option>`).join('');
             
             document.getElementById('addQuoteItemModal').classList.add('show');
         }
