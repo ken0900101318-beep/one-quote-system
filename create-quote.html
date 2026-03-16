@@ -248,6 +248,12 @@
                     <label>電話</label>
                     <input type="text" id="phone" placeholder="例如：0912-345-678">
                 </div>
+                
+                <div class="form-row">
+                    <label>工程行名稱</label>
+                    <input type="text" id="contractorName" placeholder="例如：○○工程行">
+                    <small style="color: #999; font-size: 0.85em;">用於工程行報價單抬頭</small>
+                </div>
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
@@ -951,6 +957,7 @@
                 address: document.getElementById('address').value,
                 contact: document.getElementById('contact').value || '-',
                 phone: document.getElementById('phone').value || '-',
+                contractorName: document.getElementById('contractorName').value || '',
                 lineId: '',
                 rooms: parseInt(document.getElementById('rooms').value) || 0,
                 openSeats: parseInt(document.getElementById('openSeats').value) || 0,

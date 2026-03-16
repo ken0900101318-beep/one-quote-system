@@ -18,7 +18,8 @@
             .btn-sm,
             .btn-logout,
             .modal,
-            #btnPrintPDF,
+            #btnPrintCompany,
+            #btnPrintContractor,
             #btnEditProject,
             #btnAddPayment,
             #btnAddQuoteItem,
@@ -119,11 +120,11 @@
 
     <div class="container">
         <!-- 列印時顯示的公司抬頭 -->
-        <div class="print-header" style="display: none;">
+        <div class="print-header" id="printHeader" style="display: none;">
             <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #667eea; padding-bottom: 20px;">
-                <h1 style="margin: 0; color: #667eea; font-size: 28px;">ONE桌遊</h1>
-                <p style="margin: 5px 0; color: #666;">遊戲家資訊科技有限公司</p>
-                <p style="margin: 5px 0; color: #666; font-size: 14px;">專業桌遊空間規劃與設備供應</p>
+                <h1 style="margin: 0; color: #667eea; font-size: 28px;" id="printCompanyName">ONE桌遊</h1>
+                <p style="margin: 5px 0; color: #666;" id="printCompanyFullName">遊戲家資訊科技有限公司</p>
+                <p style="margin: 5px 0; color: #666; font-size: 14px;" id="printCompanyDesc">專業桌遊空間規劃與設備供應</p>
             </div>
         </div>
         
@@ -132,7 +133,8 @@
                 <h2 class="card-title" id="projectTitle">📋 專案詳情</h2>
                 <div>
                     <span id="projectStatus" class="status-badge">-</span>
-                    <button class="btn btn-primary" id="btnPrintPDF" onclick="printProject()" style="margin-right: 10px;">📄 導出PDF</button>
+                    <button class="btn btn-primary" id="btnPrintCompany" onclick="printProject('company')" style="margin-right: 10px;">📄 導出公司報價單</button>
+                    <button class="btn btn-primary" id="btnPrintContractor" onclick="printProject('contractor')" style="margin-right: 10px;">📄 導出工程行報價單</button>
                     <button class="btn btn-secondary" id="btnEditProject" onclick="openEditProjectModal()">✏️ 編輯資訊</button>
                 </div>
             </div>
@@ -294,6 +296,11 @@
                         <div class="form-group">
                             <label>電話 *</label>
                             <input type="tel" id="editPhone" required>
+                        </div>
+                        <div class="form-group">
+                            <label>工程行名稱</label>
+                            <input type="text" id="editContractorName" placeholder="例如：○○工程行">
+                            <small style="color: #999; font-size: 0.85em;">用於工程行報價單抬頭</small>
                         </div>
                         <div class="form-group">
                             <label>簽約日期</label>
@@ -510,23 +517,145 @@
             }
         });
 
-        // === v1.6.0 新增：導出PDF（列印） ===
-        function printProject() {
+        // === v1.6.2 新增：分類導出PDF（列印） ===
+        let currentPrintCategory = 'all'; // 'all', 'company', 'contractor'
+        let originalHeaderContent = {};
+        
+        function printProject(category = 'all') {
             // 儲存當前頁面標題
             const originalTitle = document.title;
+            
+            // 設置當前列印類別（讓列印樣式知道要顯示哪些項目）
+            currentPrintCategory = category;
             
             // 更新標題為專案名稱（會顯示在 PDF 檔名）
             const storeName = document.getElementById('storeName').textContent || '專案';
             const projectId = currentProjectId || '';
-            document.title = `${storeName}-報價單-${projectId}`;
+            const categoryName = category === 'company' ? '公司報價單' : category === 'contractor' ? '工程行報價單' : '報價單';
+            document.title = `${storeName}-${categoryName}-${projectId}`;
+            
+            // 更新列印抬頭
+            updatePrintHeader(category);
+            
+            // 篩選報價項目
+            filterQuoteItemsForPrint(category);
             
             // 觸發列印
             window.print();
             
-            // 恢復原標題
+            // 恢復原標題和顯示
             setTimeout(() => {
                 document.title = originalTitle;
+                currentPrintCategory = 'all';
+                restorePrintHeader();
+                restoreQuoteItems();
             }, 1000);
+        }
+        
+        function updatePrintHeader(category) {
+            const companyName = document.getElementById('printCompanyName');
+            const companyFullName = document.getElementById('printCompanyFullName');
+            const companyDesc = document.getElementById('printCompanyDesc');
+            
+            // 儲存原始內容
+            originalHeaderContent = {
+                name: companyName.textContent,
+                fullName: companyFullName.textContent,
+                desc: companyDesc.textContent
+            };
+            
+            if (category === 'contractor') {
+                // 工程行報價單
+                const contractorName = currentProject.contractorName || '○○工程行';
+                companyName.textContent = contractorName;
+                companyFullName.textContent = '';
+                companyDesc.textContent = '裝潢工程專業承包';
+            } else {
+                // 公司報價單（保持原樣）
+                companyName.textContent = 'ONE桌遊';
+                companyFullName.textContent = '遊戲家資訊科技有限公司';
+                companyDesc.textContent = '專業桌遊空間規劃與設備供應';
+            }
+        }
+        
+        function restorePrintHeader() {
+            if (originalHeaderContent.name) {
+                document.getElementById('printCompanyName').textContent = originalHeaderContent.name;
+                document.getElementById('printCompanyFullName').textContent = originalHeaderContent.fullName;
+                document.getElementById('printCompanyDesc').textContent = originalHeaderContent.desc;
+            }
+        }
+        
+        function filterQuoteItemsForPrint(category) {
+            if (category === 'all') return;
+            
+            const quoteItemsBody = document.getElementById('quoteItemsBody');
+            const rows = Array.from(quoteItemsBody.querySelectorAll('tr'));
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            const latestQuote = currentProject.quoteVersions && currentProject.quoteVersions.length > 0 
+                ? currentProject.quoteVersions[currentProject.quoteVersions.length - 1] 
+                : null;
+            
+            if (!latestQuote || !latestQuote.items) return;
+            
+            // 計算篩選後的總計
+            let filteredTotal = 0;
+            
+            rows.forEach((row, index) => {
+                // 跳過最後一行（總計行）
+                if (index === rows.length - 1) {
+                    return;
+                }
+                
+                // 獲取該行對應的項目
+                const item = latestQuote.items[index];
+                if (!item) {
+                    row.style.display = 'none';
+                    return;
+                }
+                
+                // 判斷是否為折扣項目
+                if (item.isDiscount) {
+                    // 折扣項目：兩種報價單都顯示
+                    filteredTotal += item.total;
+                    return;
+                }
+                
+                // 從價格表查找類別
+                const priceItem = priceTable.find(p => p.id === item.itemId || p.name === item.name);
+                
+                if (!priceItem) {
+                    // 找不到價格資訊，隱藏
+                    row.style.display = 'none';
+                    return;
+                }
+                
+                // 根據類別決定是否顯示
+                if (category === 'company' && priceItem.category !== '公司') {
+                    row.style.display = 'none';
+                } else if (category === 'contractor' && priceItem.category !== '工班') {
+                    row.style.display = 'none';
+                } else {
+                    filteredTotal += item.total;
+                }
+            });
+            
+            // 更新總計行
+            const totalRow = rows[rows.length - 1];
+            if (totalRow) {
+                const totalCell = totalRow.querySelector('td:nth-child(4)');
+                if (totalCell) {
+                    totalCell.innerHTML = `$${filteredTotal.toLocaleString()}`;
+                }
+            }
+        }
+        
+        function restoreQuoteItems() {
+            const quoteItemsBody = document.getElementById('quoteItemsBody');
+            const rows = quoteItemsBody.querySelectorAll('tr');
+            rows.forEach(row => {
+                row.style.display = '';
+            });
         }
 
         function loadProjectInfo() {
@@ -727,6 +856,7 @@
             document.getElementById('editOpenSeats').value = currentProject.openSeats || 0;
             document.getElementById('editContact').value = currentProject.contact || '';
             document.getElementById('editPhone').value = currentProject.phone || '';
+            document.getElementById('editContractorName').value = currentProject.contractorName || '';
             document.getElementById('editSignDate').value = currentProject.signDate || '';
             document.getElementById('editStartDate').value = currentProject.startDate || '';
             document.getElementById('editExpectedEndDate').value = currentProject.expectedEndDate || '';
@@ -746,6 +876,7 @@
             currentProject.openSeats = parseInt(document.getElementById('editOpenSeats').value);
             currentProject.contact = document.getElementById('editContact').value;
             currentProject.phone = document.getElementById('editPhone').value;
+            currentProject.contractorName = document.getElementById('editContractorName').value;
             currentProject.signDate = document.getElementById('editSignDate').value;
             currentProject.startDate = document.getElementById('editStartDate').value;
             currentProject.expectedEndDate = document.getElementById('editExpectedEndDate').value;
