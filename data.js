@@ -1,15 +1,38 @@
 // ONE桌遊報價系統 - 初始數據
 
+// 系統版本
+const DATA_VERSION = '1.6.2';
+
 // 初始化數據到 localStorage
 function initializeData() {
-    // 改進的初始化檢查：檢查實際數據是否存在
+    // 檢查數據版本，如果版本不符合就重新初始化 users
+    const currentVersion = localStorage.getItem('dataVersion');
     const hasProjects = localStorage.getItem('projects');
     const hasPriceTable = localStorage.getItem('priceTable');
     const hasUsers = localStorage.getItem('users');
     
-    // 如果所有核心數據都存在，跳過初始化
-    if (hasProjects && hasPriceTable && hasUsers) {
-        console.log('✅ 數據已存在，跳過初始化');
+    // 如果版本不同，強制更新 users（保留 projects 和 priceTable）
+    if (currentVersion !== DATA_VERSION && hasUsers) {
+        console.log('🔄 版本更新，重新初始化使用者資料...');
+        // 只更新 users，保留其他資料
+        const users = [
+            { id: 'U001', username: 'admin', name: '阿建', role: 'admin', password: 'zxc88888', avatar: '👨‍💼' },
+            { id: 'U002', username: 'jo', name: '建佑', role: 'admin', password: '123456', avatar: '👨‍💼' },
+            { id: 'U003', username: 'staff1', name: '小圓', role: 'staff', password: '123456', avatar: '👩‍💻' },
+            { id: 'U004', username: 'staff2', name: '尼克', role: 'staff', password: '123456', avatar: '👨‍💻' },
+            { id: 'U005', username: 'acc', name: '會計', role: 'viewer', password: '123456', avatar: '👩‍💼' }
+        ];
+        localStorage.setItem('users', JSON.stringify(users));
+        localStorage.setItem('dataVersion', DATA_VERSION);
+        console.log('✅ 使用者資料已更新');
+        
+        // 清除當前登入狀態，要求重新登入
+        localStorage.removeItem('currentUser');
+    }
+    
+    // 如果所有核心數據都存在且版本正確，跳過初始化
+    if (hasProjects && hasPriceTable && hasUsers && currentVersion === DATA_VERSION) {
+        console.log('✅ 數據已存在，版本正確，跳過初始化');
         return;
     }
     
@@ -73,11 +96,11 @@ function initializeData() {
 
     // 使用者數據
     const users = [
-        { id: 'U001', name: '阿建', role: 'admin', password: 'admin123', avatar: '👨‍💼' },
-        { id: 'U002', name: '建佑', role: 'admin', password: 'admin123', avatar: '👨‍💼' },
-        { id: 'U003', name: '小圓', role: 'staff', password: 'staff123', avatar: '👩‍💻' },
-        { id: 'U004', name: '尼克', role: 'staff', password: 'staff123', avatar: '👨‍💻' },
-        { id: 'U005', name: '會計', role: 'viewer', password: 'view123', avatar: '👩‍💼' }
+        { id: 'U001', username: 'admin', name: '阿建', role: 'admin', password: 'zxc88888', avatar: '👨‍💼' },
+        { id: 'U002', username: 'jo', name: '建佑', role: 'admin', password: '123456', avatar: '👨‍💼' },
+        { id: 'U003', username: 'staff1', name: '小圓', role: 'staff', password: '123456', avatar: '👩‍💻' },
+        { id: 'U004', username: 'staff2', name: '尼克', role: 'staff', password: '123456', avatar: '👨‍💻' },
+        { id: 'U005', username: 'acc', name: '會計', role: 'viewer', password: '123456', avatar: '👩‍💼' }
     ];
 
     // 專案數據（從 Excel 同步，共 8 個）
@@ -572,6 +595,7 @@ function initializeData() {
     localStorage.setItem('users', JSON.stringify(users));
     localStorage.setItem('projects', JSON.stringify(projects));
     localStorage.setItem('quoteSystemInitialized', 'true');
+    localStorage.setItem('dataVersion', DATA_VERSION);
     localStorage.setItem('nextProjectId', '4');
     localStorage.setItem('nextPaymentId', '3');
 

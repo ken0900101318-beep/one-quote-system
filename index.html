@@ -17,21 +17,13 @@
             
             <form id="loginForm" class="login-form">
                 <div class="form-group">
-                    <label for="username">👤 使用者</label>
-                    <select id="username" required>
-                        <option value="">請選擇使用者</option>
-                        <option value="U001">阿建（主管）</option>
-                        <option value="U002">建佑（主管）</option>
-                        <option value="U003">小圓（員工）</option>
-                        <option value="U004">尼克（員工）</option>
-                        <option value="U005">會計（查看）</option>
-                    </select>
+                    <label for="username">👤 帳號</label>
+                    <input type="text" id="username" placeholder="請輸入帳號" required autocomplete="username">
                 </div>
                 
                 <div class="form-group">
                     <label for="password">🔒 密碼</label>
-                    <input type="password" id="password" placeholder="請輸入密碼" required>
-                    <small class="hint">主管/員工: admin123/staff123 | 會計: view123</small>
+                    <input type="password" id="password" placeholder="請輸入密碼" required autocomplete="current-password">
                 </div>
                 
                 <button type="submit" class="btn btn-primary btn-block">
@@ -51,19 +43,20 @@
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const userId = document.getElementById('username').value;
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             
             const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const user = users.find(u => u.id === userId && u.password === password);
+            const user = users.find(u => u.username === username && u.password === password);
             
             if (user) {
                 // 登入成功
                 localStorage.setItem('currentUser', JSON.stringify(user));
                 window.location.href = 'dashboard.html';
             } else {
-                alert('密碼錯誤，請重試');
+                alert('帳號或密碼錯誤，請重試');
                 document.getElementById('password').value = '';
+                document.getElementById('password').focus();
             }
         });
 
