@@ -218,8 +218,8 @@
                 </div>
             </div>
 
-            <!-- 報價明細 -->
-            <h3>📋 報價明細
+            <!-- 公司報價明細 -->
+            <h3>📋 公司報價明細
                 <button class="btn btn-secondary btn-sm" id="btnAddQuoteItem" onclick="openAddQuoteItemModal()">➕ 新增項目</button>
                 <button class="btn btn-sm" id="btnAddDiscount" onclick="addDiscountItem()" style="background: #3b82f6; color: white; margin-left: 10px;">💼 業務折扣</button>
             </h3>
@@ -233,8 +233,32 @@
                         <th>操作</th>
                     </tr>
                 </thead>
-                <tbody id="quoteItemsBody"></tbody>
+                <tbody id="companyQuoteItemsBody"></tbody>
             </table>
+
+            <!-- 工程行報價明細 -->
+            <h3 style="margin-top: 30px;">🏗️ 工程行報價明細</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>項目名稱</th>
+                        <th>數量</th>
+                        <th>單價</th>
+                        <th>小計</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="contractorQuoteItemsBody"></tbody>
+            </table>
+
+            <!-- 總計 -->
+            <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                <div style="display: flex; justify-content: flex-end; gap: 40px; font-size: 1.1em;">
+                    <div><strong>公司小計：</strong><span id="companySubtotal">$0</span></div>
+                    <div><strong>工程行小計：</strong><span id="contractorSubtotal">$0</span></div>
+                    <div style="font-size: 1.3em; color: #667eea;"><strong>總計：</strong><span id="grandTotal">$0</span></div>
+                </div>
+            </div>
 
             <!-- 施工進度 -->
             <div id="progressSection">
@@ -589,72 +613,59 @@
         function filterQuoteItemsForPrint(category) {
             if (category === 'all') return;
             
-            const quoteItemsBody = document.getElementById('quoteItemsBody');
-            const rows = Array.from(quoteItemsBody.querySelectorAll('tr'));
-            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
-            const latestQuote = currentProject.quoteVersions && currentProject.quoteVersions.length > 0 
-                ? currentProject.quoteVersions[currentProject.quoteVersions.length - 1] 
-                : null;
+            const companyBody = document.getElementById('companyQuoteItemsBody');
+            const contractorBody = document.getElementById('contractorQuoteItemsBody');
+            const totalSection = companyBody.closest('.card').querySelector('[id="grandTotal"]')?.closest('div').parentElement;
             
-            if (!latestQuote || !latestQuote.items) return;
-            
-            // 計算篩選後的總計
-            let filteredTotal = 0;
-            
-            rows.forEach((row, index) => {
-                // 跳過最後一行（總計行）
-                if (index === rows.length - 1) {
-                    return;
+            if (category === 'company') {
+                // 只顯示公司報價
+                if (contractorBody && contractorBody.closest('table').previousElementSibling) {
+                    contractorBody.closest('table').previousElementSibling.style.display = 'none'; // 隱藏標題
+                    contractorBody.closest('table').style.display = 'none'; // 隱藏表格
                 }
-                
-                // 獲取該行對應的項目
-                const item = latestQuote.items[index];
-                if (!item) {
-                    row.style.display = 'none';
-                    return;
+                // 更新總計顯示
+                if (totalSection) {
+                    const companySubtotal = document.getElementById('companySubtotal').textContent;
+                    const grandTotal = document.getElementById('grandTotal');
+                    grandTotal.textContent = companySubtotal;
+                    document.getElementById('contractorSubtotal').closest('div').style.display = 'none';
                 }
-                
-                // 判斷是否為折扣項目
-                if (item.isDiscount) {
-                    // 折扣項目：兩種報價單都顯示
-                    filteredTotal += item.total;
-                    return;
+            } else if (category === 'contractor') {
+                // 只顯示工程行報價
+                if (companyBody && companyBody.closest('table').previousElementSibling) {
+                    companyBody.closest('table').previousElementSibling.style.display = 'none'; // 隱藏標題
+                    companyBody.closest('table').style.display = 'none'; // 隱藏表格
                 }
-                
-                // 從價格表查找類別
-                const priceItem = priceTable.find(p => p.id === item.itemId || p.name === item.name);
-                
-                if (!priceItem) {
-                    // 找不到價格資訊，隱藏
-                    row.style.display = 'none';
-                    return;
-                }
-                
-                // 根據類別決定是否顯示
-                if (category === 'company' && priceItem.category !== '公司') {
-                    row.style.display = 'none';
-                } else if (category === 'contractor' && priceItem.category !== '工班') {
-                    row.style.display = 'none';
-                } else {
-                    filteredTotal += item.total;
-                }
-            });
-            
-            // 更新總計行
-            const totalRow = rows[rows.length - 1];
-            if (totalRow) {
-                const totalCell = totalRow.querySelector('td:nth-child(4)');
-                if (totalCell) {
-                    totalCell.innerHTML = `$${filteredTotal.toLocaleString()}`;
+                // 更新總計顯示
+                if (totalSection) {
+                    const contractorSubtotal = document.getElementById('contractorSubtotal').textContent;
+                    const grandTotal = document.getElementById('grandTotal');
+                    grandTotal.textContent = contractorSubtotal;
+                    document.getElementById('companySubtotal').closest('div').style.display = 'none';
                 }
             }
         }
         
         function restoreQuoteItems() {
-            const quoteItemsBody = document.getElementById('quoteItemsBody');
-            const rows = quoteItemsBody.querySelectorAll('tr');
-            rows.forEach(row => {
-                row.style.display = '';
+            const companyTable = document.getElementById('companyQuoteItemsBody').closest('table');
+            const contractorTable = document.getElementById('contractorQuoteItemsBody').closest('table');
+            
+            // 顯示所有表格和標題
+            if (companyTable && companyTable.previousElementSibling) {
+                companyTable.previousElementSibling.style.display = '';
+                companyTable.style.display = '';
+            }
+            if (contractorTable && contractorTable.previousElementSibling) {
+                contractorTable.previousElementSibling.style.display = '';
+                contractorTable.style.display = '';
+            }
+            
+            // 恢復總計顯示
+            const subtotals = document.querySelectorAll('[id="companySubtotal"], [id="contractorSubtotal"]');
+            subtotals.forEach(el => {
+                if (el.closest('div')) {
+                    el.closest('div').style.display = '';
+                }
             });
         }
 
@@ -762,69 +773,128 @@
         }
 
         function loadQuoteItems() {
-            const quoteItemsBody = document.getElementById('quoteItemsBody');
+            const companyBody = document.getElementById('companyQuoteItemsBody');
+            const contractorBody = document.getElementById('contractorQuoteItemsBody');
             const latestQuote = currentProject.quoteVersions && currentProject.quoteVersions.length > 0 
                 ? currentProject.quoteVersions[currentProject.quoteVersions.length - 1] 
                 : null;
 
-            if (latestQuote && latestQuote.items && latestQuote.items.length > 0) {
-                quoteItemsBody.innerHTML = latestQuote.items.map((item, idx) => {
-                    const salesDiscount = item.salesDiscount || 0;
-                    const companyDiscount = item.companyDiscount || 0;
-                    const originalTotal = item.quantity * item.price;
-                    const hasDiscount = salesDiscount > 0 || companyDiscount > 0;
-                    const note = item.note || '';
-                    const isDiscount = item.isDiscount || false;
-                    
-                    // 折扣項目特殊樣式
-                    const rowStyle = isDiscount ? 'background: #fef3c7; border-left: 4px solid #f59e0b;' : '';
-                    const priceDisplay = isDiscount && item.price < 0 ? `<span style="color: #dc2626; font-weight: bold;">-$${Math.abs(item.price).toLocaleString()}</span>` : `$${item.price.toLocaleString()}`;
-                    const totalDisplay = isDiscount && item.total < 0 ? `<span style="color: #dc2626; font-weight: bold;">-$${Math.abs(item.total).toLocaleString()}</span>` : `$${item.total.toLocaleString()}`;
-                    
-                    return `
-                    <tr style="${rowStyle}">
-                        <td>
-                            ${isDiscount ? '<span style="color: #f59e0b; font-weight: bold;">💼 </span>' : ''}<strong>${item.name}</strong>
-                            ${hasDiscount && !isDiscount ? `
-                            <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
-                                原價：$${originalTotal.toLocaleString()}
-                                ${salesDiscount > 0 ? `<br><span style="color: #3b82f6;">業務優惠：-$${salesDiscount.toLocaleString()}</span>` : ''}
-                                ${companyDiscount > 0 ? `<br><span style="color: #10b981;">公司優惠：-$${companyDiscount.toLocaleString()}</span>` : ''}
-                            </div>
-                            ` : ''}
-                            <div style="font-size: 0.85em; color: #f59e0b; margin-top: 5px;">
-                                <input type="text" 
-                                       placeholder="📝 點擊輸入備註..." 
-                                       value="${note}"
-                                       onchange="updateQuoteItemNote(${idx}, this.value)"
-                                       style="width: 100%; padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.9em;">
-                            </div>
-                        </td>
-                        <td>${item.quantity}</td>
-                        <td>${priceDisplay}</td>
-                        <td><strong>${totalDisplay}</strong></td>
-                        <td>
-                            ${!isDiscount ? `
-                            <button class="btn btn-sm" style="background: #3b82f6; color: white; padding: 4px 8px; font-size: 0.8em;" onclick="setItemSalesDiscount(${idx})">💼</button>
-                            <button class="btn btn-sm" style="background: #10b981; color: white; padding: 4px 8px; font-size: 0.8em;" onclick="setItemCompanyDiscount(${idx})">🏢</button>
-                            <button class="btn btn-sm btn-secondary" onclick="editQuoteItem(${idx})">編輯</button>
-                            ` : `
-                            <button class="btn btn-sm btn-secondary" onclick="editDiscountItem(${idx})">編輯</button>
-                            `}
-                            <button class="btn btn-sm btn-danger" onclick="deleteQuoteItem(${idx})">刪除</button>
-                        </td>
-                    </tr>
-                    `;
-                }).join('') + `
-                    <tr style="background: #f7fafc; font-weight: bold;">
-                        <td colspan="3" style="text-align: right;">總計</td>
-                        <td>$${(currentProject.totalAmount || 0).toLocaleString()}</td>
+            if (!latestQuote || !latestQuote.items || latestQuote.items.length === 0) {
+                companyBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">沒有公司報價項目</td></tr>';
+                contractorBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">沒有工程行報價項目</td></tr>';
+                updateSubtotals(0, 0);
+                return;
+            }
+
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            let companyItems = [];
+            let contractorItems = [];
+            let companyTotal = 0;
+            let contractorTotal = 0;
+
+            // 分類項目並生成 HTML
+            latestQuote.items.forEach((item, idx) => {
+                const salesDiscount = item.salesDiscount || 0;
+                const companyDiscount = item.companyDiscount || 0;
+                const originalTotal = item.quantity * item.price;
+                const hasDiscount = salesDiscount > 0 || companyDiscount > 0;
+                const note = item.note || '';
+                const isDiscount = item.isDiscount || false;
+                
+                // 折扣項目特殊樣式
+                const rowStyle = isDiscount ? 'background: #fef3c7; border-left: 4px solid #f59e0b;' : '';
+                const priceDisplay = isDiscount && item.price < 0 ? `<span style="color: #dc2626; font-weight: bold;">-$${Math.abs(item.price).toLocaleString()}</span>` : `$${item.price.toLocaleString()}`;
+                const totalDisplay = isDiscount && item.total < 0 ? `<span style="color: #dc2626; font-weight: bold;">-$${Math.abs(item.total).toLocaleString()}</span>` : `$${item.total.toLocaleString()}`;
+                
+                const itemHTML = `
+                <tr style="${rowStyle}">
+                    <td>
+                        ${isDiscount ? '<span style="color: #f59e0b; font-weight: bold;">💼 </span>' : ''}<strong>${item.name}</strong>
+                        ${hasDiscount && !isDiscount ? `
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            原價：$${originalTotal.toLocaleString()}
+                            ${salesDiscount > 0 ? `<br><span style="color: #3b82f6;">業務優惠：-$${salesDiscount.toLocaleString()}</span>` : ''}
+                            ${companyDiscount > 0 ? `<br><span style="color: #10b981;">公司優惠：-$${companyDiscount.toLocaleString()}</span>` : ''}
+                        </div>
+                        ` : ''}
+                        <div style="font-size: 0.85em; color: #f59e0b; margin-top: 5px;">
+                            <input type="text" 
+                                   placeholder="📝 點擊輸入備註..." 
+                                   value="${note}"
+                                   onchange="updateQuoteItemNote(${idx}, this.value)"
+                                   style="width: 100%; padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.9em;">
+                        </div>
+                    </td>
+                    <td>${item.quantity}</td>
+                    <td>${priceDisplay}</td>
+                    <td><strong>${totalDisplay}</strong></td>
+                    <td>
+                        ${!isDiscount ? `
+                        <button class="btn btn-sm" style="background: #3b82f6; color: white; padding: 4px 8px; font-size: 0.8em;" onclick="setItemSalesDiscount(${idx})">💼</button>
+                        <button class="btn btn-sm" style="background: #10b981; color: white; padding: 4px 8px; font-size: 0.8em;" onclick="setItemCompanyDiscount(${idx})">🏢</button>
+                        <button class="btn btn-sm btn-secondary" onclick="editQuoteItem(${idx})">編輯</button>
+                        ` : `
+                        <button class="btn btn-sm btn-secondary" onclick="editDiscountItem(${idx})">編輯</button>
+                        `}
+                        <button class="btn btn-sm btn-danger" onclick="deleteQuoteItem(${idx})">刪除</button>
+                    </td>
+                </tr>
+                `;
+
+                // 判斷類別
+                if (isDiscount) {
+                    // 折扣項目：平均分配到兩類
+                    const halfDiscount = item.total / 2;
+                    companyItems.push(itemHTML);
+                    companyTotal += halfDiscount;
+                    contractorTotal += halfDiscount;
+                } else {
+                    const priceItem = priceTable.find(p => p.id === item.itemId || p.name === item.name);
+                    if (priceItem && priceItem.category === '工班') {
+                        contractorItems.push(itemHTML);
+                        contractorTotal += item.total;
+                    } else {
+                        // 預設為公司項目
+                        companyItems.push(itemHTML);
+                        companyTotal += item.total;
+                    }
+                }
+            });
+
+            // 顯示公司項目
+            if (companyItems.length > 0) {
+                companyBody.innerHTML = companyItems.join('') + `
+                    <tr style="background: #f0f9ff; font-weight: bold;">
+                        <td colspan="3" style="text-align: right;">公司小計</td>
+                        <td>$${companyTotal.toLocaleString()}</td>
                         <td></td>
                     </tr>
                 `;
             } else {
-                quoteItemsBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">沒有報價項目</td></tr>';
+                companyBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">沒有公司報價項目</td></tr>';
             }
+
+            // 顯示工程行項目
+            if (contractorItems.length > 0) {
+                contractorBody.innerHTML = contractorItems.join('') + `
+                    <tr style="background: #fef3c7; font-weight: bold;">
+                        <td colspan="3" style="text-align: right;">工程行小計</td>
+                        <td>$${contractorTotal.toLocaleString()}</td>
+                        <td></td>
+                    </tr>
+                `;
+            } else {
+                contractorBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">沒有工程行報價項目</td></tr>';
+            }
+
+            // 更新小計和總計
+            updateSubtotals(companyTotal, contractorTotal);
+        }
+
+        function updateSubtotals(companyTotal, contractorTotal) {
+            document.getElementById('companySubtotal').textContent = `$${companyTotal.toLocaleString()}`;
+            document.getElementById('contractorSubtotal').textContent = `$${contractorTotal.toLocaleString()}`;
+            document.getElementById('grandTotal').textContent = `$${(companyTotal + contractorTotal).toLocaleString()}`;
         }
 
         function loadProgress() {
