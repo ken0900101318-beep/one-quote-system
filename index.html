@@ -6,64 +6,25 @@
     <title>ONE桌遊報價管理系統</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="login-page">
-    <div class="login-container">
-        <div class="login-box">
-            <div class="logo">
-                <img src="one-logo.jpg" alt="ONE桌遊" style="width: 100px; height: 100px; border-radius: 50%; margin-bottom: 15px;">
-                <h1>ONE桌遊</h1>
-                <p>報價管理系統</p>
-            </div>
-            
-            <form id="loginForm" class="login-form">
-                <div class="form-group">
-                    <label for="username">👤 帳號</label>
-                    <input type="text" id="username" placeholder="請輸入帳號" required autocomplete="username">
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">🔒 密碼</label>
-                    <input type="password" id="password" placeholder="請輸入密碼" required autocomplete="current-password">
-                </div>
-                
-                <button type="submit" class="btn btn-primary btn-block">
-                    登入系統
-                </button>
-            </form>
-            
-            <div class="login-footer">
-                <p>© 2026 ONE桌遊 | 版本 v1.0</p>
-            </div>
+<body>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #667eea, #764ba2);">
+        <div style="text-align: center; color: white;">
+            <h1 style="font-size: 2em; margin-bottom: 20px;">🔄 正在跳轉...</h1>
+            <p>請稍候</p>
         </div>
     </div>
 
-    <script src="data.js"></script>
     <script>
-        // 登入處理
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const user = users.find(u => u.username === username && u.password === password);
-            
-            if (user) {
-                // 登入成功
-                localStorage.setItem('currentUser', JSON.stringify(user));
-                window.location.href = 'dashboard.html';
-            } else {
-                alert('帳號或密碼錯誤，請重試');
-                document.getElementById('password').value = '';
-                document.getElementById('password').focus();
-            }
-        });
-
-        // 檢查是否已登入
-        const currentUser = localStorage.getItem('currentUser');
+        // 檢查是否已在員工管理系統登入
+        const currentUser = JSON.parse(localStorage.getItem('oneCurrentUser'));
+        
         if (currentUser) {
-            window.location.href = 'dashboard.html';
+            // 已登入，直接進入報價系統
+            window.location.href = 'dashboard-simple.html';
+        } else {
+            // 未登入，跳轉到員工管理系統登入
+            alert('請先在員工管理系統登入');
+            window.location.href = '../one-management-portal/index.html';
         }
     </script>
 </body>
