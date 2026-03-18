@@ -13,7 +13,7 @@
             ONE桌遊報價系統
         </div>
         <div class="navbar-user">
-            <button class="btn-secondary" onclick="location.href='dashboard-simple.html'">← 返回列表</button>
+            <button class="btn-secondary" onclick="goBack()">← 返回列表</button>
         </div>
     </nav>
 
@@ -27,11 +27,12 @@
                 <h3>基本資訊</h3>
                 <div class="form-row">
                     <label>客戶姓名 *</label>
-                    <input type="text" id="customerName" required>
+                    <input type="text" id="customerName" required maxlength="50" placeholder="請輸入客戶姓名">
                 </div>
                 <div class="form-row">
                     <label>聯絡電話 *</label>
-                    <input type="tel" id="phone" required>
+                    <input type="tel" id="phone" required pattern="09\d{8}" placeholder="0912345678">
+                    <small style="color: #666;">格式：09 開頭，共 10 位數字</small>
                 </div>
                 <div class="form-row">
                     <label>專案編號（自動產生）</label>
@@ -56,37 +57,43 @@
                 </div>
 
                 <div style="margin-top: 20px; display: flex; gap: 10px;">
-                    <button type="submit" class="btn btn-primary">💾 儲存報價</button>
-                    <button type="button" class="btn btn-secondary" onclick="location.href='dashboard-simple.html'">取消</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">💾 儲存報價</button>
+                    <button type="button" class="btn btn-secondary" onclick="goBack()">取消</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- 引入共用工具 -->
+    <script src="utils.js"></script>
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
     <script src="config-api.js"></script>
     <script src="api-quote.js"></script>
     <script>
-        // 檢查登入
-        const currentUser = JSON.parse(localStorage.getItem('oneCurrentUser'));
-        if (!currentUser) {
-            alert('請先登入');
-            location.href = '../one-management-portal/index.html';
-        }
+        // 檢查登入（使用共用工具）
+        const currentUser = Auth.requireLogin();
+        if (!currentUser) return;
 
         let itemCount = 0;
         let items = [];
+        let formModified = false;
 
-        // 產生專案編號
-        function generateProjectNumber() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const date = String(now.getDate()).padStart(2, '0');
-            const random = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
-            return `ONE${year}${month}${date}${random}`;
+        // 產生專案編號（使用共用工具）
+        document.getElementById('projectNumber').value = Utils.generateProjectNo();
+
+        // 監控表單變更
+        document.getElementById('quoteForm').addEventListener('input', () => {
+            formModified = true;
+        });
+
+        // 返回前確認
+        function goBack() {
+            if (formModified && !confirm('⚠️ 表單尚未儲存，確定要離開嗎？')) {
+                return;
+            }
+            location.href = 'dashboard-simple.html';
         }
-
-        document.getElementById('projectNumber').value = generateProjectNumber();
 
         // 新增項目
         function addItem() {
@@ -105,16 +112,16 @@
                 </button>
                 <div class="form-row">
                     <label>項目名稱 *</label>
-                    <input type="text" id="itemName${itemCount}" required>
+                    <input type="text" id="itemName${itemCount}" required maxlength="100">
                 </div>
                 <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
                     <div>
                         <label>數量 *</label>
-                        <input type="number" id="itemQty${itemCount}" value="1" min="1" required onchange="calculateTotal()">
+                        <input type="number" id="itemQty${itemCount}" value="1" min="1" max="9999" required onchange="calculateTotal()">
                     </div>
                     <div>
                         <label>單價 *</label>
-                        <input type="number" id="itemPrice${itemCount}" value="0" min="0" required onchange="calculateTotal()">
+                        <input type="number" id="itemPrice${itemCount}" value="0" min="0" max="9999999" step="0.01" required onchange="calculateTotal()">
                     </div>
                     <div>
                         <label>小計</label>
@@ -123,7 +130,7 @@
                 </div>
                 <div class="form-row">
                     <label>說明</label>
-                    <input type="text" id="itemDesc${itemCount}">
+                    <input type="text" id="itemDesc${itemCount}" maxlength="200">
                 </div>
             `;
             
@@ -132,8 +139,15 @@
             calculateTotal();
         }
 
-        // 移除項目
+        // 移除項目（加入確認）
         function removeItem(id) {
+            const itemName = document.getElementById(`itemName${id}`)?.value;
+            
+            // 如果項目有填寫內容，需要確認
+            if (itemName && !confirm(`確定要移除項目「${itemName}」嗎？`)) {
+                return;
+            }
+            
             const itemDiv = document.getElementById(`item${id}`);
             if (itemDiv) {
                 itemDiv.remove();
@@ -142,18 +156,18 @@
             }
         }
 
-        // 計算總計
+        // 計算總計（修正為使用 parseFloat 支援小數）
         function calculateTotal() {
             let total = 0;
             
             items.forEach(id => {
-                const qty = parseInt(document.getElementById(`itemQty${id}`)?.value || 0);
-                const price = parseInt(document.getElementById(`itemPrice${id}`)?.value || 0);
+                const qty = parseFloat(document.getElementById(`itemQty${id}`)?.value || 0);
+                const price = parseFloat(document.getElementById(`itemPrice${id}`)?.value || 0);
                 const subtotal = qty * price;
                 
                 const subtotalInput = document.getElementById(`itemSubtotal${id}`);
                 if (subtotalInput) {
-                    subtotalInput.value = `$${subtotal.toLocaleString()}`;
+                    subtotalInput.value = Utils.formatPrice(subtotal);
                 }
                 
                 total += subtotal;
@@ -162,9 +176,76 @@
             document.getElementById('totalPrice').textContent = total.toLocaleString();
         }
 
+        // 表單驗證
+        function validateForm() {
+            const customerName = document.getElementById('customerName').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            
+            // 姓名驗證
+            if (!customerName || customerName.length < 2) {
+                Toast.error('請輸入客戶姓名（至少 2 個字）');
+                document.getElementById('customerName').focus();
+                return false;
+            }
+            
+            if (customerName.length > 50) {
+                Toast.error('客戶姓名不可超過 50 個字');
+                document.getElementById('customerName').focus();
+                return false;
+            }
+            
+            // 電話驗證
+            if (!Utils.validatePhone(phone)) {
+                Toast.error('請輸入正確的手機號碼（例如：0912345678）');
+                document.getElementById('phone').focus();
+                return false;
+            }
+            
+            // 項目驗證
+            let hasValidItem = false;
+            items.forEach(id => {
+                const name = document.getElementById(`itemName${id}`)?.value.trim();
+                const qty = parseFloat(document.getElementById(`itemQty${id}`)?.value || 0);
+                const price = parseFloat(document.getElementById(`itemPrice${id}`)?.value || 0);
+                
+                if (name && qty > 0) {
+                    hasValidItem = true;
+                    
+                    // 驗證數量範圍
+                    if (!Utils.validateNumber(qty, 1, 9999)) {
+                        Toast.error(`項目「${name}」的數量必須在 1-9999 之間`);
+                        return false;
+                    }
+                    
+                    // 驗證價格範圍
+                    if (!Utils.validateNumber(price, 0, 9999999)) {
+                        Toast.error(`項目「${name}」的單價必須在 0-9,999,999 之間`);
+                        return false;
+                    }
+                }
+            });
+            
+            if (!hasValidItem) {
+                Toast.error('請至少新增一個報價項目');
+                return false;
+            }
+            
+            return true;
+        }
+
         // 儲存報價
         document.getElementById('quoteForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            // 表單驗證
+            if (!validateForm()) {
+                return;
+            }
+            
+            // 停用按鈕防止重複提交
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '儲存中...';
             
             // 收集資料
             const projectData = {
@@ -180,10 +261,10 @@
             // 收集項目
             let total = 0;
             items.forEach(id => {
-                const name = document.getElementById(`itemName${id}`)?.value || '';
-                const qty = parseInt(document.getElementById(`itemQty${id}`)?.value || 0);
-                const price = parseInt(document.getElementById(`itemPrice${id}`)?.value || 0);
-                const desc = document.getElementById(`itemDesc${id}`)?.value || '';
+                const name = document.getElementById(`itemName${id}`)?.value.trim() || '';
+                const qty = parseFloat(document.getElementById(`itemQty${id}`)?.value || 0);
+                const price = parseFloat(document.getElementById(`itemPrice${id}`)?.value || 0);
+                const desc = document.getElementById(`itemDesc${id}`)?.value.trim() || '';
                 
                 if (name && qty > 0) {
                     const subtotal = qty * price;
@@ -196,29 +277,60 @@
             
             projectData.totalPrice = total;
             
-            if (projectData.items.length === 0) {
-                alert('請至少新增一個報價項目！');
-                return;
-            }
-            
             try {
                 console.log('準備儲存:', projectData);
                 const result = await QuoteAPI.addProject(projectData);
                 
                 if (result.success) {
-                    alert('✅ 報價已儲存！');
-                    location.href = 'dashboard-simple.html';
+                    Toast.success('報價已成功儲存！');
+                    formModified = false; // 重置表單變更標記
+                    setTimeout(() => {
+                        location.href = 'dashboard-simple.html';
+                    }, 1000);
                 } else {
-                    alert('❌ ' + result.error);
+                    Toast.error('儲存失敗：' + result.error);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '💾 儲存報價';
                 }
             } catch (error) {
                 console.error('儲存失敗:', error);
-                alert('❌ 連線失敗：' + error.message);
+                Toast.error('連線失敗：' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = '💾 儲存報價';
             }
         });
 
         // 初始新增一個項目
         addItem();
+        
+        // 快捷鍵：Ctrl+S 或 Cmd+S = 儲存
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                document.getElementById('quoteForm').dispatchEvent(new Event('submit'));
+            }
+        });
+        
+        // 離開前提醒
+        window.addEventListener('beforeunload', (e) => {
+            if (formModified) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
     </script>
+    
+    <style>
+        /* 行動裝置優化 */
+        @media (max-width: 768px) {
+            .form-row > div {
+                grid-template-columns: 1fr !important;
+            }
+            
+            .item-row {
+                padding-top: 40px !important;
+            }
+        }
+    </style>
 </body>
 </html>

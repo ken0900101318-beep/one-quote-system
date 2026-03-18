@@ -14,17 +14,23 @@
         </div>
     </div>
 
+    <!-- 引入共用工具 -->
+    <script src="utils.js"></script>
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
     <script>
-        // 檢查是否已在員工管理系統登入
-        const currentUser = JSON.parse(localStorage.getItem('oneCurrentUser'));
+        // 檢查是否已在員工管理系統登入（使用共用工具，安全的 JSON.parse）
+        const currentUser = Auth.checkLogin();
         
         if (currentUser) {
             // 已登入，直接進入報價系統
             window.location.href = 'dashboard-simple.html';
         } else {
             // 未登入，跳轉到員工管理系統登入
-            alert('請先在員工管理系統登入');
-            window.location.href = '../one-management-portal/index.html';
+            Toast.info('請先在員工管理系統登入');
+            setTimeout(() => {
+                window.location.href = '../one-management-portal/index.html';
+            }, 1500);
         }
     </script>
 </body>
