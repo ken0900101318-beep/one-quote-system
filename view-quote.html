@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>檢視報價 - ONE桌遊報價系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" class="logo">
+            ONE桌遊報價系統
+        </div>
+        <div class="navbar-user">
+            <button class="btn-secondary" onclick="location.href='dashboard-simple.html'">← 返回列表</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>📄 報價單</h2>
+                <button class="btn btn-primary" onclick="window.print()">🖨️ 列印</button>
+            </div>
+
+            <div id="quoteContent" style="padding: 20px;"></div>
+        </div>
+    </div>
+
+    <script src="config-api.js"></script>
+    <script src="api-quote.js"></script>
+    <script>
+        // 檢查登入
+        const currentUser = JSON.parse(localStorage.getItem('oneCurrentUser'));
+        if (!currentUser) {
+            alert('請先登入');
+            location.href = '../one-management-portal/index.html';
+        }
+
+        const statusNames = {
+            'quoted': '已報價',
+            'signed': '已簽約',
+            'construction': '施工中',
+            'completed': '已完工'
+        };
+
+        // 取得專案 ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('id');
+
+        if (!projectId) {
+            alert('缺少專案 ID');
+            location.href = 'dashboard-simple.html';
+        }
+
+        // 載入專案
+        async function loadProject() {
+            try {
+                const result = await QuoteAPI.getProject(projectId);
+                
+                if (result.success) {
+                    renderQuote(result.project);
+                } else {
+                    alert('❌ ' + result.error);
+                    location.href = 'dashboard-simple.html';
+                }
+            } catch (error) {
+                console.error('載入失敗:', error);
+                alert('❌ 連線失敗：' + error.message);
+            }
+        }
+
+        // 顯示報價單
+        function renderQuote(project) {
+            const container = document.getElementById('quoteContent');
+            
+            let itemsHTML = '';
+            if (project.items && project.items.length > 0) {
+                itemsHTML = `
+                    <h3 style="margin-top: 30px;">報價項目</h3>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>項目名稱</th>
+                                <th>數量</th>
+                                <th>單價</th>
+                                <th>小計</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${project.items.map(item => `
+                                <tr>
+                                    <td>
+                                        <strong>${item.name}</strong>
+                                        ${item.desc ? `<br><small style="color: #666;">${item.desc}</small>` : ''}
+                                    </td>
+                                    <td>${item.qty}</td>
+                                    <td>$${(item.price || 0).toLocaleString()}</td>
+                                    <td>$${(item.subtotal || 0).toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+            
+            container.innerHTML = `
+                <div style="border: 2px solid #000; padding: 30px; border-radius: 10px;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <h1 style="margin: 0;">ONE桌遊</h1>
+                        <h2 style="margin: 10px 0; color: #666;">報價單</h2>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                        <div>
+                            <p><strong>專案編號：</strong>${project.projectNumber || '-'}</p>
+                            <p><strong>客戶姓名：</strong>${project.customerName || '-'}</p>
+                            <p><strong>聯絡電話：</strong>${project.phone || '-'}</p>
+                        </div>
+                        <div>
+                            <p><strong>狀態：</strong><span class="status-badge status-${project.status}">${statusNames[project.status] || project.status}</span></p>
+                            <p><strong>建立日期：</strong>${new Date(project.createdAt).toLocaleDateString('zh-TW')}</p>
+                            <p><strong>建立人：</strong>${project.createdBy || '-'}</p>
+                        </div>
+                    </div>
+                    
+                    ${itemsHTML}
+                    
+                    <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 5px; text-align: right;">
+                        <h2 style="margin: 0; color: #28a745;">總計：$${(project.totalPrice || 0).toLocaleString()}</h2>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 載入專案
+        loadProject();
+    </script>
+
+    <style>
+        @media print {
+            .navbar, button { display: none !important; }
+            .container { padding: 0 !important; }
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新增報價 - ONE桌遊報價系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" class="logo">
+            ONE桌遊報價系統
+        </div>
+        <div class="navbar-user">
+            <button class="btn-secondary" onclick="location.href='dashboard-simple.html'">← 返回列表</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>➕ 新增報價</h2>
+            </div>
+
+            <form id="quoteForm" style="padding: 20px;">
+                <h3>基本資訊</h3>
+                <div class="form-row">
+                    <label>客戶姓名 *</label>
+                    <input type="text" id="customerName" required>
+                </div>
+                <div class="form-row">
+                    <label>聯絡電話 *</label>
+                    <input type="tel" id="phone" required>
+                </div>
+                <div class="form-row">
+                    <label>專案編號（自動產生）</label>
+                    <input type="text" id="projectNumber" readonly>
+                </div>
+                <div class="form-row">
+                    <label>狀態</label>
+                    <select id="status">
+                        <option value="quoted">已報價</option>
+                        <option value="signed">已簽約</option>
+                        <option value="construction">施工中</option>
+                        <option value="completed">已完工</option>
+                    </select>
+                </div>
+
+                <h3 style="margin-top: 30px;">報價項目</h3>
+                <div id="itemsContainer"></div>
+                <button type="button" class="btn btn-secondary" onclick="addItem()">➕ 新增項目</button>
+
+                <div style="margin-top: 30px; padding: 15px; background: #f0f0f0; border-radius: 5px;">
+                    <h3>總計：$<span id="totalPrice">0</span></h3>
+                </div>
+
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary">💾 儲存報價</button>
+                    <button type="button" class="btn btn-secondary" onclick="location.href='dashboard-simple.html'">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="config-api.js"></script>
+    <script src="api-quote.js"></script>
+    <script>
+        // 檢查登入
+        const currentUser = JSON.parse(localStorage.getItem('oneCurrentUser'));
+        if (!currentUser) {
+            alert('請先登入');
+            location.href = '../one-management-portal/index.html';
+        }
+
+        let itemCount = 0;
+        let items = [];
+
+        // 產生專案編號
+        function generateProjectNumber() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const date = String(now.getDate()).padStart(2, '0');
+            const random = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+            return `ONE${year}${month}${date}${random}`;
+        }
+
+        document.getElementById('projectNumber').value = generateProjectNumber();
+
+        // 新增項目
+        function addItem() {
+            itemCount++;
+            const container = document.getElementById('itemsContainer');
+            
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'item-row';
+            itemDiv.id = `item${itemCount}`;
+            itemDiv.style.cssText = 'border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; position: relative;';
+            
+            itemDiv.innerHTML = `
+                <button type="button" onclick="removeItem(${itemCount})" 
+                        style="position: absolute; top: 10px; right: 10px; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">
+                    ✕
+                </button>
+                <div class="form-row">
+                    <label>項目名稱 *</label>
+                    <input type="text" id="itemName${itemCount}" required>
+                </div>
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>數量 *</label>
+                        <input type="number" id="itemQty${itemCount}" value="1" min="1" required onchange="calculateTotal()">
+                    </div>
+                    <div>
+                        <label>單價 *</label>
+                        <input type="number" id="itemPrice${itemCount}" value="0" min="0" required onchange="calculateTotal()">
+                    </div>
+                    <div>
+                        <label>小計</label>
+                        <input type="text" id="itemSubtotal${itemCount}" readonly style="background: #f0f0f0;">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>說明</label>
+                    <input type="text" id="itemDesc${itemCount}">
+                </div>
+            `;
+            
+            container.appendChild(itemDiv);
+            items.push(itemCount);
+            calculateTotal();
+        }
+
+        // 移除項目
+        function removeItem(id) {
+            const itemDiv = document.getElementById(`item${id}`);
+            if (itemDiv) {
+                itemDiv.remove();
+                items = items.filter(i => i !== id);
+                calculateTotal();
+            }
+        }
+
+        // 計算總計
+        function calculateTotal() {
+            let total = 0;
+            
+            items.forEach(id => {
+                const qty = parseInt(document.getElementById(`itemQty${id}`)?.value || 0);
+                const price = parseInt(document.getElementById(`itemPrice${id}`)?.value || 0);
+                const subtotal = qty * price;
+                
+                const subtotalInput = document.getElementById(`itemSubtotal${id}`);
+                if (subtotalInput) {
+                    subtotalInput.value = `$${subtotal.toLocaleString()}`;
+                }
+                
+                total += subtotal;
+            });
+            
+            document.getElementById('totalPrice').textContent = total.toLocaleString();
+        }
+
+        // 儲存報價
+        document.getElementById('quoteForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // 收集資料
+            const projectData = {
+                projectNumber: document.getElementById('projectNumber').value,
+                customerName: document.getElementById('customerName').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                status: document.getElementById('status').value,
+                createdBy: currentUser.name,
+                items: [],
+                totalPrice: 0
+            };
+            
+            // 收集項目
+            let total = 0;
+            items.forEach(id => {
+                const name = document.getElementById(`itemName${id}`)?.value || '';
+                const qty = parseInt(document.getElementById(`itemQty${id}`)?.value || 0);
+                const price = parseInt(document.getElementById(`itemPrice${id}`)?.value || 0);
+                const desc = document.getElementById(`itemDesc${id}`)?.value || '';
+                
+                if (name && qty > 0) {
+                    const subtotal = qty * price;
+                    projectData.items.push({
+                        name, qty, price, desc, subtotal
+                    });
+                    total += subtotal;
+                }
+            });
+            
+            projectData.totalPrice = total;
+            
+            if (projectData.items.length === 0) {
+                alert('請至少新增一個報價項目！');
+                return;
+            }
+            
+            try {
+                console.log('準備儲存:', projectData);
+                const result = await QuoteAPI.addProject(projectData);
+                
+                if (result.success) {
+                    alert('✅ 報價已儲存！');
+                    location.href = 'dashboard-simple.html';
+                } else {
+                    alert('❌ ' + result.error);
+                }
+            } catch (error) {
+                console.error('儲存失敗:', error);
+                alert('❌ 連線失敗：' + error.message);
+            }
+        });
+
+        // 初始新增一個項目
+        addItem();
+    </script>
+</body>
+</html>
