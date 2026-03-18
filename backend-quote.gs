@@ -58,6 +58,31 @@ function initializeSheets() {
 }
 
 /**
+ * 處理 POST 請求
+ */
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const action = data.action || 'importPriceTable';
+    
+    if (action === 'importPriceTable') {
+      const result = importPriceTable(data.items || []);
+      return ContentService
+        .createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: '不支援的操作' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
  * 處理 GET 請求
  */
 function doGet(e) {
@@ -99,9 +124,6 @@ function doGet(e) {
       break;
     case 'deleteProject':
       result = deleteProject(e.parameter.id);
-      break;
-    case 'importPriceTable':
-      result = importPriceTable(JSON.parse(e.parameter.items));
       break;
     default:
       result = { success: false, error: '不支援的操作' };
