@@ -35,7 +35,10 @@ function initializeSheets() {
   let priceSheet = ss.getSheetByName(SHEETS.PRICE_TABLE);
   if (!priceSheet) {
     priceSheet = ss.insertSheet(SHEETS.PRICE_TABLE);
-    priceSheet.appendRow(['ID', '分類', '項目名稱', '單價', '單位', '說明', '建立時間']);
+    priceSheet.appendRow(['ID', '分類', '項目名稱', '單價', '單位', '子分類', '建立時間']);
+  } else {
+    // 更新現有工作表的標題
+    priceSheet.getRange(1, 6).setValue('子分類');
   }
   
   // 3. 分類
@@ -247,7 +250,7 @@ function getPriceTable() {
       name: data[i][2],
       price: data[i][3],
       unit: data[i][4],
-      description: data[i][5]
+      subCategory: data[i][5]
     });
   }
   
