@@ -72,6 +72,13 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
+    if (action === 'addProject') {
+      const result = addProject(data.project || {});
+      return ContentService
+        .createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
     return ContentService
       .createTextOutput(JSON.stringify({ success: false, error: '不支援的操作' }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -165,13 +172,19 @@ function getProjects() {
   const projects = [];
   for (let i = 1; i < data.length; i++) {
     const projectData = data[i][9] ? JSON.parse(data[i][9]) : {};
+    
+    // 相容多種欄位名稱
+    const customerName = data[i][2] || projectData.storeName || projectData.customerName || '';
+    const phone = data[i][3] || projectData.contact || projectData.phone || '';
+    const totalPrice = data[i][5] || projectData.totalAmount || projectData.paidAmount || 0;
+    
     projects.push({
       id: data[i][0],
-      projectNumber: data[i][1],
-      customerName: data[i][2],
-      phone: data[i][3],
+      projectNumber: data[i][1] || projectData.id,
+      customerName: customerName,
+      phone: phone,
       status: data[i][4],
-      totalPrice: data[i][5],
+      totalPrice: totalPrice,
       createdBy: data[i][6],
       createdAt: data[i][7],
       updatedAt: data[i][8],
@@ -192,15 +205,21 @@ function getProject(id) {
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === id) {
       const projectData = data[i][9] ? JSON.parse(data[i][9]) : {};
+      
+      // 相容多種欄位名稱
+      const customerName = data[i][2] || projectData.storeName || projectData.customerName || '';
+      const phone = data[i][3] || projectData.contact || projectData.phone || '';
+      const totalPrice = data[i][5] || projectData.totalAmount || projectData.paidAmount || 0;
+      
       return {
         success: true,
         project: {
           id: data[i][0],
-          projectNumber: data[i][1],
-          customerName: data[i][2],
-          phone: data[i][3],
+          projectNumber: data[i][1] || projectData.id,
+          customerName: customerName,
+          phone: phone,
           status: data[i][4],
-          totalPrice: data[i][5],
+          totalPrice: totalPrice,
           createdBy: data[i][6],
           createdAt: data[i][7],
           updatedAt: data[i][8],
@@ -260,18 +279,23 @@ function getCategories() {
 function addProject(project) {
   const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.PROJECTS);
   
-  const id = 'P' + Date.now();
+  const id = project.id || ('P' + Date.now());
   const now = new Date();
+  
+  // 支援多種欄位名稱
+  const customerName = project.customerName || project.storeName || '';
+  const phone = project.phone || project.contact || '';
+  const projectNumber = project.projectNumber || project.id || '';
   
   sheet.appendRow([
     id,
-    project.projectNumber,
-    project.customerName,
-    project.phone,
+    projectNumber,
+    customerName,
+    phone,
     project.status || 'quoted',
-    project.totalPrice || 0,
-    project.createdBy,
-    now,
+    project.totalPrice || project.paidAmount || 0,
+    project.createdBy || project.assignee || '',
+    project.createdDate || now,
     now,
     JSON.stringify(project)
   ]);

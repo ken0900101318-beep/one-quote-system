@@ -142,6 +142,14 @@ body {
 .navbar-brand {
     font-size: 1.5em;
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.navbar-brand .logo {
+    height: 40px;
+    width: auto;
 }
 
 .navbar-user {
