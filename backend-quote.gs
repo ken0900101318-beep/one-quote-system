@@ -293,7 +293,7 @@ function addProject(project) {
     customerName,
     phone,
     project.status || 'quoted',
-    project.totalPrice || project.paidAmount || 0,
+    project.totalPrice || project.totalAmount || project.paidAmount || 0,
     project.createdBy || project.assignee || '',
     project.createdDate || now,
     now,
@@ -312,11 +312,15 @@ function updateProject(id, project) {
   
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === id) {
+      const customerName = project.customerName || project.storeName || data[i][2];
+      const phone = project.phone || project.contact || data[i][3];
+      const totalPrice = project.totalPrice || project.totalAmount || project.paidAmount || data[i][5];
+      
       sheet.getRange(i + 1, 2).setValue(project.projectNumber || data[i][1]);
-      sheet.getRange(i + 1, 3).setValue(project.customerName || data[i][2]);
-      sheet.getRange(i + 1, 4).setValue(project.phone || data[i][3]);
+      sheet.getRange(i + 1, 3).setValue(customerName);
+      sheet.getRange(i + 1, 4).setValue(phone);
       sheet.getRange(i + 1, 5).setValue(project.status || data[i][4]);
-      sheet.getRange(i + 1, 6).setValue(project.totalPrice || data[i][5]);
+      sheet.getRange(i + 1, 6).setValue(totalPrice);
       sheet.getRange(i + 1, 9).setValue(new Date());
       sheet.getRange(i + 1, 10).setValue(JSON.stringify(project));
       
