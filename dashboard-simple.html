@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專案列表 - ONE桌遊報價系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" class="logo">
+            ONE桌遊報價系統
+        </div>
+        <div class="navbar-user">
+            <span id="userName">載入中...</span>
+            <button class="btn-logout" onclick="logout()">登出</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>📋 專案列表</h2>
+                <button class="btn btn-primary" onclick="location.href='create-quote-simple.html'">➕ 新增報價</button>
+            </div>
+
+            <div class="filters" style="padding: 15px; border-bottom: 1px solid #ddd;">
+                <select id="statusFilter" onchange="loadProjects()" style="padding: 8px; margin-right: 10px;">
+                    <option value="">全部狀態</option>
+                    <option value="quoted">已報價</option>
+                    <option value="signed">已簽約</option>
+                    <option value="construction">施工中</option>
+                    <option value="completed">已完工</option>
+                </select>
+                
+                <input type="text" id="searchInput" placeholder="搜尋客戶名稱或專案編號..." 
+                       onkeyup="filterProjects()" style="padding: 8px; width: 300px;">
+            </div>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>專案編號</th>
+                        <th>客戶姓名</th>
+                        <th>聯絡電話</th>
+                        <th>總價</th>
+                        <th>狀態</th>
+                        <th>建立時間</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="projectList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="config-api.js"></script>
+    <script src="api-quote.js"></script>
+    <script>
+        const statusNames = {
+            'quoted': '已報價',
+            'signed': '已簽約',
+            'construction': '施工中',
+            'completed': '已完工'
+        };
+        
+        let allProjects = [];
+        
+        // 檢查登入
+        const currentUser = JSON.parse(localStorage.getItem('oneCurrentUser'));
+        if (!currentUser) {
+            alert('請先登入');
+            location.href = '../one-management-portal/index.html';
+        }
+        
+        // 顯示使用者
+        document.getElementById('userName').textContent = `${currentUser.avatar || ''} ${currentUser.name}`;
+        
+        // 載入專案列表
+        async function loadProjects() {
+            try {
+                const result = await QuoteAPI.getProjects();
+                
+                if (result.success) {
+                    allProjects = result.projects || [];
+                    filterProjects();
+                } else {
+                    alert('❌ 載入失敗：' + result.error);
+                }
+            } catch (error) {
+                console.error('載入專案失敗:', error);
+                alert('❌ 連線失敗：' + error.message);
+            }
+        }
+        
+        // 篩選專案
+        function filterProjects() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filtered = allProjects;
+            
+            // 狀態篩選
+            if (statusFilter) {
+                filtered = filtered.filter(p => p.status === statusFilter);
+            }
+            
+            // 搜尋篩選
+            if (searchText) {
+                filtered = filtered.filter(p => 
+                    (p.customerName || '').toLowerCase().includes(searchText) ||
+                    (p.projectNumber || '').toLowerCase().includes(searchText)
+                );
+            }
+            
+            renderProjects(filtered);
+        }
+        
+        // 顯示專案
+        function renderProjects(projects) {
+            const tbody = document.getElementById('projectList');
+            
+            if (projects.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px;">暫無專案資料</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = projects.map(p => `
+                <tr>
+                    <td>${p.projectNumber || '-'}</td>
+                    <td>${p.customerName || '-'}</td>
+                    <td>${p.phone || '-'}</td>
+                    <td>$${(p.totalPrice || 0).toLocaleString()}</td>
+                    <td><span class="status-badge status-${p.status}">${statusNames[p.status] || p.status}</span></td>
+                    <td>${new Date(p.createdAt).toLocaleDateString('zh-TW')}</td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="viewProject('${p.id}')">檢視</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteProject('${p.id}')">刪除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // 檢視專案
+        function viewProject(id) {
+            location.href = `view-quote.html?id=${id}`;
+        }
+        
+        // 刪除專案
+        async function deleteProject(id) {
+            const project = allProjects.find(p => p.id === id);
+            if (!project) return;
+            
+            if (!confirm(`確定要刪除專案「${project.customerName}」嗎？\n\n此操作無法復原！`)) {
+                return;
+            }
+            
+            try {
+                const result = await QuoteAPI.deleteProject(id);
+                
+                if (result.success) {
+                    alert('✅ ' + result.message);
+                    setTimeout(loadProjects, 1000);
+                } else {
+                    alert('❌ ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ 連線失敗：' + error.message);
+            }
+        }
+        
+        // 登出
+        function logout() {
+            if (confirm('確定要登出嗎？')) {
+                localStorage.removeItem('oneCurrentUser');
+                localStorage.removeItem('currentUser');
+                location.href = '../one-management-portal/index.html';
+            }
+        }
+        
+        // 頁面載入時執行
+        loadProjects();
+    </script>
+</body>
+</html>
