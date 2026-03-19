@@ -83,6 +83,18 @@ function doPost(e) {
         result = updateProject(data.id, data.project || {});
         break;
         
+      case 'addPriceItem':
+        result = addPriceItem(data.item || {});
+        break;
+        
+      case 'updatePriceItem':
+        result = updatePriceItem(data.id, data.item || {});
+        break;
+        
+      case 'deletePriceItem':
+        result = deletePriceItem(data.id);
+        break;
+        
       default:
         result = { success: false, error: '不支援的操作' };
     }
@@ -393,4 +405,64 @@ function importPriceTable(items) {
     message: `已匯入 ${items.length} 項價目`,
     count: items.length
   };
+}
+
+/**
+ * 新增價目項目
+ */
+function addPriceItem(item) {
+  const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.PRICE_TABLE);
+  
+  const id = item.id || ('ITEM' + Date.now());
+  
+  sheet.appendRow([
+    id,
+    item.category || '',
+    item.name || '',
+    item.price || 0,
+    item.unit || '',
+    item.subCategory || '',
+    new Date()
+  ]);
+  
+  return { success: true, message: '項目已新增', id };
+}
+
+/**
+ * 更新價目項目
+ */
+function updatePriceItem(id, item) {
+  const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.PRICE_TABLE);
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === id) {
+      sheet.getRange(i + 1, 2).setValue(item.category || data[i][1]);
+      sheet.getRange(i + 1, 3).setValue(item.name || data[i][2]);
+      sheet.getRange(i + 1, 4).setValue(item.price !== undefined ? item.price : data[i][3]);
+      sheet.getRange(i + 1, 5).setValue(item.unit || data[i][4]);
+      sheet.getRange(i + 1, 6).setValue(item.subCategory || data[i][5]);
+      
+      return { success: true, message: '項目已更新' };
+    }
+  }
+  
+  return { success: false, error: '找不到項目' };
+}
+
+/**
+ * 刪除價目項目
+ */
+function deletePriceItem(id) {
+  const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.PRICE_TABLE);
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === id) {
+      sheet.deleteRow(i + 1);
+      return { success: true, message: '項目已刪除' };
+    }
+  }
+  
+  return { success: false, error: '找不到項目' };
 }

@@ -253,5 +253,32 @@ const QuoteAPI = {
     // 讀取員工
     async getUsers() {
         return await this.request('getUsers');
+    },
+    
+    // 新增價目項目
+    async addPriceItem(item) {
+        if (!item || !item.name) {
+            return { success: false, error: '缺少項目名稱' };
+        }
+        
+        return await this.requestPost('addPriceItem', { item });
+    },
+    
+    // 更新價目項目
+    async updatePriceItem(id, item) {
+        if (!id || !item) {
+            return { success: false, error: '缺少項目 ID 或資料' };
+        }
+        
+        return await this.requestPost('updatePriceItem', { id, item });
+    },
+    
+    // 刪除價目項目
+    async deletePriceItem(id) {
+        if (!id) {
+            return { success: false, error: '缺少項目 ID' };
+        }
+        
+        return await this.requestPost('deletePriceItem', { id });
     }
 };

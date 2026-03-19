@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>價目表管理 - ONE桌遊報價系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" class="logo">
+            ONE桌遊報價系統
+        </div>
+        <div class="navbar-user">
+            <button class="btn-secondary" onclick="location.href='dashboard-simple.html'">← 返回列表</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>💰 價目表管理</h2>
+                <button class="btn btn-primary" onclick="showAddModal()">➕ 新增項目</button>
+            </div>
+
+            <div class="filters" style="padding: 15px; border-bottom: 1px solid #ddd;">
+                <select id="categoryFilter" onchange="filterItems()" style="padding: 8px; margin-right: 10px;">
+                    <option value="">全部分類</option>
+                </select>
+                
+                <input type="text" id="searchInput" placeholder="搜尋項目名稱..." 
+                       onkeyup="searchDebounced()" style="padding: 8px; width: 300px;">
+            </div>
+
+            <!-- Loading 狀態 -->
+            <div id="loadingState" style="display: none; text-align: center; padding: 40px;">
+                <div class="spinner"></div>
+                <p>載入中...</p>
+            </div>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>分類</th>
+                        <th>項目名稱</th>
+                        <th>單價</th>
+                        <th>單位</th>
+                        <th>子分類</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="priceList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 新增/編輯 Modal -->
+    <div id="itemModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 id="modalTitle">新增項目</h3>
+                <button onclick="closeModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+            </div>
+            <form id="itemForm" style="padding: 20px;">
+                <input type="hidden" id="itemId">
+                
+                <div class="form-row">
+                    <label>項目名稱 *</label>
+                    <input type="text" id="itemName" required maxlength="100">
+                </div>
+                
+                <div class="form-row">
+                    <label>分類 *</label>
+                    <select id="itemCategory" required>
+                        <option value="">請選擇分類</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <label>子分類</label>
+                    <input type="text" id="itemSubCategory" maxlength="50" placeholder="選填">
+                </div>
+                
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>單價 *</label>
+                        <input type="number" id="itemPrice" required min="0" max="9999999" step="0.01" value="0">
+                    </div>
+                    <div>
+                        <label>單位</label>
+                        <input type="text" id="itemUnit" maxlength="10" placeholder="個/組/式">
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary" id="submitBtn">💾 儲存</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 引入共用工具 -->
+    <script src="utils.js"></script>
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
+    <script src="config-api.js"></script>
+    <script src="api-quote.js"></script>
+    <script>
+        // 檢查登入
+        const currentUser = Auth.requireLogin();
+        if (!currentUser) return;
+
+        let allItems = [];
+        let categories = [];
+        let isLoading = false;
+        let editingId = null;
+
+        // 顯示/隱藏 Loading
+        function showLoading(show) {
+            isLoading = show;
+            document.getElementById('loadingState').style.display = show ? 'block' : 'none';
+            document.querySelector('.table').style.display = show ? 'none' : 'table';
+        }
+
+        // 載入分類
+        async function loadCategories() {
+            try {
+                const result = await QuoteAPI.getCategories();
+                if (result.success && result.categories) {
+                    categories = result.categories;
+                    populateCategoryFilter();
+                    populateCategorySelect();
+                }
+            } catch (error) {
+                console.error('載入分類失敗:', error);
+            }
+        }
+
+        // 填充分類篩選
+        function populateCategoryFilter() {
+            const filter = document.getElementById('categoryFilter');
+            filter.innerHTML = '<option value="">全部分類</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.textContent = cat.name;
+                filter.appendChild(option);
+            });
+        }
+
+        // 填充分類選單
+        function populateCategorySelect() {
+            const select = document.getElementById('itemCategory');
+            select.innerHTML = '<option value="">請選擇分類</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            });
+        }
+
+        // 載入價目表
+        async function loadItems() {
+            if (isLoading) return;
+            
+            showLoading(true);
+            
+            try {
+                const result = await QuoteAPI.getPriceTable();
+                
+                if (result.success) {
+                    allItems = result.items || [];
+                    filterItems();
+                    Toast.success(`已載入 ${allItems.length} 個項目`);
+                } else {
+                    Toast.error('載入失敗：' + result.error);
+                }
+            } catch (error) {
+                console.error('載入價目表失敗:', error);
+                Toast.error('連線失敗：' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 搜尋防抖
+        const searchDebounced = Utils.debounce(filterItems, 300);
+
+        // 篩選項目
+        function filterItems() {
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filtered = allItems;
+            
+            if (categoryFilter) {
+                filtered = filtered.filter(item => item.category === categoryFilter);
+            }
+            
+            if (searchText) {
+                filtered = filtered.filter(item => 
+                    (item.name || '').toLowerCase().includes(searchText)
+                );
+            }
+            
+            renderItems(filtered);
+        }
+
+        // 顯示項目列表
+        function renderItems(items) {
+            const tbody = document.getElementById('priceList');
+            
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px;">暫無價目資料</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = items.map(item => `
+                <tr>
+                    <td>${Utils.escapeHtml(item.category) || '-'}</td>
+                    <td><strong>${Utils.escapeHtml(item.name)}</strong></td>
+                    <td>${Utils.formatPrice(item.price)}</td>
+                    <td>${Utils.escapeHtml(item.unit) || '-'}</td>
+                    <td>${Utils.escapeHtml(item.subCategory) || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick='editItem(${JSON.stringify(item)})'>✏️ 編輯</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteItem('${Utils.escapeHtml(item.id)}', '${Utils.escapeHtml(item.name)}')">🗑️ 刪除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 顯示新增 Modal
+        function showAddModal() {
+            editingId = null;
+            document.getElementById('modalTitle').textContent = '新增項目';
+            document.getElementById('itemForm').reset();
+            document.getElementById('itemId').value = '';
+            document.getElementById('itemModal').style.display = 'block';
+        }
+
+        // 編輯項目
+        function editItem(item) {
+            editingId = item.id;
+            document.getElementById('modalTitle').textContent = '編輯項目';
+            document.getElementById('itemId').value = item.id || '';
+            document.getElementById('itemName').value = item.name || '';
+            document.getElementById('itemCategory').value = item.category || '';
+            document.getElementById('itemSubCategory').value = item.subCategory || '';
+            document.getElementById('itemPrice').value = item.price || 0;
+            document.getElementById('itemUnit').value = item.unit || '';
+            document.getElementById('itemModal').style.display = 'block';
+        }
+
+        // 關閉 Modal
+        function closeModal() {
+            document.getElementById('itemModal').style.display = 'none';
+            document.getElementById('itemForm').reset();
+            editingId = null;
+        }
+
+        // 刪除項目
+        async function deleteItem(id, name) {
+            if (!confirm(`⚠️ 確定要刪除「${name}」嗎？\n\n此操作無法復原！`)) {
+                return;
+            }
+
+            try {
+                const result = await QuoteAPI.deletePriceItem(id);
+                
+                if (result.success) {
+                    Toast.success('已成功刪除項目');
+                    await loadItems();
+                } else {
+                    Toast.error('刪除失敗：' + result.error);
+                }
+            } catch (error) {
+                console.error('刪除失敗:', error);
+                Toast.error('連線失敗：' + error.message);
+            }
+        }
+
+        // 表單提交
+        document.getElementById('itemForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '儲存中...';
+            
+            const itemData = {
+                id: document.getElementById('itemId').value || ('ITEM' + Date.now()),
+                name: document.getElementById('itemName').value.trim(),
+                category: document.getElementById('itemCategory').value.trim(),
+                subCategory: document.getElementById('itemSubCategory').value.trim(),
+                price: parseFloat(document.getElementById('itemPrice').value || 0),
+                unit: document.getElementById('itemUnit').value.trim()
+            };
+            
+            try {
+                let result;
+                
+                if (editingId) {
+                    result = await QuoteAPI.updatePriceItem(editingId, itemData);
+                } else {
+                    result = await QuoteAPI.addPriceItem(itemData);
+                }
+                
+                if (result.success) {
+                    Toast.success(editingId ? '修改成功' : '新增成功');
+                    closeModal();
+                    await loadItems();
+                } else {
+                    Toast.error('儲存失敗：' + result.error);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '💾 儲存';
+                }
+            } catch (error) {
+                console.error('儲存失敗:', error);
+                Toast.error('連線失敗：' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = '💾 儲存';
+            }
+        });
+
+        // 頁面載入時初始化
+        (async function init() {
+            await loadCategories();
+            await loadItems();
+        })();
+
+        // Modal 外點擊關閉
+        window.onclick = function(event) {
+            const modal = document.getElementById('itemModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+    </script>
+    
+    <style>
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 90%;
+        }
+        
+        .modal-header {
+            padding: 15px 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .spinner {
+            margin: 0 auto;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .filters {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .filters select,
+            .filters input {
+                width: 100% !important;
+                margin: 0 !important;
+            }
+        }
+    </style>
+</body>
+</html>
