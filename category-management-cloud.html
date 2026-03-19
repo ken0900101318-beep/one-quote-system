@@ -72,21 +72,39 @@
         let allCategories = [];
         let editingCategoryId = null;
         let isLoading = false;
+        let currentUser = null;
         
-        // 檢查登入
-        const currentUser = Auth.requireLogin();
-        if (!currentUser) return;
+        // 檢查登入（延遲執行，不阻塞函數定義）
+        function checkAuth() {
+            currentUser = Auth.requireLogin();
+            if (!currentUser) {
+                // 不要 return，讓頁面正常載入
+                console.warn('[分類管理] 未登入，將轉跳登入頁');
+                return false;
+            }
+            return true;
+        }
         
         // 權限檢查（只有主管和員工能編輯）
-        if (currentUser.role === 'viewer') {
-            Toast.error('您沒有權限管理分類');
-            setTimeout(() => {
-                window.location.href = 'dashboard-simple.html';
-            }, 2000);
+        function checkPermission() {
+            if (!currentUser) return false;
+            
+            if (currentUser.role === 'viewer') {
+                Toast.error('您沒有權限管理分類');
+                setTimeout(() => {
+                    window.location.href = 'dashboard-simple.html';
+                }, 2000);
+                return false;
+            }
+            return true;
         }
         
         // 顯示使用者
-        document.getElementById('userName').textContent = `${currentUser.avatar || ''} ${currentUser.name}`;
+        function displayUser() {
+            if (currentUser) {
+                document.getElementById('userName').textContent = `${currentUser.avatar || ''} ${currentUser.name}`;
+            }
+        }
         
         // 顯示/隱藏 Loading
         function showLoading(show) {
@@ -121,9 +139,16 @@
         
         // 顯示分類
         function renderCategories() {
+            console.log('[分類管理] 渲染分類列表，共', allCategories.length, '項');
             const container = document.getElementById('categoriesList');
             
+            if (!container) {
+                console.error('[分類管理] 找不到 categoriesList 元素！');
+                return;
+            }
+            
             if (allCategories.length === 0) {
+                console.log('[分類管理] 無分類資料，顯示空白訊息');
                 container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暫無分類</p>';
                 return;
             }
@@ -147,11 +172,13 @@
         
         // 顯示新增分類 Modal
         function showAddCategoryModal() {
+            console.log('[分類管理] 點擊新增分類');
             editingCategoryId = null;
             document.getElementById('modalTitle').textContent = '新增分類';
             document.getElementById('categoryName').value = '';
             document.getElementById('categoryIcon').value = '';
             document.getElementById('categoryModal').style.display = 'flex';
+            console.log('[分類管理] Modal 已顯示');
         }
         
         // 編輯分類
@@ -250,8 +277,30 @@
             window.location.href = 'dashboard-simple.html';
         }
         
-        // 頁面載入
-        loadCategories();
+        // 頁面載入初始化
+        (function init() {
+            console.log('[分類管理] 頁面初始化');
+            
+            // 1. 檢查登入
+            if (!checkAuth()) {
+                console.error('[分類管理] 認證失敗');
+                return;
+            }
+            
+            // 2. 檢查權限
+            if (!checkPermission()) {
+                console.error('[分類管理] 權限不足');
+                return;
+            }
+            
+            // 3. 顯示使用者
+            displayUser();
+            
+            // 4. 載入分類資料
+            loadCategories();
+            
+            console.log('[分類管理] 初始化完成');
+        })();
         
         // 點擊 Modal 外部關閉
         document.getElementById('categoryModal').addEventListener('click', (e) => {

@@ -71,23 +71,34 @@
     <script src="config-api.js"></script>
     <script src="api-quote.js"></script>
     <script>
-        // 檢查登入（使用共用工具）
-        const currentUser = Auth.requireLogin();
-        if (!currentUser) return;
-
+        // 全域變數
+        let currentUser = null;
         let itemCount = 0;
         let items = [];
         let formModified = false;
         let categories = []; // 儲存分類資料
         let priceTable = []; // 儲存價目表資料
+        
+        // 檢查登入（延遲執行，不阻塞函數定義）
+        function checkAuth() {
+            currentUser = Auth.requireLogin();
+            if (!currentUser) {
+                console.warn('[新增報價] 未登入，將轉跳登入頁');
+                return false;
+            }
+            return true;
+        }
 
-        // 產生專案編號（使用共用工具）
-        document.getElementById('projectNumber').value = Utils.generateProjectNo();
+        // 初始化表單
+        function initForm() {
+            // 產生專案編號（使用共用工具）
+            document.getElementById('projectNumber').value = Utils.generateProjectNo();
 
-        // 監控表單變更
-        document.getElementById('quoteForm').addEventListener('input', () => {
-            formModified = true;
-        });
+            // 監控表單變更
+            document.getElementById('quoteForm').addEventListener('input', () => {
+                formModified = true;
+            });
+        }
 
         // 載入分類
         async function loadCategories() {
@@ -144,8 +155,14 @@
 
         // 新增項目
         function addItem() {
+            console.log('[新增報價] 新增項目', itemCount + 1);
             itemCount++;
             const container = document.getElementById('itemsContainer');
+            
+            if (!container) {
+                console.error('[新增報價] 找不到 itemsContainer 元素！');
+                return;
+            }
             
             const itemDiv = document.createElement('div');
             itemDiv.className = 'item-row';
@@ -444,12 +461,25 @@
         
         // 頁面載入時初始化
         (async function init() {
-            // 載入分類和價目表
+            console.log('[新增報價] 頁面初始化');
+            
+            // 1. 檢查登入
+            if (!checkAuth()) {
+                console.error('[新增報價] 認證失敗');
+                return;
+            }
+            
+            // 2. 初始化表單
+            initForm();
+            
+            // 3. 載入分類和價目表
             await loadCategories();
             await loadPriceTable();
             
-            // 初始新增一個項目
+            // 4. 初始新增一個項目
             addItem();
+            
+            console.log('[新增報價] 初始化完成');
         })();
         
         // 快捷鍵：Ctrl+S 或 Cmd+S = 儲存
