@@ -79,6 +79,7 @@
         let items = [];
         let formModified = false;
         let categories = []; // 儲存分類資料
+        let priceTable = []; // 儲存價目表資料
 
         // 產生專案編號（使用共用工具）
         document.getElementById('projectNumber').value = Utils.generateProjectNo();
@@ -102,6 +103,23 @@
             } catch (error) {
                 console.error('載入分類失敗:', error);
                 categories = [];
+            }
+        }
+        
+        // 載入價目表
+        async function loadPriceTable() {
+            try {
+                const result = await QuoteAPI.getPriceTable();
+                if (result.success && result.items) {
+                    priceTable = result.items;
+                    console.log('已載入價目表:', priceTable.length, '項');
+                } else {
+                    console.warn('無法載入價目表:', result.error || '未知錯誤');
+                    priceTable = [];
+                }
+            } catch (error) {
+                console.error('載入價目表失敗:', error);
+                priceTable = [];
             }
         }
 
@@ -141,7 +159,12 @@
                 </button>
                 <div class="form-row">
                     <label>項目名稱 *</label>
-                    <input type="text" id="itemName${itemCount}" required maxlength="100">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="itemName${itemCount}" required maxlength="100" style="flex: 1;">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="selectFromPriceTable(${itemCount})">
+                            📋 從價目表選擇
+                        </button>
+                    </div>
                 </div>
                 <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div>
@@ -362,10 +385,68 @@
             }
         });
 
+        // 從價目表選擇
+        function selectFromPriceTable(itemId) {
+            if (priceTable.length === 0) {
+                Toast.error('價目表尚未載入或為空');
+                return;
+            }
+            
+            const keyword = prompt('請輸入項目關鍵字搜尋：');
+            if (!keyword) return;
+            
+            const filtered = priceTable.filter(item => 
+                item.name.includes(keyword)
+            );
+            
+            if (filtered.length === 0) {
+                Toast.error('找不到相關項目');
+                return;
+            }
+            
+            // 只有一個結果，直接填入
+            if (filtered.length === 1) {
+                fillPriceItem(itemId, filtered[0]);
+                return;
+            }
+            
+            // 多個結果，顯示選單
+            const options = filtered.map((item, idx) => 
+                `${idx + 1}. ${item.name} - ${item.price} 元/${item.unit || '個'}`
+            ).join('\n');
+            
+            const choice = prompt(`找到 ${filtered.length} 項結果：\n${options}\n\n請輸入編號：`);
+            const index = parseInt(choice) - 1;
+            
+            if (index >= 0 && index < filtered.length) {
+                fillPriceItem(itemId, filtered[index]);
+            } else {
+                Toast.error('無效的選擇');
+            }
+        }
+        
+        // 填入價目資料
+        function fillPriceItem(itemId, priceItem) {
+            document.getElementById(`itemName${itemId}`).value = priceItem.name || '';
+            
+            const categorySelect = document.getElementById(`itemCategory${itemId}`);
+            if (categorySelect && priceItem.category) {
+                categorySelect.value = priceItem.category;
+            }
+            
+            document.getElementById(`itemSubCategory${itemId}`).value = priceItem.subCategory || '';
+            document.getElementById(`itemPrice${itemId}`).value = priceItem.price || 0;
+            document.getElementById(`itemUnit${itemId}`).value = priceItem.unit || '';
+            
+            calculateTotal();
+            Toast.success('已填入價目資料');
+        }
+        
         // 頁面載入時初始化
         (async function init() {
-            // 載入分類
+            // 載入分類和價目表
             await loadCategories();
+            await loadPriceTable();
             
             // 初始新增一個項目
             addItem();
