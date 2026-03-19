@@ -1,345 +1,341 @@
-# ONE桌遊報價系統 - 部署指南（v2.1 安全加固版）
+# 報價系統整合部署指南
 
-**目標**: 將安全修正版本部署到正式環境  
-**預估時間**: 15-20 分鐘  
-**風險等級**: 🟢 低（僅後端邏輯修正，不影響前端介面）
+**版本**: v2.0 (雲端整合版)
+**日期**: 2026-03-19
 
 ---
 
-## 📋 部署前檢查清單
+## 🎯 部署目標
 
-### 1. 環境確認
-- [ ] 確認有 Google Apps Script 專案存取權限
-- [ ] 確認已安裝 `clasp` CLI 工具
-- [ ] 確認本地代碼已同步到最新版本
-- [ ] 確認有測試資料可用於驗證
+整合新舊版本，建立一個：
+- ✅ 完整可用的報價系統
+- ✅ 統一的入口（Management Portal）
+- ✅ 雲端同步（Google Sheets）
+- ✅ 分類管理功能
+- ✅ 跨裝置使用
 
-### 2. 備份確認
-- [ ] 原始代碼已備份
-- [ ] Google Sheets 資料已備份
-- [ ] 部署 URL 已記錄
+---
 
-### 3. 測試環境
-- [ ] 測試腳本已準備好
-- [ ] Node.js 環境已安裝
-- [ ] API URL 已更新到測試腳本
+## 📋 部署前檢查
+
+### 1. 確認環境
+- [ ] Google Apps Script 存取權限
+- [ ] Google Sheets 存取權限
+- [ ] GitHub 存取權限
+- [ ] 測試環境可用
+
+### 2. 備份資料
+```bash
+# 備份 Google Sheets
+# 1. 開啟報價系統 Sheets
+#    https://docs.google.com/spreadsheets/d/1HCRbR2s8Zz5931hhE-Egsp7M8jpclygKi2hwE8rFcrw
+# 2. 檔案 → 建立副本
+# 3. 命名：「報價系統備份 - 2026-03-19」
+
+# 備份程式碼
+git branch backup-before-integration
+git push origin backup-before-integration
+```
 
 ---
 
 ## 🚀 部署步驟
 
-### 步驟 1: 備份原有代碼（5 分鐘）
+### 步驟 1：更新後端 GAS
 
-```bash
-# 進入專案目錄
-cd ~/workspace/one-quote-system
-
-# 備份原始檔案（保留時間戳）
-cp backend-quote.gs backend-quote.backup-$(date +%Y%m%d-%H%M%S).gs
-
-# 確認備份成功
-ls -lh backend-quote.backup*.gs
+#### 1.1 開啟 Google Apps Script
+```
+https://script.google.com/home
 ```
 
-**✅ 驗證**: 應該看到備份檔案，例如 `backend-quote.backup-20260319-1630.gs`
+找到「ONE桌遊報價系統」專案
 
----
+#### 1.2 更新 backend-quote.gs
 
-### 步驟 2: 部署新代碼（5 分鐘）
+**方法 A：完整替換（推薦）**
+1. 開啟本地檔案 `one-quote-system/backend-quote.gs`
+2. 全選複製（Cmd+A, Cmd+C）
+3. 貼到 GAS 編輯器（Cmd+V）
+4. 儲存（Cmd+S）
 
-#### 方法 A: 使用 clasp（推薦）
-
-```bash
-# 1. 複製修正後的代碼
-cp backend-quote-fixed.gs backend-quote.gs
-
-# 2. 推送到 Google Apps Script
-clasp push
-
-# 3. 確認推送成功
-clasp status
-```
-
-#### 方法 B: 手動複製（如果 clasp 有問題）
-
-1. 打開 `backend-quote-fixed.gs`
-2. 複製所有內容
-3. 前往 Google Apps Script 編輯器：
-   - https://script.google.com/
-4. 找到「ONE桌遊報價系統」專案
-5. 開啟 `backend-quote.gs`
-6. 貼上新代碼
-7. 儲存（Ctrl+S 或 ⌘+S）
-
----
-
-### 步驟 3: 部署 Web App（5 分鐘）
-
-在 Google Apps Script 編輯器：
-
-1. 點擊右上角「部署」按鈕
-2. 選擇「管理部署」
-3. 找到現有的部署
-4. 點擊右側「編輯」圖示（✏️）
-5. 設定：
-   - **新說明**: `v2.1 安全加固版 - 修正 5 個關鍵問題`
-   - **版本**: 選擇「新版本」
-   - **執行身分**: `我`
-   - **存取權限**: `所有人`
-6. 點擊「部署」
-7. 複製部署 URL（開頭是 `https://script.google.com/macros/s/...`）
-
-**✅ 驗證**: 部署 URL 應該與原來相同，只是內部版本號增加了
-
----
-
-### 步驟 4: 測試 API（5 分鐘）
-
-#### 4.1 更新測試腳本 API URL
-
-編輯 `test-security-fixes.js`，確認 API URL 正確：
-
+**方法 B：手動新增**
+如果只想新增分類管理功能：
+1. 找到 `doPost` 函數的 `switch` 區塊
+2. 在 `deletePriceItem` 後面加入：
 ```javascript
-const API_URL = 'https://script.google.com/macros/s/AKfycbyaZiYDGTbeCxe9HYRCREsrWEMVLNpJYZaV7Jw7aV_dO7yU8XsGCUEqPQfafrgx2uHe/exec';
+case 'addCategory':
+  result = addCategory(data.category || {});
+  break;
+  
+case 'updateCategory':
+  result = updateCategory(data.id, data.category || {});
+  break;
+  
+case 'deleteCategory':
+  result = deleteCategory(data.id);
+  break;
 ```
 
-#### 4.2 執行測試
+3. 找到 `doGet` 函數的 `switch` 區塊
+4. 在 `deleteProject` 後面加入：
+```javascript
+case 'addCategory':
+  result = addCategory(JSON.parse(e.parameter.data));
+  break;
+case 'updateCategory':
+  result = updateCategory(e.parameter.id, JSON.parse(e.parameter.data));
+  break;
+case 'deleteCategory':
+  result = deleteCategory(e.parameter.id);
+  break;
+```
 
+5. 在檔案最後加入三個新函數（從 backend-quote.gs 複製）
+
+#### 1.3 部署新版本
+1. 點擊「部署」→「新增部署作業」
+2. 類型：「網頁應用程式」
+3. 執行身分：「我」
+4. 存取權限：「所有人」
+5. 點擊「部署」
+6. **重要**：複製新的網頁應用程式 URL
+
+#### 1.4 測試後端 API
+開啟瀏覽器測試：
+```
+新的 Web App URL + ?action=test
+```
+
+預期回應：
+```json
+{
+  "success": true,
+  "message": "ONE桌遊報價系統 API 正常運作",
+  "timestamp": "..."
+}
+```
+
+---
+
+### 步驟 2：更新前端 API 端點（如果 URL 有變）
+
+如果步驟 1.3 的 URL 跟舊的不同：
+
+#### 2.1 更新 config-api.js
+```javascript
+// 找到這行
+const QUOTE_API = {
+    endpoint: 'https://script.google.com/macros/s/YOUR_NEW_URL/exec'
+};
+```
+
+更換為新的 URL
+
+---
+
+### 步驟 3：推送前端程式碼到 GitHub
+
+#### 3.1 檢查變更
 ```bash
-# 安裝 node-fetch（如果還沒安裝）
-npm install node-fetch
-
-# 執行測試
-node test-security-fixes.js
+cd ~/path/to/your/project
+git status
 ```
 
-**預期結果**:
-```
-🚀 開始執行安全修正測試
+應該看到：
+- `one-quote-system/backend-quote.gs` (modified)
+- `one-quote-system/category-management-cloud.html` (new file)
+- `one-quote-system/dashboard-simple.html` (modified)
+- `one-quote-system/api-quote.js` (modified)
+- `one-management-portal/menu.html` (modified)
 
-API URL: https://script.google.com/macros/s/...
-============================================================
-
-🧪 測試 #17: 後端輸入驗證
-✅ PASS - 空白專案應被拒絕: 缺少客戶姓名
-✅ PASS - 缺少電話應被拒絕: 缺少聯絡電話
-✅ PASS - 缺少報價項目應被拒絕: 至少需要一個報價項目
-✅ PASS - 有效專案應該通過: 專案已新增
-
-... (其他測試)
-
-============================================================
-📊 測試結果:
-✅ 通過: 15
-❌ 失敗: 0
-📋 總計: 15
-
-✨ 成功率: 100%
-
-🎉 所有測試通過！
-```
-
----
-
-### 步驟 5: 功能驗證（3-5 分鐘）
-
-在報價系統網頁進行以下操作：
-
-#### 5.1 新增專案測試
-1. 打開報價系統
-2. 點擊「新增專案」
-3. 填寫以下資訊：
-   - 客戶姓名：`測試客戶`
-   - 聯絡電話：`0912345678`
-   - 新增至少 1 個報價項目
-4. 點擊「儲存」
-
-**✅ 預期**: 成功新增，專案 ID 格式為 `P{timestamp}-{random}`
-
-#### 5.2 輸入驗證測試
-1. 點擊「新增專案」
-2. 不填寫任何資料
-3. 直接點擊「儲存」
-
-**✅ 預期**: 顯示錯誤訊息「缺少客戶姓名」
-
-#### 5.3 編輯專案測試
-1. 找到剛才新增的測試專案
-2. 點擊「編輯」
-3. 修改客戶姓名為 `測試客戶（已修改）`
-4. 點擊「儲存」
-
-**✅ 預期**: 成功更新
-
-#### 5.4 刪除專案測試
-1. 找到測試專案
-2. 點擊「刪除」
-3. 確認刪除
-
-**✅ 預期**: 成功刪除
-
-#### 5.5 查看專案列表測試
-1. 打開「專案列表」頁面
-2. 確認可以正常顯示所有專案
-
-**✅ 預期**: 正常顯示，無錯誤訊息
-
----
-
-## 🔧 故障排除
-
-### 問題 1: clasp push 失敗
-
-**錯誤訊息**:
-```
-Error: Permission denied
-```
-
-**解決方案**:
+#### 3.2 提交變更
 ```bash
-# 重新登入
-clasp login
+# 加入所有變更
+git add one-quote-system/
+git add one-management-portal/menu.html
 
-# 確認專案 ID
-cat .clasp.json
+# 提交
+git commit -m "feat: 報價系統整合 - 新增雲端分類管理功能
 
-# 再次推送
-clasp push
+- 新增 category-management-cloud.html（分類管理頁面）
+- 更新 backend-quote.gs（新增分類 CRUD API）
+- 更新 api-quote.js（新增分類管理 API）
+- 修正 Management Portal 連結（導向 dashboard-simple.html）
+- 在 dashboard-simple.html 加入分類管理入口
+- 完整支援 Google Sheets 雲端同步
+- 完整支援跨裝置使用"
+
+# 推送到 GitHub
+git push origin main
 ```
+
+#### 3.3 檢查 GitHub Pages
+如果使用 GitHub Pages：
+1. 前往 GitHub repository
+2. 檢查 Actions 是否成功部署
+3. 測試網站是否正常
 
 ---
 
-### 問題 2: 部署後 API 返回 403 錯誤
+### 步驟 4：初始化 Google Sheets
 
-**原因**: Web App 權限設定錯誤
+如果是全新部署，需要初始化工作表：
 
-**解決方案**:
-1. 前往 Google Apps Script 編輯器
-2. 點擊「部署」→「管理部署」
-3. 編輯部署
-4. 確認「存取權限」設為「所有人」
-5. 重新部署
+#### 4.1 執行初始化函數
+在 GAS 編輯器：
+1. 選擇函數：`initializeSheets`
+2. 點擊「執行」
+3. 授權存取權限
+4. 等待執行完成
+
+#### 4.2 檢查 Sheets
+開啟報價系統 Google Sheets：
+```
+https://docs.google.com/spreadsheets/d/1HCRbR2s8Zz5931hhE-Egsp7M8jpclygKi2hwE8rFcrw
+```
+
+確認有以下工作表：
+- ✅ 專案報價
+- ✅ 價目表
+- ✅ 分類（應該包含 4 個預設分類）
 
 ---
 
-### 問題 3: 測試腳本執行失敗
+### 步驟 5：測試驗收
 
-**錯誤訊息**:
-```
-Error: fetch is not defined
-```
+按照 `INTEGRATION-TEST-REPORT.md` 執行所有測試：
 
-**解決方案**:
+#### 5.1 基本功能測試
+1. [ ] 登入流程
+2. [ ] 進入分類管理
+3. [ ] 新增分類
+4. [ ] 編輯分類
+5. [ ] 刪除分類（未使用）
+6. [ ] 刪除分類（已使用，應該失敗）
+
+#### 5.2 整合測試
+7. [ ] 新增報價（使用分類）
+8. [ ] 編輯報價
+9. [ ] 刪除報價
+
+#### 5.3 跨裝置測試
+10. [ ] Mac 新增分類
+11. [ ] 手機查看分類
+12. [ ] 確認資料同步
+
+---
+
+## ⚠️ 常見問題排查
+
+### 問題 1：API 連線失敗
+**症狀**: 顯示「連線失敗」或「無法載入」
+
+**檢查**:
+1. 檢查 `config-api.js` 的 API 端點是否正確
+2. 檢查 GAS 部署是否成功
+3. 檢查 GAS 存取權限是否設定為「所有人」
+4. 開啟瀏覽器開發者工具 → Network → 查看錯誤訊息
+
+**解決**:
 ```bash
-# 安裝 node-fetch
-npm install node-fetch
-
-# 在測試腳本最上方加入
-import fetch from 'node-fetch';
+# 測試 API
+curl "YOUR_API_URL?action=test"
 ```
 
 ---
 
-### 問題 4: Google Sheets 讀取失敗
+### 問題 2：分類無法載入
+**症狀**: 分類列表顯示「暫無分類」
 
-**錯誤訊息**:
-```
-系統錯誤，請聯絡管理員
-```
+**檢查**:
+1. 開啟 Google Sheets → 「分類」工作表
+2. 確認有資料（至少標題列）
+3. 檢查 `getCategories` 函數是否正常
 
-**解決方案**:
-1. 檢查 `QUOTE_SHEET_ID` 是否正確
-2. 檢查 Google Apps Script 是否有 Sheets 存取權限
-3. 手動執行 `initializeSheets()` 函數
-4. 檢查工作表是否存在
-
----
-
-## 📊 部署後監控
-
-### 1. 檢查執行記錄
-
-前往 Google Apps Script 編輯器：
-1. 點擊左側「執行記錄」
-2. 查看是否有錯誤訊息
-3. 注意紅色的錯誤標記
-
-### 2. 監控使用狀況
-
-前往 Google Apps Script 編輯器：
-1. 點擊左側「執行記錄」
-2. 觀察 API 呼叫次數
-3. 檢查是否有異常高峰
-
-### 3. 資料完整性檢查
-
-打開 Google Sheets：
-1. 確認「專案報價」工作表資料正常
-2. 檢查是否有重複的專案 ID
-3. 確認最新的專案都有正確的時間戳
+**解決**:
+1. 在 GAS 執行 `initializeSheets()`
+2. 重新整理網頁
 
 ---
 
-## 🔄 回滾計畫
+### 問題 3：刪除分類失敗
+**症狀**: 刪除時顯示「找不到分類」
 
-如果部署後發現嚴重問題，可以快速回滾：
+**檢查**:
+1. 檢查 ID 格式是否正確
+2. 檢查 Google Sheets 資料是否存在
 
-### 方法 1: 使用備份檔案
-
-```bash
-# 還原備份
-cp backend-quote.backup-20260319-1630.gs backend-quote.gs
-
-# 推送到 Google Apps Script
-clasp push
-
-# 重新部署 Web App（步驟 3）
-```
-
-### 方法 2: 在 Google Apps Script 編輯器回滾
-
-1. 點擊右上角「⋮」→「版本記錄」
-2. 找到上一個版本
-3. 點擊「還原此版本」
-4. 重新部署 Web App
+**解決**:
+1. 重新載入分類列表
+2. 檢查開發者工具 Console 錯誤訊息
 
 ---
 
-## ✅ 部署完成檢核
+### 問題 4：權限錯誤
+**症狀**: 顯示「您沒有權限」
+
+**檢查**:
+1. 檢查 `currentUser.role`
+2. 確認權限控制邏輯
+
+**解決**:
+- viewer 角色無法編輯分類（預期行為）
+- 如需開放權限，修改 `category-management-cloud.html` 權限檢查
+
+---
+
+## 📊 部署完成檢查清單
 
 部署完成後，確認以下項目：
 
-- [ ] 所有測試通過（100% 成功率）
-- [ ] 功能驗證完成（5 項全部通過）
-- [ ] 執行記錄無錯誤
-- [ ] 備份檔案已保存
-- [ ] 部署 URL 已記錄
-- [ ] 團隊成員已通知
+### 後端
+- [ ] GAS 程式碼已更新
+- [ ] 新版本已部署
+- [ ] API 測試端點正常
+- [ ] Google Sheets 工作表正常
+
+### 前端
+- [ ] 程式碼已推送到 GitHub
+- [ ] GitHub Pages 部署成功（如適用）
+- [ ] 所有頁面正常載入
+
+### 功能
+- [ ] Management Portal 連結正確
+- [ ] Dashboard 顯示分類管理按鈕
+- [ ] 分類管理 CRUD 正常
+- [ ] 報價功能正常
+- [ ] 跨裝置同步正常
+
+### 資料
+- [ ] 舊資料未遺失
+- [ ] 新舊資料相容
+- [ ] 備份已建立
 
 ---
 
-## 📞 支援
+## 🎉 部署完成
 
-如果在部署過程中遇到問題：
+恭喜！報價系統整合完成。
 
-1. **檢查執行記錄**: Google Apps Script → 執行記錄
-2. **查看備份**: `backend-quote.backup-*.gs`
-3. **參考故障排除**: 本文件「故障排除」章節
-4. **聯絡開發者**: 提供詳細錯誤訊息和執行記錄截圖
-
----
-
-## 📝 部署記錄（填寫後保存）
-
-**部署日期**: ____________________  
-**部署人員**: ____________________  
-**舊版本號**: ____________________  
-**新版本號**: v2.1  
-**備份檔案**: ____________________  
-**測試結果**: □ 全部通過  □ 部分失敗  
-**功能驗證**: □ 正常  □ 異常  
-**備註**: ____________________
+**下一步**:
+1. 通知所有使用者系統已更新
+2. 提供簡短教學（如何使用分類管理）
+3. 收集使用者回饋
+4. 持續優化功能
 
 ---
 
-**最後更新**: 2026-03-19 16:35
+## 📝 版本記錄
+
+| 版本 | 日期 | 變更內容 |
+|------|------|----------|
+| v2.0 | 2026-03-19 | 整合新舊版本，新增雲端分類管理 |
+| v1.1 | 2026-03-15 | 改進 API 錯誤處理 |
+| v1.0 | 2026-03-01 | 初始版本 |
+
+---
+
+**部署人員**: _待填寫_
+**部署日期**: _待填寫_
+**驗收人員**: _待填寫_
+**驗收日期**: _待填寫_

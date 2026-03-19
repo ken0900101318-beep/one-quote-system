@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專案詳情 - ONE桌遊報價管理系統 v1.1</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" style="width: 35px; height: 35px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">
+            ONE桌遊報價管理系統 v1.1
+        </div>
+        <div class="navbar-user">
+            <div class="user-info">
+                <div class="user-name" id="userName">載入中...</div>
+                <div class="user-role" id="userRole">-</div>
+            </div>
+            <button class="btn-logout" onclick="location.href='dashboard.html'">← 返回列表</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title" id="projectTitle">📋 專案詳情</h2>
+                <div>
+                    <span id="projectStatus" class="status-badge">-</span>
+                    <button class="btn btn-secondary" id="btnEditProject" onclick="openEditProjectModal()">✏️ 編輯資訊</button>
+                </div>
+            </div>
+
+            <!-- 基本資訊 -->
+            <h3>📋 基本資訊</h3>
+            <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div><strong>店名：</strong><span id="storeName">-</span></div>
+                    <div><strong>地址：</strong><span id="address">-</span></div>
+                    <div><strong>包廂數：</strong><span id="rooms">-</span> 間</div>
+                    <div><strong>開放式：</strong><span id="openSeats">-</span> 桌</div>
+                    <div><strong>聯絡人：</strong><span id="contact">-</span></div>
+                    <div><strong>電話：</strong><span id="phone">-</span></div>
+                    <div><strong>簽約日期：</strong><span id="signDate">-</span></div>
+                    <div><strong>開工日期：</strong><span id="startDate">-</span></div>
+                    <div><strong>預計完工：</strong><span id="expectedEndDate">-</span></div>
+                </div>
+            </div>
+
+            <!-- 收款明細 -->
+            <h3>💰 收款明細
+                <button class="btn btn-primary btn-sm" id="btnAddPayment" onclick="openPaymentModal(currentProjectId)">➕ 新增收款</button>
+            </h3>
+            <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>合約總價：</span><strong id="totalAmount">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>已收金額：</span><strong id="paidAmount" style="color: var(--success);">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <span>待收金額：</span><strong id="pendingAmount" style="color: var(--danger);">$0</strong>
+                </div>
+                <div class="progress-bar" style="height: 20px;">
+                    <div class="progress-fill" id="paymentProgress" style="width: 0%;"></div>
+                </div>
+                <div style="text-align: center; margin-top: 5px;" id="paymentPercent">0%</div>
+            </div>
+
+            <!-- 收款記錄表格 -->
+            <table class="table" id="paymentsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>類型</th>
+                        <th>金額</th>
+                        <th>方式</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="paymentsBody"></tbody>
+            </table>
+
+            <!-- 獲利分析 -->
+            <div id="profitAnalysis" style="display: none;">
+                <h3>📊 獲利分析</h3>
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; color: white; margin: 20px 0;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                <span>報價總額：</span>
+                                <strong id="profitTotalAmount">$0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                <span>總成本：</span>
+                                <strong style="color: #fbbf24;" id="profitTotalCost">$0</strong>
+                            </div>
+                        </div>
+                        <div style="border-left: 2px solid rgba(255,255,255,0.3); padding-left: 20px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                <span>毛利：</span>
+                                <strong style="color: #34d399; font-size: 1.4em;" id="profitGrossProfit">$0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>毛利率：</span>
+                                <strong style="color: #34d399; font-size: 1.6em;" id="profitGrossMargin">0%</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 報價明細 -->
+            <h3>📋 報價明細
+                <button class="btn btn-secondary btn-sm" id="btnAddQuoteItem" onclick="openAddQuoteItemModal()">➕ 新增項目</button>
+            </h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>項目名稱</th>
+                        <th>數量</th>
+                        <th>單價</th>
+                        <th>小計</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="quoteItemsBody"></tbody>
+            </table>
+
+            <!-- 施工進度 -->
+            <div id="progressSection">
+                <h3>🔨 施工進度</h3>
+                <div id="progressList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 編輯專案 Modal -->
+    <div class="modal" id="editProjectModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>✏️ 編輯專案資訊</h3>
+                <span class="close" onclick="closeEditProjectModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="editProjectForm">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label>店名 *</label>
+                            <input type="text" id="editStoreName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>地址 *</label>
+                            <input type="text" id="editAddress" required>
+                        </div>
+                        <div class="form-group">
+                            <label>包廂數（間）*</label>
+                            <input type="number" id="editRooms" required min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>開放式（桌）*</label>
+                            <input type="number" id="editOpenSeats" required min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>聯絡人 *</label>
+                            <input type="text" id="editContact" required>
+                        </div>
+                        <div class="form-group">
+                            <label>電話 *</label>
+                            <input type="tel" id="editPhone" required>
+                        </div>
+                        <div class="form-group">
+                            <label>簽約日期</label>
+                            <input type="date" id="editSignDate">
+                        </div>
+                        <div class="form-group">
+                            <label>開工日期</label>
+                            <input type="date" id="editStartDate">
+                        </div>
+                        <div class="form-group">
+                            <label>預計完工</label>
+                            <input type="date" id="editExpectedEndDate">
+                        </div>
+                        <div class="form-group">
+                            <label>狀態</label>
+                            <select id="editStatus">
+                                <option value="draft">草稿中</option>
+                                <option value="quoted">已報價</option>
+                                <option value="signed">已簽約</option>
+                                <option value="construction">施工中</option>
+                                <option value="completed">已完工</option>
+                                <option value="paid">已結清</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditProjectModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveEditProject()">💾 儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 收款記錄 Modal -->
+    <div class="modal" id="paymentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💰 收款記錄</h3>
+                <span class="close" onclick="closePaymentModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="paymentForm">
+                    <input type="hidden" id="paymentProjectId">
+                    <div class="form-group">
+                        <label>收款日期 *</label>
+                        <input type="date" id="paymentDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>類型 *</label>
+                        <select id="paymentType" required>
+                            <option value="訂金">訂金</option>
+                            <option value="工程款">工程款</option>
+                            <option value="尾款">尾款</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>金額 *</label>
+                        <input type="number" id="paymentAmount" required min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>付款方式 *</label>
+                        <select id="paymentMethod" required>
+                            <option value="現金">現金</option>
+                            <option value="匯款">匯款</option>
+                            <option value="支票">支票</option>
+                            <option value="刷卡">刷卡</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>銀行帳號（匯款時填寫）</label>
+                        <input type="text" id="paymentBank">
+                    </div>
+                    <div class="form-group">
+                        <label>發票號碼</label>
+                        <input type="text" id="paymentInvoice">
+                    </div>
+                    <div class="form-group">
+                        <label>備註</label>
+                        <textarea id="paymentNote" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closePaymentModal()">取消</button>
+                <button class="btn btn-primary" onclick="savePayment()">💾 儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增報價項目 Modal -->
+    <div class="modal" id="addQuoteItemModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>➕ 新增報價項目</h3>
+                <span class="close" onclick="closeAddQuoteItemModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addQuoteItemForm">
+                    <div class="form-group">
+                        <label>選擇項目 *</label>
+                        <select id="newQuoteItemSelect" required onchange="updateNewItemPrice()">
+                            <option value="">請選擇...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>數量 *</label>
+                        <input type="number" id="newQuoteItemQuantity" required min="1" value="1" onchange="updateNewItemTotal()">
+                    </div>
+                    <div class="form-group">
+                        <label>單價 *</label>
+                        <input type="number" id="newQuoteItemPrice" required min="0" onchange="updateNewItemTotal()">
+                    </div>
+                    <div class="form-group">
+                        <label>小計</label>
+                        <input type="number" id="newQuoteItemTotal" readonly>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddQuoteItemModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveNewQuoteItem()">➕ 新增</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="ensure-data.js"></script>
+    <script src="actions.js"></script>
+    <script>
+        // ✅ v1.1.0 - 完整功能版本
+        let currentProjectId = null;
+        let currentProject = null;
+        
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('=== ONE桌遊報價系統 v1.1.0 啟動 ===');
+            console.log('DOM 載入完成');
+            
+            try {
+                // 1. 檢查登入
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                if (!currentUser || !currentUser.name) {
+                    console.warn('未登入');
+                    location.href = 'index.html';
+                    return;
+                }
+                console.log('✅ 用戶:', currentUser.name);
+
+                // 2. 數據初始化
+                if (typeof ensureDataInitialized === 'function') {
+                    ensureDataInitialized();
+                }
+
+                // 3. 讀取數據
+                const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+                const users = JSON.parse(localStorage.getItem('users') || '[]');
+                const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+                
+                console.log('數據: 專案', projects.length, '| 使用者', users.length, '| 價格', priceTable.length);
+
+                if (projects.length === 0) {
+                    alert('沒有專案數據！');
+                    location.href = 'debug.html';
+                    return;
+                }
+
+                // 4. 讀取專案 ID
+                const urlParams = new URLSearchParams(window.location.search);
+                currentProjectId = urlParams.get('id');
+                console.log('專案 ID:', currentProjectId);
+
+                if (!currentProjectId) {
+                    alert('缺少專案 ID！');
+                    location.href = 'dashboard.html';
+                    return;
+                }
+
+                // 5. 查找專案
+                currentProject = projects.find(p => p.id === currentProjectId);
+                
+                if (!currentProject) {
+                    alert('找不到專案！');
+                    location.href = 'dashboard.html';
+                    return;
+                }
+
+                console.log('✅ 找到專案:', currentProject.storeName);
+
+                // 6. 顯示使用者資訊
+                const roleNames = {'admin': '主管', 'staff': '員工', 'viewer': '會計'};
+                const userNameEl = document.getElementById('userName');
+                const userRoleEl = document.getElementById('userRole');
+                
+                if (userNameEl) userNameEl.textContent = (currentUser.avatar || '👤') + ' ' + currentUser.name;
+                if (userRoleEl) userRoleEl.textContent = roleNames[currentUser.role] || '未知';
+
+                // 7. 顯示專案資訊
+                loadProjectInfo();
+
+                // 8. 權限控制
+                if (currentUser.role === 'viewer') {
+                    // 會計只能查看
+                    document.getElementById('btnEditProject')?.setAttribute('disabled', 'true');
+                    document.getElementById('btnAddPayment')?.setAttribute('disabled', 'true');
+                    document.getElementById('btnAddQuoteItem')?.setAttribute('disabled', 'true');
+                }
+
+                console.log('✅ v1.1.0 載入成功');
+
+            } catch (error) {
+                console.error('❌ 錯誤:', error);
+                alert('載入失敗：' + error.message);
+            }
+        });
+
+        function loadProjectInfo() {
+            const statusLabels = {
+                'draft': '草稿中', 'quoted': '已報價', 'signed': '已簽約',
+                'construction': '施工中', 'completed': '已完工', 'paid': '已結清'
+            };
+
+            // 基本資訊
+            document.getElementById('projectTitle').textContent = `${currentProject.id} - ${currentProject.storeName || '未命名'}`;
+            document.getElementById('projectStatus').textContent = statusLabels[currentProject.status] || '未知';
+            document.getElementById('projectStatus').className = 'status-badge status-' + (currentProject.status || 'draft');
+            
+            document.getElementById('storeName').textContent = currentProject.storeName || '-';
+            document.getElementById('address').textContent = currentProject.address || '-';
+            document.getElementById('rooms').textContent = currentProject.rooms || 0;
+            document.getElementById('openSeats').textContent = currentProject.openSeats || 0;
+            document.getElementById('contact').textContent = currentProject.contact || '-';
+            document.getElementById('phone').textContent = currentProject.phone || '-';
+            document.getElementById('signDate').textContent = currentProject.signDate || '-';
+            document.getElementById('startDate').textContent = currentProject.startDate || '-';
+            document.getElementById('expectedEndDate').textContent = currentProject.expectedEndDate || '-';
+
+            // 收款資訊
+            loadPaymentInfo();
+
+            // 獲利分析
+            loadProfitAnalysis();
+
+            // 報價明細
+            loadQuoteItems();
+
+            // 施工進度
+            loadProgress();
+        }
+
+        function loadPaymentInfo() {
+            const totalAmount = currentProject.totalAmount || 0;
+            const paidAmount = currentProject.paidAmount || 0;
+            const pendingAmount = totalAmount - paidAmount;
+            const percent = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
+
+            document.getElementById('totalAmount').textContent = '$' + totalAmount.toLocaleString();
+            document.getElementById('paidAmount').textContent = '$' + paidAmount.toLocaleString();
+            document.getElementById('pendingAmount').textContent = '$' + pendingAmount.toLocaleString();
+            document.getElementById('paymentProgress').style.width = percent + '%';
+            document.getElementById('paymentPercent').textContent = percent + '%';
+
+            // 收款記錄表格
+            const payments = currentProject.payments || [];
+            const paymentsBody = document.getElementById('paymentsBody');
+            const paymentsTable = document.getElementById('paymentsTable');
+
+            if (payments.length > 0) {
+                paymentsTable.style.display = 'table';
+                paymentsBody.innerHTML = payments.map((pay, idx) => `
+                    <tr>
+                        <td>${pay.date}</td>
+                        <td>${pay.type}</td>
+                        <td>$${pay.amount.toLocaleString()}</td>
+                        <td>${pay.method}</td>
+                        <td>
+                            <button class="btn btn-sm btn-secondary" onclick="editPayment(${idx})">編輯</button>
+                            <button class="btn btn-sm btn-danger" onclick="deletePayment(${idx})">刪除</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                paymentsTable.style.display = 'none';
+            }
+        }
+
+        function loadProfitAnalysis() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            
+            if (currentUser.role === 'admin' || currentUser.role === 'viewer') {
+                document.getElementById('profitAnalysis').style.display = 'block';
+
+                const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+                let totalCost = 0;
+                const totalAmount = currentProject.totalAmount || 0;
+                
+                const latestQuote = currentProject.quoteVersions && currentProject.quoteVersions.length > 0 
+                    ? currentProject.quoteVersions[currentProject.quoteVersions.length - 1] 
+                    : null;
+
+                if (latestQuote && latestQuote.items) {
+                    latestQuote.items.forEach(item => {
+                        const priceItem = priceTable.find(p => p.name === item.name);
+                        if (priceItem && priceItem.cost) {
+                            totalCost += item.quantity * priceItem.cost;
+                        }
+                    });
+                }
+
+                const grossProfit = totalAmount - totalCost;
+                const grossMargin = totalAmount > 0 ? (grossProfit / totalAmount * 100) : 0;
+
+                document.getElementById('profitTotalAmount').textContent = '$' + totalAmount.toLocaleString();
+                document.getElementById('profitTotalCost').textContent = '$' + totalCost.toLocaleString();
+                document.getElementById('profitGrossProfit').textContent = '$' + grossProfit.toLocaleString();
+                document.getElementById('profitGrossMargin').textContent = grossMargin.toFixed(1) + '%';
+            }
+        }
+
+        function loadQuoteItems() {
+            const quoteItemsBody = document.getElementById('quoteItemsBody');
+            const latestQuote = currentProject.quoteVersions && currentProject.quoteVersions.length > 0 
+                ? currentProject.quoteVersions[currentProject.quoteVersions.length - 1] 
+                : null;
+
+            if (latestQuote && latestQuote.items && latestQuote.items.length > 0) {
+                quoteItemsBody.innerHTML = latestQuote.items.map((item, idx) => `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${item.quantity}</td>
+                        <td>$${item.price.toLocaleString()}</td>
+                        <td>$${item.total.toLocaleString()}</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="deleteQuoteItem(${idx})">刪除</button>
+                        </td>
+                    </tr>
+                `).join('') + `
+                    <tr style="background: #f7fafc; font-weight: bold;">
+                        <td colspan="3" style="text-align: right;">總計</td>
+                        <td>$${(currentProject.totalAmount || 0).toLocaleString()}</td>
+                        <td></td>
+                    </tr>
+                `;
+            } else {
+                quoteItemsBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">沒有報價項目</td></tr>';
+            }
+        }
+
+        function loadProgress() {
+            const progressList = document.getElementById('progressList');
+            const progress = currentProject.constructionProgress || [];
+
+            if (progress.length > 0) {
+                progressList.innerHTML = progress.map((p, idx) => `
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <strong>${p.item}</strong>
+                            <span>${p.progress}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${p.progress}%;"></div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                progressList.innerHTML = '<p style="color: #999;">暫無施工進度記錄</p>';
+            }
+        }
+
+        // Modal 函數
+        function openEditProjectModal() {
+            document.getElementById('editStoreName').value = currentProject.storeName || '';
+            document.getElementById('editAddress').value = currentProject.address || '';
+            document.getElementById('editRooms').value = currentProject.rooms || 0;
+            document.getElementById('editOpenSeats').value = currentProject.openSeats || 0;
+            document.getElementById('editContact').value = currentProject.contact || '';
+            document.getElementById('editPhone').value = currentProject.phone || '';
+            document.getElementById('editSignDate').value = currentProject.signDate || '';
+            document.getElementById('editStartDate').value = currentProject.startDate || '';
+            document.getElementById('editExpectedEndDate').value = currentProject.expectedEndDate || '';
+            document.getElementById('editStatus').value = currentProject.status || 'draft';
+            
+            document.getElementById('editProjectModal').classList.add('show');
+        }
+
+        function closeEditProjectModal() {
+            document.getElementById('editProjectModal').classList.remove('show');
+        }
+
+        function saveEditProject() {
+            currentProject.storeName = document.getElementById('editStoreName').value;
+            currentProject.address = document.getElementById('editAddress').value;
+            currentProject.rooms = parseInt(document.getElementById('editRooms').value);
+            currentProject.openSeats = parseInt(document.getElementById('editOpenSeats').value);
+            currentProject.contact = document.getElementById('editContact').value;
+            currentProject.phone = document.getElementById('editPhone').value;
+            currentProject.signDate = document.getElementById('editSignDate').value;
+            currentProject.startDate = document.getElementById('editStartDate').value;
+            currentProject.expectedEndDate = document.getElementById('editExpectedEndDate').value;
+            currentProject.status = document.getElementById('editStatus').value;
+
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const idx = projects.findIndex(p => p.id === currentProjectId);
+            if (idx >= 0) {
+                projects[idx] = currentProject;
+                localStorage.setItem('projects', JSON.stringify(projects));
+            }
+
+            closeEditProjectModal();
+            loadProjectInfo();
+            alert('✅ 儲存成功！');
+        }
+
+        function editPayment(index) {
+            const payment = currentProject.payments[index];
+            const form = document.getElementById('paymentForm');
+            
+            document.getElementById('paymentProjectId').value = currentProjectId;
+            document.getElementById('paymentDate').value = payment.date;
+            document.getElementById('paymentType').value = payment.type;
+            document.getElementById('paymentAmount').value = payment.amount;
+            document.getElementById('paymentMethod').value = payment.method;
+            document.getElementById('paymentBank').value = payment.bankAccount || '';
+            document.getElementById('paymentInvoice').value = payment.invoice || '';
+            document.getElementById('paymentNote').value = payment.note || '';
+            
+            form.dataset.editIndex = index;
+            document.getElementById('paymentModal').classList.add('show');
+        }
+
+        function deletePayment(index) {
+            if (!confirm('確定要刪除這筆收款記錄嗎？')) return;
+
+            const payment = currentProject.payments[index];
+            currentProject.paidAmount -= payment.amount;
+            currentProject.payments.splice(index, 1);
+
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const idx = projects.findIndex(p => p.id === currentProjectId);
+            if (idx >= 0) {
+                projects[idx] = currentProject;
+                localStorage.setItem('projects', JSON.stringify(projects));
+            }
+
+            loadPaymentInfo();
+            alert('✅ 已刪除');
+        }
+
+        function openAddQuoteItemModal() {
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            const select = document.getElementById('newQuoteItemSelect');
+            
+            select.innerHTML = '<option value="">請選擇...</option>' + 
+                priceTable.map(item => `<option value="${item.name}" data-price="${item.price}">${item.name} - $${item.price.toLocaleString()}</option>`).join('');
+            
+            document.getElementById('addQuoteItemModal').classList.add('show');
+        }
+
+        function closeAddQuoteItemModal() {
+            document.getElementById('addQuoteItemForm').reset();
+            document.getElementById('addQuoteItemModal').classList.remove('show');
+        }
+
+        function updateNewItemPrice() {
+            const select = document.getElementById('newQuoteItemSelect');
+            const selectedOption = select.options[select.selectedIndex];
+            const price = selectedOption ? parseFloat(selectedOption.getAttribute('data-price')) : 0;
+            
+            document.getElementById('newQuoteItemPrice').value = price;
+            updateNewItemTotal();
+        }
+
+        function updateNewItemTotal() {
+            const quantity = parseFloat(document.getElementById('newQuoteItemQuantity').value) || 0;
+            const price = parseFloat(document.getElementById('newQuoteItemPrice').value) || 0;
+            document.getElementById('newQuoteItemTotal').value = quantity * price;
+        }
+
+        function saveNewQuoteItem() {
+            const name = document.getElementById('newQuoteItemSelect').value;
+            const quantity = parseFloat(document.getElementById('newQuoteItemQuantity').value);
+            const price = parseFloat(document.getElementById('newQuoteItemPrice').value);
+            const total = quantity * price;
+
+            if (!name) {
+                alert('請選擇項目！');
+                return;
+            }
+
+            const latestQuote = currentProject.quoteVersions[currentProject.quoteVersions.length - 1];
+            latestQuote.items.push({ name, quantity, price, total });
+            
+            currentProject.totalAmount += total;
+
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const idx = projects.findIndex(p => p.id === currentProjectId);
+            if (idx >= 0) {
+                projects[idx] = currentProject;
+                localStorage.setItem('projects', JSON.stringify(projects));
+            }
+
+            closeAddQuoteItemModal();
+            loadProjectInfo();
+            alert('✅ 已新增');
+        }
+
+        function deleteQuoteItem(index) {
+            if (!confirm('確定要刪除這個項目嗎？')) return;
+
+            const latestQuote = currentProject.quoteVersions[currentProject.quoteVersions.length - 1];
+            const item = latestQuote.items[index];
+            
+            currentProject.totalAmount -= item.total;
+            latestQuote.items.splice(index, 1);
+
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const idx = projects.findIndex(p => p.id === currentProjectId);
+            if (idx >= 0) {
+                projects[idx] = currentProject;
+                localStorage.setItem('projects', JSON.stringify(projects));
+            }
+
+            loadProjectInfo();
+            alert('✅ 已刪除');
+        }
+    </script>
+</body>
+</html>

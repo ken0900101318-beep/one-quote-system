@@ -1,0 +1,269 @@
+/**
+ * ONE桌遊報價系統 API 測試腳本
+ * 用於測試 backend-quote.gs 的各項功能
+ */
+
+const API_URL = 'https://script.google.com/macros/s/AKfycbx0vMbZ7X6YL312M88q6NoGgwPb3oB-zZj1TpUt3K7BtV54QE445cyLFDJkhtXm1rZH/exec';
+
+/**
+ * 測試 1: 基本連線測試
+ */
+function test1_basicConnection() {
+  const url = `${API_URL}?action=test`;
+  const response = UrlFetchApp.fetch(url);
+  const result = JSON.parse(response.getContentText());
+  Logger.log('Test 1 - 基本連線:', result);
+  return result.success;
+}
+
+/**
+ * 測試 2: 取得價目表
+ */
+function test2_getPriceTable() {
+  const url = `${API_URL}?action=getPriceTable`;
+  try {
+    const response = UrlFetchApp.fetch(url);
+    const result = JSON.parse(response.getContentText());
+    Logger.log('Test 2 - 價目表:', result);
+    Logger.log('項目數量:', result.items ? result.items.length : 0);
+    return result.success;
+  } catch (error) {
+    Logger.log('Test 2 - 錯誤:', error.toString());
+    return false;
+  }
+}
+
+/**
+ * 測試 3: 取得所有專案
+ */
+function test3_getProjects() {
+  const url = `${API_URL}?action=getProjects`;
+  try {
+    const response = UrlFetchApp.fetch(url);
+    const result = JSON.parse(response.getContentText());
+    Logger.log('Test 3 - 所有專案:', result);
+    Logger.log('專案數量:', result.projects ? result.projects.length : 0);
+    return result.success;
+  } catch (error) {
+    Logger.log('Test 3 - 錯誤:', error.toString());
+    return false;
+  }
+}
+
+/**
+ * 測試 4: 取得單一專案 (用內部 ID)
+ */
+function test4_getProjectById() {
+  // 先取得所有專案，拿第一個來測試
+  const projectsUrl = `${API_URL}?action=getProjects`;
+  const projectsResponse = UrlFetchApp.fetch(projectsUrl);
+  const projectsResult = JSON.parse(projectsResponse.getContentText());
+  
+  if (!projectsResult.success || projectsResult.projects.length === 0) {
+    Logger.log('Test 4 - 沒有專案可測試');
+    return false;
+  }
+  
+  const firstProject = projectsResult.projects[0];
+  const url = `${API_URL}?action=getProject&id=${firstProject.id}`;
+  
+  try {
+    const response = UrlFetchApp.fetch(url);
+    const result = JSON.parse(response.getContentText());
+    Logger.log('Test 4 - 用內部 ID 查詢:', result);
+    return result.success;
+  } catch (error) {
+    Logger.log('Test 4 - 錯誤:', error.toString());
+    return false;
+  }
+}
+
+/**
+ * 測試 5: 取得單一專案 (用專案編號)
+ */
+function test5_getProjectByNumber() {
+  // 先取得所有專案，拿第一個來測試
+  const projectsUrl = `${API_URL}?action=getProjects`;
+  const projectsResponse = UrlFetchApp.fetch(projectsUrl);
+  const projectsResult = JSON.parse(projectsResponse.getContentText());
+  
+  if (!projectsResult.success || projectsResult.projects.length === 0) {
+    Logger.log('Test 5 - 沒有專案可測試');
+    return false;
+  }
+  
+  const firstProject = projectsResult.projects[0];
+  const url = `${API_URL}?action=getProject&id=${firstProject.projectNumber}`;
+  
+  try {
+    const response = UrlFetchApp.fetch(url);
+    const result = JSON.parse(response.getContentText());
+    Logger.log('Test 5 - 用專案編號查詢:', result);
+    return result.success;
+  } catch (error) {
+    Logger.log('Test 5 - 錯誤:', error.toString());
+    return false;
+  }
+}
+
+/**
+ * 測試 6: 新增專案
+ */
+function test6_addProject() {
+  const testProject = {
+    projectNumber: 'P-TEST-' + Date.now(),
+    customerName: '測試客戶',
+    phone: '0912345678',
+    status: 'quoted',
+    totalPrice: 50000,
+    createdBy: 'API測試',
+    items: [
+      { category: '桌遊設備', name: '測試項目', price: 50000, quantity: 1 }
+    ]
+  };
+  
+  const url = `${API_URL}?action=addProject&data=${encodeURIComponent(JSON.stringify(testProject))}`;
+  
+  try {
+    const response = UrlFetchApp.fetch(url);
+    const result = JSON.parse(response.getContentText());
+    Logger.log('Test 6 - 新增專案:', result);
+    return result.success;
+  } catch (error) {
+    Logger.log('Test 6 - 錯誤:', error.toString());
+    return false;
+  }
+}
+
+/**
+ * 測試 7: 更新專案
+ */
+function test7_updateProject() {
+  // 先取得所有專案
+  const projectsUrl = `${API_URL}?action=getProjects`;
+  const projectsResponse = UrlFetchApp.fetch(projectsUrl);
+  const projectsResult = JSON.parse(projectsResponse.getContentText());
+  
+  if (!projectsResult.success || projectsResult.projects.length === 0) {
+    Logger.log('Test 7 - 沒有專案可測試');
+    return false;
+  }
+  
+  const firstProject = projectsResult.projects[0];
+  const updatedData = {
+    ...firstProject,
+    customerName: '更新後的客戶名稱',
+    totalPrice: 60000
+  };
+  
+  const url = `${API_URL}?action=updateProject&id=${firstProject.id}&data=${encodeURIComponent(JSON.stringify(updatedData))}`;
+  
+  try {
+    const response = UrlFetchApp.fetch(url);
+    const result = JSON.parse(response.getContentText());
+    Logger.log('Test 7 - 更新專案:', result);
+    return result.success;
+  } catch (error) {
+    Logger.log('Test 7 - 錯誤:', error.toString());
+    return false;
+  }
+}
+
+/**
+ * 測試 8: 刪除專案
+ */
+function test8_deleteProject() {
+  // 先新增一個測試專案
+  const testProject = {
+    projectNumber: 'P-DELETE-TEST-' + Date.now(),
+    customerName: '待刪除的測試客戶',
+    phone: '0900000000',
+    status: 'quoted',
+    totalPrice: 1000
+  };
+  
+  const addUrl = `${API_URL}?action=addProject&data=${encodeURIComponent(JSON.stringify(testProject))}`;
+  const addResponse = UrlFetchApp.fetch(addUrl);
+  const addResult = JSON.parse(addResponse.getContentText());
+  
+  if (!addResult.success) {
+    Logger.log('Test 8 - 無法新增測試專案');
+    return false;
+  }
+  
+  const projectId = addResult.id;
+  const deleteUrl = `${API_URL}?action=deleteProject&id=${projectId}`;
+  
+  try {
+    const response = UrlFetchApp.fetch(deleteUrl);
+    const result = JSON.parse(response.getContentText());
+    Logger.log('Test 8 - 刪除專案:', result);
+    return result.success;
+  } catch (error) {
+    Logger.log('Test 8 - 錯誤:', error.toString());
+    return false;
+  }
+}
+
+/**
+ * 測試 9: 取得分類
+ */
+function test9_getCategories() {
+  const url = `${API_URL}?action=getCategories`;
+  try {
+    const response = UrlFetchApp.fetch(url);
+    const result = JSON.parse(response.getContentText());
+    Logger.log('Test 9 - 分類:', result);
+    Logger.log('分類數量:', result.categories ? result.categories.length : 0);
+    return result.success;
+  } catch (error) {
+    Logger.log('Test 9 - 錯誤:', error.toString());
+    return false;
+  }
+}
+
+/**
+ * 執行所有測試
+ */
+function runAllTests() {
+  Logger.log('===== ONE桌遊報價系統 API 測試開始 =====');
+  Logger.log('');
+  
+  const tests = [
+    { name: 'Test 1: 基本連線', fn: test1_basicConnection },
+    { name: 'Test 2: 取得價目表', fn: test2_getPriceTable },
+    { name: 'Test 3: 取得所有專案', fn: test3_getProjects },
+    { name: 'Test 4: 用內部 ID 查詢專案', fn: test4_getProjectById },
+    { name: 'Test 5: 用專案編號查詢專案', fn: test5_getProjectByNumber },
+    { name: 'Test 6: 新增專案', fn: test6_addProject },
+    { name: 'Test 7: 更新專案', fn: test7_updateProject },
+    { name: 'Test 8: 刪除專案', fn: test8_deleteProject },
+    { name: 'Test 9: 取得分類', fn: test9_getCategories }
+  ];
+  
+  let passed = 0;
+  let failed = 0;
+  
+  tests.forEach(test => {
+    Logger.log(`\n執行 ${test.name}...`);
+    try {
+      const result = test.fn();
+      if (result) {
+        Logger.log(`✅ ${test.name} 通過`);
+        passed++;
+      } else {
+        Logger.log(`❌ ${test.name} 失敗`);
+        failed++;
+      }
+    } catch (error) {
+      Logger.log(`❌ ${test.name} 錯誤: ${error.toString()}`);
+      failed++;
+    }
+    Logger.log('');
+  });
+  
+  Logger.log('===== 測試結果 =====');
+  Logger.log(`✅ 通過: ${passed}`);
+  Logger.log(`❌ 失敗: ${failed}`);
+  Logger.log(`總計: ${tests.length}`);
+}

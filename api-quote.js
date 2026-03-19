@@ -280,5 +280,32 @@ const QuoteAPI = {
         }
         
         return await this.requestPost('deletePriceItem', { id });
+    },
+    
+    // 新增分類
+    async addCategory(category) {
+        if (!category || !category.name) {
+            return { success: false, error: '缺少分類名稱' };
+        }
+        
+        return await this.requestPost('addCategory', { category });
+    },
+    
+    // 更新分類
+    async updateCategory(id, category) {
+        if (!id || !category) {
+            return { success: false, error: '缺少分類 ID 或資料' };
+        }
+        
+        return await this.requestPost('updateCategory', { id, category });
+    },
+    
+    // 刪除分類
+    async deleteCategory(id) {
+        if (!id) {
+            return { success: false, error: '缺少分類 ID' };
+        }
+        
+        return await this.requestPost('deleteCategory', { id });
     }
 };

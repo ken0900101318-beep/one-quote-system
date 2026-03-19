@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>資料匯入 - ONE桌遊報價系統</title>
+</head>
+<body>
+    <h1>資料匯入工具</h1>
+    <button onclick="importPriceTable()">匯入價目表到 Google Sheets</button>
+    <button onclick="importProjects()">匯入專案到 Google Sheets</button>
+    <div id="log" style="margin-top: 20px; border: 1px solid #ccc; padding: 10px; max-height: 400px; overflow-y: auto;"></div>
+
+    <script src="data.js"></script>
+    <script src="config-api.js"></script>
+    <script src="api-quote.js"></script>
+    <script>
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${msg}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // 匯入價目表
+        async function importPriceTable() {
+            log('開始匯入價目表...');
+            
+            // 從 localStorage 讀取
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            log(`找到 ${priceTable.length} 項價目`);
+            
+            if (priceTable.length === 0) {
+                log('❌ localStorage 中沒有價目表資料');
+                return;
+            }
+            
+            // TODO: 需要建立匯入 API
+            log('⚠️ 價目表匯入 API 尚未實作');
+            log('請將以下資料複製到 Google Sheets：');
+            console.log('價目表:', priceTable);
+        }
+
+        // 匯入專案
+        async function importProjects() {
+            log('開始匯入專案...');
+            
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            log(`找到 ${projects.length} 個專案`);
+            
+            if (projects.length === 0) {
+                log('❌ localStorage 中沒有專案資料');
+                return;
+            }
+            
+            let success = 0;
+            let failed = 0;
+            
+            for (const project of projects) {
+                try {
+                    log(`匯入專案: ${project.customerName}...`);
+                    const result = await QuoteAPI.addProject(project);
+                    
+                    if (result.success) {
+                        success++;
+                        log(`✅ ${project.customerName} 匯入成功`);
+                    } else {
+                        failed++;
+                        log(`❌ ${project.customerName} 失敗: ${result.error}`);
+                    }
+                    
+                    // 延遲避免 API 限流
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                } catch (error) {
+                    failed++;
+                    log(`❌ ${project.customerName} 錯誤: ${error.message}`);
+                }
+            }
+            
+            log(`\n匯入完成！成功: ${success}, 失敗: ${failed}`);
+        }
+
+        // 頁面載入時檢查
+        window.onload = function() {
+            const priceTable = JSON.parse(localStorage.getItem('priceTable') || '[]');
+            const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+            
+            log(`localStorage 狀態：`);
+            log(`  價目表: ${priceTable.length} 項`);
+            log(`  專案: ${projects.length} 個`);
+        };
+    </script>
+</body>
+</html>

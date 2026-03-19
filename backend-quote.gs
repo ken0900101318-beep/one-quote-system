@@ -95,6 +95,18 @@ function doPost(e) {
         result = deletePriceItem(data.id);
         break;
         
+      case 'addCategory':
+        result = addCategory(data.category || {});
+        break;
+        
+      case 'updateCategory':
+        result = updateCategory(data.id, data.category || {});
+        break;
+        
+      case 'deleteCategory':
+        result = deleteCategory(data.id);
+        break;
+        
       default:
         result = { success: false, error: '不支援的操作' };
     }
@@ -154,6 +166,15 @@ function doGet(e) {
       break;
     case 'deleteProject':
       result = deleteProject(e.parameter.id);
+      break;
+    case 'addCategory':
+      result = addCategory(JSON.parse(e.parameter.data));
+      break;
+    case 'updateCategory':
+      result = updateCategory(e.parameter.id, JSON.parse(e.parameter.data));
+      break;
+    case 'deleteCategory':
+      result = deleteCategory(e.parameter.id);
       break;
     default:
       result = { success: false, error: '不支援的操作' };
@@ -465,4 +486,84 @@ function deletePriceItem(id) {
   }
   
   return { success: false, error: '找不到項目' };
+}
+
+/**
+ * 新增分類
+ */
+function addCategory(category) {
+  const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.CATEGORIES);
+  
+  const id = category.id || ('CAT' + Date.now());
+  
+  sheet.appendRow([
+    id,
+    category.name || '',
+    category.icon || '📋',
+    new Date()
+  ]);
+  
+  return { success: true, message: '分類已新增', id };
+}
+
+/**
+ * 更新分類
+ */
+function updateCategory(id, category) {
+  const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.CATEGORIES);
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === id) {
+      sheet.getRange(i + 1, 2).setValue(category.name || data[i][1]);
+      sheet.getRange(i + 1, 3).setValue(category.icon || data[i][2]);
+      
+      return { success: true, message: '分類已更新' };
+    }
+  }
+  
+  return { success: false, error: '找不到分類' };
+}
+
+/**
+ * 刪除分類
+ */
+function deleteCategory(id) {
+  // 先檢查是否有價目表項目使用此分類
+  const priceSheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.PRICE_TABLE);
+  const priceData = priceSheet.getDataRange().getValues();
+  
+  // 找到分類名稱
+  const categorySheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.CATEGORIES);
+  const categoryData = categorySheet.getDataRange().getValues();
+  
+  let categoryName = '';
+  let rowIndex = -1;
+  
+  for (let i = 1; i < categoryData.length; i++) {
+    if (categoryData[i][0] === id) {
+      categoryName = categoryData[i][1];
+      rowIndex = i + 1;
+      break;
+    }
+  }
+  
+  if (rowIndex === -1) {
+    return { success: false, error: '找不到分類' };
+  }
+  
+  // 檢查是否被使用
+  for (let i = 1; i < priceData.length; i++) {
+    if (priceData[i][1] === categoryName) {
+      return { 
+        success: false, 
+        error: '此分類正在被使用，無法刪除',
+        inUse: true
+      };
+    }
+  }
+  
+  // 沒有被使用，可以刪除
+  categorySheet.deleteRow(rowIndex);
+  return { success: true, message: '分類已刪除' };
 }

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分類管理 - ONE桌遊報價系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" class="logo">
+            ONE桌遊報價系統
+        </div>
+        <div class="navbar-user">
+            <span id="userName">載入中...</span>
+            <button class="btn-logout" onclick="goBack()">← 返回</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>🗂️ 分類管理</h2>
+                <button class="btn btn-primary" onclick="showAddCategoryModal()">➕ 新增分類</button>
+            </div>
+
+            <!-- Loading 狀態 -->
+            <div id="loadingState" style="display: none; text-align: center; padding: 40px;">
+                <div class="spinner"></div>
+                <p>載入中...</p>
+            </div>
+
+            <!-- 分類列表 -->
+            <div id="categoriesList" style="padding: 20px;"></div>
+        </div>
+    </div>
+
+    <!-- 新增/編輯分類 Modal -->
+    <div id="categoryModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="modalTitle">新增分類</h3>
+                <button class="modal-close" onclick="closeCategoryModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>分類名稱 *</label>
+                    <input type="text" id="categoryName" placeholder="例：桌遊設備" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Icon (Emoji)</label>
+                    <input type="text" id="categoryIcon" placeholder="例：🎲" maxlength="2">
+                    <small>常用：🎲 🏗️ 🛋️ 📋 💰 🎯 📦 🔧</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCategoryModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveCategory()">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入共用工具 -->
+    <script src="utils.js"></script>
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
+    <script src="config-api.js"></script>
+    <script src="api-quote.js"></script>
+    <script>
+        let allCategories = [];
+        let editingCategoryId = null;
+        let isLoading = false;
+        
+        // 檢查登入
+        const currentUser = Auth.requireLogin();
+        if (!currentUser) return;
+        
+        // 權限檢查（只有主管和員工能編輯）
+        if (currentUser.role === 'viewer') {
+            Toast.error('您沒有權限管理分類');
+            setTimeout(() => {
+                window.location.href = 'dashboard-simple.html';
+            }, 2000);
+        }
+        
+        // 顯示使用者
+        document.getElementById('userName').textContent = `${currentUser.avatar || ''} ${currentUser.name}`;
+        
+        // 顯示/隱藏 Loading
+        function showLoading(show) {
+            isLoading = show;
+            document.getElementById('loadingState').style.display = show ? 'block' : 'none';
+            document.getElementById('categoriesList').style.display = show ? 'none' : 'block';
+        }
+        
+        // 載入分類
+        async function loadCategories() {
+            if (isLoading) return;
+            
+            showLoading(true);
+            
+            try {
+                const result = await QuoteAPI.getCategories();
+                
+                if (result.success) {
+                    allCategories = result.categories || [];
+                    renderCategories();
+                    Toast.success(`已載入 ${allCategories.length} 個分類`);
+                } else {
+                    Toast.error('載入失敗：' + result.error);
+                }
+            } catch (error) {
+                console.error('載入分類失敗:', error);
+                Toast.error('連線失敗：' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // 顯示分類
+        function renderCategories() {
+            const container = document.getElementById('categoriesList');
+            
+            if (allCategories.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暫無分類</p>';
+                return;
+            }
+            
+            container.innerHTML = allCategories.map(cat => `
+                <div class="category-item" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; margin-bottom: 10px; background: #f7fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span style="font-size: 24px;">${Utils.escapeHtml(cat.icon || '📋')}</span>
+                        <div>
+                            <strong style="font-size: 16px;">${Utils.escapeHtml(cat.name)}</strong>
+                            <div style="font-size: 12px; color: #666;">ID: ${Utils.escapeHtml(cat.id)}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-sm btn-primary" onclick="editCategory('${Utils.escapeHtml(cat.id)}')">✏️ 編輯</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCategory('${Utils.escapeHtml(cat.id)}')">🗑️ 刪除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 顯示新增分類 Modal
+        function showAddCategoryModal() {
+            editingCategoryId = null;
+            document.getElementById('modalTitle').textContent = '新增分類';
+            document.getElementById('categoryName').value = '';
+            document.getElementById('categoryIcon').value = '';
+            document.getElementById('categoryModal').style.display = 'flex';
+        }
+        
+        // 編輯分類
+        function editCategory(id) {
+            const category = allCategories.find(c => c.id === id);
+            if (!category) {
+                Toast.error('找不到分類');
+                return;
+            }
+            
+            editingCategoryId = id;
+            document.getElementById('modalTitle').textContent = '編輯分類';
+            document.getElementById('categoryName').value = category.name;
+            document.getElementById('categoryIcon').value = category.icon || '';
+            document.getElementById('categoryModal').style.display = 'flex';
+        }
+        
+        // 關閉 Modal
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').style.display = 'none';
+            editingCategoryId = null;
+        }
+        
+        // 儲存分類
+        async function saveCategory() {
+            const name = document.getElementById('categoryName').value.trim();
+            const icon = document.getElementById('categoryIcon').value.trim();
+            
+            if (!name) {
+                Toast.error('請輸入分類名稱');
+                return;
+            }
+            
+            const category = {
+                name: name,
+                icon: icon || '📋'
+            };
+            
+            try {
+                let result;
+                
+                if (editingCategoryId) {
+                    // 更新
+                    result = await QuoteAPI.updateCategory(editingCategoryId, category);
+                } else {
+                    // 新增
+                    result = await QuoteAPI.addCategory(category);
+                }
+                
+                if (result.success) {
+                    Toast.success(editingCategoryId ? '分類已更新' : '分類已新增');
+                    closeCategoryModal();
+                    await loadCategories();
+                } else {
+                    Toast.error(result.error || '儲存失敗');
+                }
+            } catch (error) {
+                console.error('儲存分類失敗:', error);
+                Toast.error('連線失敗：' + error.message);
+            }
+        }
+        
+        // 刪除分類
+        async function deleteCategory(id) {
+            const category = allCategories.find(c => c.id === id);
+            if (!category) {
+                Toast.error('找不到分類');
+                return;
+            }
+            
+            if (!confirm(`⚠️ 確定要刪除分類「${category.name}」嗎？\n\n如果此分類正在被使用，將無法刪除。`)) {
+                return;
+            }
+            
+            try {
+                const result = await QuoteAPI.deleteCategory(id);
+                
+                if (result.success) {
+                    Toast.success('分類已刪除');
+                    await loadCategories();
+                } else {
+                    if (result.inUse) {
+                        Toast.error('此分類正在被使用，無法刪除');
+                    } else {
+                        Toast.error(result.error || '刪除失敗');
+                    }
+                }
+            } catch (error) {
+                console.error('刪除分類失敗:', error);
+                Toast.error('連線失敗：' + error.message);
+            }
+        }
+        
+        // 返回
+        function goBack() {
+            window.location.href = 'dashboard-simple.html';
+        }
+        
+        // 頁面載入
+        loadCategories();
+        
+        // 點擊 Modal 外部關閉
+        document.getElementById('categoryModal').addEventListener('click', (e) => {
+            if (e.target.id === 'categoryModal') {
+                closeCategoryModal();
+            }
+        });
+        
+        // Enter 鍵儲存
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && document.getElementById('categoryModal').style.display === 'flex') {
+                saveCategory();
+            }
+            if (e.key === 'Escape') {
+                closeCategoryModal();
+            }
+        });
+    </script>
+    
+    <style>
+        /* Loading 動畫 */
+        .spinner {
+            margin: 0 auto;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 500px;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            color: #666;
+            font-size: 12px;
+        }
+        
+        /* 行動裝置優化 */
+        @media (max-width: 768px) {
+            .category-item {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+            
+            .category-item > div:last-child {
+                margin-top: 10px;
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</body>
+</html>
