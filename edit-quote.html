@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新增報價 - ONE桌遊報價系統</title>
+    <title>編輯報價 - ONE桌遊報價系統</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,14 +13,14 @@
             ONE桌遊報價系統
         </div>
         <div class="navbar-user">
-            <button class="btn-secondary" onclick="goBack()">← 返回列表</button>
+            <button class="btn-secondary" onclick="goBack()">← 返回</button>
         </div>
     </nav>
 
     <div class="container">
         <div class="card">
             <div class="card-header">
-                <h2>➕ 新增報價</h2>
+                <h2>✏️ 編輯報價</h2>
             </div>
 
             <form id="quoteForm" style="padding: 20px;">
@@ -35,8 +35,8 @@
                     <small style="color: #666;">格式：09 開頭，共 10 位數字</small>
                 </div>
                 <div class="form-row">
-                    <label>專案編號（自動產生）</label>
-                    <input type="text" id="projectNumber" readonly>
+                    <label>專案編號</label>
+                    <input type="text" id="projectNumber" readonly style="background: #f0f0f0;">
                 </div>
                 <div class="form-row">
                     <label>狀態</label>
@@ -57,7 +57,7 @@
                 </div>
 
                 <div style="margin-top: 20px; display: flex; gap: 10px;">
-                    <button type="submit" class="btn btn-primary" id="submitBtn">💾 儲存報價</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">💾 儲存修改</button>
                     <button type="button" class="btn btn-secondary" onclick="goBack()">取消</button>
                 </div>
             </form>
@@ -71,17 +71,25 @@
     <script src="config-api.js"></script>
     <script src="api-quote.js"></script>
     <script>
-        // 檢查登入（使用共用工具）
+        // 檢查登入
         const currentUser = Auth.requireLogin();
         if (!currentUser) return;
 
         let itemCount = 0;
         let items = [];
         let formModified = false;
-        let categories = []; // 儲存分類資料
+        let categories = [];
+        let projectId = null;
+        let originalData = null;
 
-        // 產生專案編號（使用共用工具）
-        document.getElementById('projectNumber').value = Utils.generateProjectNo();
+        // 從 URL 取得專案 ID
+        const urlParams = new URLSearchParams(window.location.search);
+        projectId = urlParams.get('id');
+
+        if (!projectId) {
+            Toast.error('缺少專案 ID');
+            setTimeout(() => location.href = 'dashboard-simple.html', 1000);
+        }
 
         // 監控表單變更
         document.getElementById('quoteForm').addEventListener('input', () => {
@@ -116,6 +124,46 @@
             });
         }
 
+        // 載入專案資料
+        async function loadProject() {
+            try {
+                Toast.info('載入資料中...');
+                const result = await QuoteAPI.getProject(projectId);
+                
+                if (!result.success) {
+                    Toast.error('載入失敗：' + result.error);
+                    setTimeout(() => location.href = 'dashboard-simple.html', 1500);
+                    return;
+                }
+
+                const project = result.project;
+                originalData = project;
+
+                // 填入基本資訊
+                document.getElementById('customerName').value = project.customerName || '';
+                document.getElementById('phone').value = project.phone || '';
+                document.getElementById('projectNumber').value = project.projectNumber || '';
+                document.getElementById('status').value = project.status || 'quoted';
+
+                // 載入項目
+                if (project.items && project.items.length > 0) {
+                    project.items.forEach(item => {
+                        addItem(item);
+                    });
+                } else {
+                    // 如果沒有項目，新增一個空項目
+                    addItem();
+                }
+
+                calculateTotal();
+                Toast.success('資料已載入');
+            } catch (error) {
+                console.error('載入專案失敗:', error);
+                Toast.error('載入失敗：' + error.message);
+                setTimeout(() => location.href = 'dashboard-simple.html', 1500);
+            }
+        }
+
         // 返回前確認
         function goBack() {
             if (formModified && !confirm('⚠️ 表單尚未儲存，確定要離開嗎？')) {
@@ -124,8 +172,8 @@
             location.href = 'dashboard-simple.html';
         }
 
-        // 新增項目
-        function addItem() {
+        // 新增項目（支援預填資料）
+        function addItem(data = null) {
             itemCount++;
             const container = document.getElementById('itemsContainer');
             
@@ -141,7 +189,7 @@
                 </button>
                 <div class="form-row">
                     <label>項目名稱 *</label>
-                    <input type="text" id="itemName${itemCount}" required maxlength="100">
+                    <input type="text" id="itemName${itemCount}" required maxlength="100" value="${data?.name || ''}">
                 </div>
                 <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div>
@@ -152,21 +200,21 @@
                     </div>
                     <div>
                         <label>子分類</label>
-                        <input type="text" id="itemSubCategory${itemCount}" maxlength="50" placeholder="選填">
+                        <input type="text" id="itemSubCategory${itemCount}" maxlength="50" placeholder="選填" value="${data?.subCategory || ''}">
                     </div>
                 </div>
                 <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
                     <div>
                         <label>數量 *</label>
-                        <input type="number" id="itemQty${itemCount}" value="1" min="1" max="9999" required onchange="calculateTotal()">
+                        <input type="number" id="itemQty${itemCount}" value="${data?.qty || 1}" min="1" max="9999" required onchange="calculateTotal()">
                     </div>
                     <div>
                         <label>單價 *</label>
-                        <input type="number" id="itemPrice${itemCount}" value="0" min="0" max="9999999" step="0.01" required onchange="calculateTotal()">
+                        <input type="number" id="itemPrice${itemCount}" value="${data?.price || 0}" min="0" max="9999999" step="0.01" required onchange="calculateTotal()">
                     </div>
                     <div>
                         <label>單位</label>
-                        <input type="text" id="itemUnit${itemCount}" maxlength="10" placeholder="個/組/式">
+                        <input type="text" id="itemUnit${itemCount}" maxlength="10" placeholder="個/組/式" value="${data?.unit || ''}">
                     </div>
                     <div>
                         <label>小計</label>
@@ -175,7 +223,7 @@
                 </div>
                 <div class="form-row">
                     <label>說明</label>
-                    <input type="text" id="itemDesc${itemCount}" maxlength="200">
+                    <input type="text" id="itemDesc${itemCount}" maxlength="200" value="${data?.desc || ''}">
                 </div>
             `;
             
@@ -186,16 +234,18 @@
             const categorySelect = document.getElementById(`itemCategory${itemCount}`);
             if (categorySelect) {
                 populateCategorySelect(categorySelect);
+                if (data?.category) {
+                    categorySelect.value = data.category;
+                }
             }
             
             calculateTotal();
         }
 
-        // 移除項目（加入確認）
+        // 移除項目
         function removeItem(id) {
             const itemName = document.getElementById(`itemName${id}`)?.value;
             
-            // 如果項目有填寫內容，需要確認
             if (itemName && !confirm(`確定要移除項目「${itemName}」嗎？`)) {
                 return;
             }
@@ -208,7 +258,7 @@
             }
         }
 
-        // 計算總計（修正為使用 parseFloat 支援小數）
+        // 計算總計
         function calculateTotal() {
             let total = 0;
             
@@ -233,7 +283,6 @@
             const customerName = document.getElementById('customerName').value.trim();
             const phone = document.getElementById('phone').value.trim();
             
-            // 姓名驗證
             if (!customerName || customerName.length < 2) {
                 Toast.error('請輸入客戶姓名（至少 2 個字）');
                 document.getElementById('customerName').focus();
@@ -246,16 +295,14 @@
                 return false;
             }
             
-            // 電話驗證
             if (!Utils.validatePhone(phone)) {
                 Toast.error('請輸入正確的手機號碼（例如：0912345678）');
                 document.getElementById('phone').focus();
                 return false;
             }
             
-            // 項目驗證
             let hasValidItem = false;
-            items.forEach(id => {
+            for (const id of items) {
                 const name = document.getElementById(`itemName${id}`)?.value.trim();
                 const qty = parseFloat(document.getElementById(`itemQty${id}`)?.value || 0);
                 const price = parseFloat(document.getElementById(`itemPrice${id}`)?.value || 0);
@@ -263,49 +310,45 @@
                 if (name && qty > 0) {
                     hasValidItem = true;
                     
-                    // 驗證數量範圍
                     if (!Utils.validateNumber(qty, 1, 9999)) {
                         Toast.error(`項目「${name}」的數量必須在 1-9999 之間`);
                         return false;
                     }
                     
-                    // 驗證價格範圍
                     if (!Utils.validateNumber(price, 0, 9999999)) {
                         Toast.error(`項目「${name}」的單價必須在 0-9,999,999 之間`);
                         return false;
                     }
                 }
-            });
+            }
             
             if (!hasValidItem) {
-                Toast.error('請至少新增一個報價項目');
+                Toast.error('請至少保留一個報價項目');
                 return false;
             }
             
             return true;
         }
 
-        // 儲存報價
+        // 儲存修改
         document.getElementById('quoteForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // 表單驗證
             if (!validateForm()) {
                 return;
             }
             
-            // 停用按鈕防止重複提交
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.textContent = '儲存中...';
             
             // 收集資料
             const projectData = {
+                ...originalData,
                 projectNumber: document.getElementById('projectNumber').value,
                 customerName: document.getElementById('customerName').value.trim(),
                 phone: document.getElementById('phone').value.trim(),
                 status: document.getElementById('status').value,
-                createdBy: currentUser.name,
                 items: [],
                 totalPrice: 0
             };
@@ -340,38 +383,35 @@
             projectData.totalPrice = total;
             
             try {
-                console.log('準備儲存:', projectData);
-                const result = await QuoteAPI.addProject(projectData);
+                console.log('準備更新:', projectData);
+                const result = await QuoteAPI.updateProject(projectId, projectData);
                 
                 if (result.success) {
-                    Toast.success('報價已成功儲存！');
-                    formModified = false; // 重置表單變更標記
+                    Toast.success('修改已成功儲存！');
+                    formModified = false;
                     setTimeout(() => {
                         location.href = 'dashboard-simple.html';
                     }, 1000);
                 } else {
                     Toast.error('儲存失敗：' + result.error);
                     submitBtn.disabled = false;
-                    submitBtn.textContent = '💾 儲存報價';
+                    submitBtn.textContent = '💾 儲存修改';
                 }
             } catch (error) {
                 console.error('儲存失敗:', error);
                 Toast.error('連線失敗：' + error.message);
                 submitBtn.disabled = false;
-                submitBtn.textContent = '💾 儲存報價';
+                submitBtn.textContent = '💾 儲存修改';
             }
         });
 
         // 頁面載入時初始化
         (async function init() {
-            // 載入分類
             await loadCategories();
-            
-            // 初始新增一個項目
-            addItem();
+            await loadProject();
         })();
         
-        // 快捷鍵：Ctrl+S 或 Cmd+S = 儲存
+        // 快捷鍵
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();
@@ -389,7 +429,6 @@
     </script>
     
     <style>
-        /* 行動裝置優化 */
         @media (max-width: 768px) {
             .form-row > div {
                 grid-template-columns: 1fr !important;

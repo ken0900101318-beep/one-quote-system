@@ -160,11 +160,17 @@
                     <td><span class="status-badge status-${Utils.escapeHtml(p.status)}">${Utils.escapeHtml(statusNames[p.status] || p.status)}</span></td>
                     <td>${Utils.formatDate(p.createdAt)}</td>
                     <td>
-                        <button class="btn btn-sm btn-secondary" onclick="viewProject('${Utils.escapeHtml(p.id)}')">檢視</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteProject('${Utils.escapeHtml(p.id)}')">刪除</button>
+                        <button class="btn btn-sm btn-primary" onclick="editProject('${Utils.escapeHtml(p.id)}')">✏️ 編輯</button>
+                        <button class="btn btn-sm btn-secondary" onclick="viewProject('${Utils.escapeHtml(p.id)}')">👁️ 檢視</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteProject('${Utils.escapeHtml(p.id)}')">🗑️ 刪除</button>
                     </td>
                 </tr>
             `).join('');
+        }
+        
+        // 編輯專案
+        function editProject(id) {
+            location.href = `edit-quote.html?id=${encodeURIComponent(id)}`;
         }
         
         // 檢視專案

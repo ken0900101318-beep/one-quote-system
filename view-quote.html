@@ -21,7 +21,10 @@
         <div class="card">
             <div class="card-header">
                 <h2>📄 報價單</h2>
-                <button class="btn btn-primary" onclick="window.print()">🖨️ 列印</button>
+                <div>
+                    <button class="btn btn-primary" onclick="editQuote()">✏️ 編輯</button>
+                    <button class="btn btn-secondary" onclick="window.print()">🖨️ 列印</button>
+                </div>
             </div>
 
             <!-- Loading 狀態 -->
@@ -132,7 +135,7 @@
                                             ${item.desc ? `<br><small style="color: #666;">${Utils.escapeHtml(item.desc)}</small>` : ''}
                                         </td>
                                         <td>${categoryDisplay || '-'}</td>
-                                        <td>${Utils.escapeHtml(item.qty)}</td>
+                                        <td>${Utils.escapeHtml(item.qty)} ${item.unit ? Utils.escapeHtml(item.unit) : ''}</td>
                                         <td>${Utils.formatPrice(item.price)}</td>
                                         <td>${Utils.formatPrice(item.subtotal)}</td>
                                     </tr>
@@ -175,11 +178,20 @@
         // 載入專案
         loadProject();
         
-        // 快捷鍵：P = 列印
+        // 編輯報價
+        function editQuote() {
+            location.href = `edit-quote.html?id=${encodeURIComponent(projectId)}`;
+        }
+        
+        // 快捷鍵：P = 列印, E = 編輯
         document.addEventListener('keydown', (e) => {
             if (e.key === 'p' && !e.ctrlKey && !e.metaKey && !e.target.matches('input, textarea')) {
                 e.preventDefault();
                 window.print();
+            }
+            if (e.key === 'e' && !e.ctrlKey && !e.metaKey && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                editQuote();
             }
         });
     </script>
