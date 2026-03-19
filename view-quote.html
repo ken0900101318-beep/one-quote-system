@@ -108,23 +108,36 @@
                         <thead>
                             <tr>
                                 <th>項目名稱</th>
+                                <th>分類</th>
                                 <th>數量</th>
                                 <th>單價</th>
                                 <th>小計</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${project.items.map(item => `
-                                <tr>
-                                    <td>
-                                        <strong>${Utils.escapeHtml(item.name)}</strong>
-                                        ${item.desc ? `<br><small style="color: #666;">${Utils.escapeHtml(item.desc)}</small>` : ''}
-                                    </td>
-                                    <td>${Utils.escapeHtml(item.qty)}</td>
-                                    <td>${Utils.formatPrice(item.price)}</td>
-                                    <td>${Utils.formatPrice(item.subtotal)}</td>
-                                </tr>
-                            `).join('')}
+                            ${project.items.map(item => {
+                                // 組合分類顯示
+                                let categoryDisplay = '';
+                                if (item.category || item.subCategory) {
+                                    const parts = [];
+                                    if (item.category) parts.push(Utils.escapeHtml(item.category));
+                                    if (item.subCategory) parts.push(Utils.escapeHtml(item.subCategory));
+                                    categoryDisplay = parts.join(' / ');
+                                }
+                                
+                                return `
+                                    <tr>
+                                        <td>
+                                            <strong>${Utils.escapeHtml(item.name)}</strong>
+                                            ${item.desc ? `<br><small style="color: #666;">${Utils.escapeHtml(item.desc)}</small>` : ''}
+                                        </td>
+                                        <td>${categoryDisplay || '-'}</td>
+                                        <td>${Utils.escapeHtml(item.qty)}</td>
+                                        <td>${Utils.formatPrice(item.price)}</td>
+                                        <td>${Utils.formatPrice(item.subtotal)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
                         </tbody>
                     </table>
                 `;
