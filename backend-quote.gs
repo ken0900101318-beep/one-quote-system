@@ -61,33 +61,41 @@ function initializeSheets() {
 }
 
 /**
- * 處理 POST 請求
+ * 處理 POST 請求（改進版）
  */
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
     const action = data.action || 'importPriceTable';
     
-    if (action === 'importPriceTable') {
-      const result = importPriceTable(data.items || []);
-      return ContentService
-        .createTextOutput(JSON.stringify(result))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
+    let result;
     
-    if (action === 'addProject') {
-      const result = addProject(data.project || {});
-      return ContentService
-        .createTextOutput(JSON.stringify(result))
-        .setMimeType(ContentService.MimeType.JSON);
+    switch (action) {
+      case 'importPriceTable':
+        result = importPriceTable(data.items || []);
+        break;
+        
+      case 'addProject':
+        result = addProject(data.project || {});
+        break;
+        
+      case 'updateProject':
+        result = updateProject(data.id, data.project || {});
+        break;
+        
+      default:
+        result = { success: false, error: '不支援的操作' };
     }
     
     return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: '不支援的操作' }))
+      .createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .createTextOutput(JSON.stringify({ 
+        success: false, 
+        error: error.toString() 
+      }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -200,13 +208,15 @@ function getProjects() {
 
 /**
  * 取得單一專案
+ * @param {string} id - 可以是內部 ID (P1710123456789) 或專案編號 (P-2025001)
  */
 function getProject(id) {
   const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.PROJECTS);
   const data = sheet.getDataRange().getValues();
   
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === id) {
+    // 支援用內部 ID 或專案編號查詢
+    if (data[i][0] === id || data[i][1] === id) {
       const projectData = data[i][9] ? JSON.parse(data[i][9]) : {};
       
       // 相容多種欄位名稱

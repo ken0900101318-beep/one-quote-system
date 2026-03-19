@@ -120,31 +120,114 @@ const QuoteAPI = {
         return await this.request('getProject', { id });
     },
     
-    // 新增專案
+    /**
+     * 發送 POST 請求（新增）
+     */
+    async requestPost(action, data, options = {}) {
+        const {
+            timeout = 30000,
+            retries = 1
+        } = options;
+        
+        let lastError;
+        
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                console.log(`API POST 請求 (嘗試 ${attempt + 1}/${retries + 1}):`, action, data);
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                const response = await fetch(QUOTE_API.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: action,
+                        ...data
+                    }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                let result;
+                try {
+                    result = await response.json();
+                } catch (parseError) {
+                    throw new Error('伺服器回應格式錯誤');
+                }
+                
+                console.log('API 回應:', result);
+                
+                if (result.success === false && result.error) {
+                    if (result.error.includes('找不到') || 
+                        result.error.includes('驗證失敗') ||
+                        result.error.includes('權限不足')) {
+                        return result;
+                    }
+                    throw new Error(result.error);
+                }
+                
+                return result;
+                
+            } catch (error) {
+                lastError = error;
+                
+                if (error.name === 'AbortError') {
+                    lastError = new Error('連線超時，請檢查網路狀態');
+                }
+                
+                if (error.message.includes('Failed to fetch')) {
+                    lastError = new Error('無法連線到伺服器，請檢查網路狀態');
+                }
+                
+                if (attempt < retries) {
+                    console.log(`等待 ${(attempt + 1) * 1000}ms 後重試...`);
+                    await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 1000));
+                    continue;
+                }
+                
+                break;
+            }
+        }
+        
+        return {
+            success: false,
+            error: lastError.message || '未知錯誤',
+            details: lastError
+        };
+    },
+    
+    // 新增專案（改用 POST）
     async addProject(data) {
         if (!data) {
             return { success: false, error: '缺少專案資料' };
         }
         
-        // 驗證必要欄位
         if (!data.customerName || !data.phone) {
             return { success: false, error: '缺少客戶姓名或電話' };
         }
         
-        return await this.request('addProject', { 
-            data: JSON.stringify(data) 
-        }, { timeout: 60000 }); // 新增專案給 60 秒超時
+        return await this.requestPost('addProject', { 
+            project: data 
+        }, { timeout: 60000 });
     },
     
-    // 更新專案
+    // 更新專案（改用 POST）
     async updateProject(id, data) {
         if (!id || !data) {
             return { success: false, error: '缺少專案 ID 或資料' };
         }
         
-        return await this.request('updateProject', { 
-            id, 
-            data: JSON.stringify(data) 
+        return await this.requestPost('updateProject', { 
+            id: id,
+            project: data 
         }, { timeout: 60000 });
     },
     
