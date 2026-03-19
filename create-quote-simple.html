@@ -78,6 +78,7 @@
         let itemCount = 0;
         let items = [];
         let formModified = false;
+        let categories = []; // 儲存分類資料
 
         // 產生專案編號（使用共用工具）
         document.getElementById('projectNumber').value = Utils.generateProjectNo();
@@ -86,6 +87,34 @@
         document.getElementById('quoteForm').addEventListener('input', () => {
             formModified = true;
         });
+
+        // 載入分類
+        async function loadCategories() {
+            try {
+                const result = await QuoteAPI.getCategories();
+                if (result.success && result.categories) {
+                    categories = result.categories;
+                    console.log('已載入分類:', categories.length, '個');
+                } else {
+                    console.warn('無法載入分類:', result.error || '未知錯誤');
+                    categories = [];
+                }
+            } catch (error) {
+                console.error('載入分類失敗:', error);
+                categories = [];
+            }
+        }
+
+        // 填充分類選單
+        function populateCategorySelect(selectElement) {
+            selectElement.innerHTML = '<option value="">請選擇分類</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.textContent = cat.name;
+                selectElement.appendChild(option);
+            });
+        }
 
         // 返回前確認
         function goBack() {
@@ -114,6 +143,18 @@
                     <label>項目名稱 *</label>
                     <input type="text" id="itemName${itemCount}" required maxlength="100">
                 </div>
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>分類</label>
+                        <select id="itemCategory${itemCount}">
+                            <option value="">請選擇分類</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>子分類</label>
+                        <input type="text" id="itemSubCategory${itemCount}" maxlength="50" placeholder="選填">
+                    </div>
+                </div>
                 <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
                     <div>
                         <label>數量 *</label>
@@ -136,6 +177,13 @@
             
             container.appendChild(itemDiv);
             items.push(itemCount);
+            
+            // 填充分類選單
+            const categorySelect = document.getElementById(`itemCategory${itemCount}`);
+            if (categorySelect) {
+                populateCategorySelect(categorySelect);
+            }
+            
             calculateTotal();
         }
 
@@ -262,6 +310,8 @@
             let total = 0;
             items.forEach(id => {
                 const name = document.getElementById(`itemName${id}`)?.value.trim() || '';
+                const category = document.getElementById(`itemCategory${id}`)?.value.trim() || '';
+                const subCategory = document.getElementById(`itemSubCategory${id}`)?.value.trim() || '';
                 const qty = parseFloat(document.getElementById(`itemQty${id}`)?.value || 0);
                 const price = parseFloat(document.getElementById(`itemPrice${id}`)?.value || 0);
                 const desc = document.getElementById(`itemDesc${id}`)?.value.trim() || '';
@@ -269,7 +319,13 @@
                 if (name && qty > 0) {
                     const subtotal = qty * price;
                     projectData.items.push({
-                        name, qty, price, desc, subtotal
+                        name, 
+                        category, 
+                        subCategory, 
+                        qty, 
+                        price, 
+                        desc, 
+                        subtotal
                     });
                     total += subtotal;
                 }
@@ -300,8 +356,14 @@
             }
         });
 
-        // 初始新增一個項目
-        addItem();
+        // 頁面載入時初始化
+        (async function init() {
+            // 載入分類
+            await loadCategories();
+            
+            // 初始新增一個項目
+            addItem();
+        })();
         
         // 快捷鍵：Ctrl+S 或 Cmd+S = 儲存
         document.addEventListener('keydown', (e) => {
