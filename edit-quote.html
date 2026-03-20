@@ -65,15 +65,17 @@
     </div>
 
     <!-- 引入共用工具 -->
-    <script src="utils.js"></script>
-    <script src="auth.js"></script>
-    <script src="toast.js"></script>
-    <script src="config-api.js"></script>
-    <script src="api-quote.js"></script>
+    <script src="utils.js?v=20260320c"></script>
+    <script src="auth.js?v=20260320c"></script>
+    <script src="toast.js?v=20260320c"></script>
+    <script src="config-api.js?v=20260320c"></script>
+    <script src="api-quote.js?v=20260320c"></script>
     <script>
         // 檢查登入
         const currentUser = Auth.requireLogin();
-        if (!currentUser) return;
+        if (!currentUser) {
+            console.warn('未登入或登入資訊失效，停止載入 edit-quote');
+        } else {
 
         let itemCount = 0;
         let items = [];
@@ -505,6 +507,7 @@
                 e.returnValue = '';
             }
         });
+        }
     </script>
     
     <style>
