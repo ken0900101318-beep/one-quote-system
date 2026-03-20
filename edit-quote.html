@@ -45,6 +45,7 @@
                         <option value="signed">已簽約</option>
                         <option value="construction">施工中</option>
                         <option value="completed">已完工</option>
+                        <option value="paid">已付款</option>
                     </select>
                 </div>
 
@@ -161,7 +162,7 @@
 
                 // 填入基本資訊
                 document.getElementById('customerName').value = project.customerName || '';
-                document.getElementById('phone').value = project.phone || '';
+                document.getElementById('phone').value = (project.phone === '-' ? '' : (project.phone || ''));
                 document.getElementById('projectNumber').value = project.projectNumber || '';
                 document.getElementById('status').value = project.status || 'quoted';
 
@@ -169,6 +170,15 @@
                 if (project.items && project.items.length > 0) {
                     project.items.forEach(item => {
                         addItem(item);
+                    });
+                } else if (project.totalPrice && Number(project.totalPrice) > 0) {
+                    // 舊資料沒有 items，但有總價時，自動補一個預設項目避免編輯時歸零
+                    addItem({
+                        name: '舊資料匯入項目',
+                        qty: 1,
+                        price: Number(project.totalPrice),
+                        unit: '式',
+                        desc: '系統自動補入，請依實際內容調整'
                     });
                 } else {
                     // 如果沒有項目，新增一個空項目
