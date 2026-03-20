@@ -331,7 +331,7 @@ const QuoteAPI = {
     },
 
     async seedContractors(options = {}) {
-        return await this.requestPost('seedContractors', { options }, { timeout: 60000 });
+        return await this.request('seedContractors', options, { timeout: 60000 });
     },
 
     async getStatisticsOverview(filters = {}) {
