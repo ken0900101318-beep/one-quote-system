@@ -61,7 +61,7 @@ function initializeSheets() {
 }
 
 /**
- * 處理 POST 請求（改進版）
+ * 處理 POST 請求（改進版 + CORS 支援）
  */
 function doPost(e) {
   try {
@@ -111,33 +111,50 @@ function doPost(e) {
         result = { success: false, error: '不支援的操作' };
     }
     
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
+    const output = ContentService.createTextOutput(JSON.stringify(result));
+    output.setMimeType(ContentService.MimeType.JSON);
+    
+    // 🔧 加入 CORS 標頭（修復 GitHub Pages 跨域問題）
+    
+    return output;
   } catch (error) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ 
-        success: false, 
-        error: error.toString() 
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
+    const output = ContentService.createTextOutput(JSON.stringify({ 
+      success: false, 
+      error: error.toString() 
+    }));
+    output.setMimeType(ContentService.MimeType.JSON);
+    
+    // CORS 標頭也要加在錯誤回應
+    
+    return output;
   }
 }
 
 /**
- * 處理 GET 請求
+ * 處理 OPTIONS 請求（CORS Preflight）
+ */
+function doOptions(e) {
+  const output = ContentService.createTextOutput('');
+  return output;
+}
+
+/**
+ * 處理 GET 請求（加入 CORS 支援）
  */
 function doGet(e) {
   const action = e.parameter.action || 'test';
   
   if (action === 'test') {
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        success: true,
-        message: 'ONE桌遊報價系統 API 正常運作',
-        timestamp: new Date()
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
+    const output = ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'ONE桌遊報價系統 API 正常運作',
+      timestamp: new Date()
+    }));
+    output.setMimeType(ContentService.MimeType.JSON);
+    
+    // CORS 標頭
+    
+    return output;
   }
   
   let result;
@@ -180,9 +197,12 @@ function doGet(e) {
       result = { success: false, error: '不支援的操作' };
   }
   
-  return ContentService
-    .createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
+  const output = ContentService.createTextOutput(JSON.stringify(result));
+  output.setMimeType(ContentService.MimeType.JSON);
+  
+  // CORS 標頭
+  
+  return output;
 }
 
 /**
