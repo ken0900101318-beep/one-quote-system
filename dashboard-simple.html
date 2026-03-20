@@ -26,6 +26,7 @@
                     <button class="btn btn-secondary" onclick="location.href='statistics.html'" style="margin-right: 10px;">📊 統計報表</button>
                     <button class="btn btn-secondary" onclick="location.href='category-management-cloud.html'" style="margin-right: 10px;">🗂️ 分類管理</button>
                     <button class="btn btn-secondary" onclick="location.href='price-list.html'" style="margin-right: 10px;">💰 價目表管理</button>
+                    <button class="btn btn-secondary" onclick="location.href='contractors.html'" style="margin-right: 10px;">🧰 工程行管理</button>
                     <button class="btn btn-primary" onclick="location.href='create-quote-simple.html'">➕ 新增報價</button>
                 </div>
             </div>
@@ -54,6 +55,7 @@
                         <th>專案編號</th>
                         <th>客戶姓名</th>
                         <th>聯絡電話</th>
+                        <th>指定工程行</th>
                         <th>總價</th>
                         <th>收款進度</th>
                         <th>待收款</th>
@@ -138,7 +140,7 @@
             function renderProjects(projects) {
                 const tbody = document.getElementById('projectList');
                 if (projects.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px;">暫無專案資料</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 40px;">暫無專案資料</td></tr>'; 
                     return;
                 }
 
@@ -155,6 +157,7 @@
                             <td data-label="專案編號">${Utils.escapeHtml(p.projectNumber) || '-'}</td>
                             <td data-label="客戶姓名">${Utils.escapeHtml(p.customerName) || '-'}</td>
                             <td data-label="聯絡電話">${Utils.escapeHtml(p.phone) || '-'}</td>
+                            <td data-label="指定工程行">${Utils.escapeHtml(p.contractorName || '-') }</td>
                             <td data-label="總價">${Utils.formatPrice(totalPrice)}</td>
                             <td data-label="收款進度">
                                 <div class="payment-progress-cell">

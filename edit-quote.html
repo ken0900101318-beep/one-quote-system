@@ -48,6 +48,13 @@
                         <option value="paid">已付款</option>
                     </select>
                 </div>
+                <div class="form-row contractor-panel">
+                    <label>指定工程行</label>
+                    <select id="contractorId" onchange="handleContractorChange()">
+                        <option value="">未指定</option>
+                    </select>
+                    <div id="contractorInfo" class="contractor-info" style="display:none;"></div>
+                </div>
 
                 <h3 style="margin-top: 30px;">報價項目</h3>
                 <div id="itemsContainer"></div>
@@ -65,18 +72,19 @@
         </div>
     </div>
 
-    <script src="utils.js?v=20260320d"></script>
-    <script src="auth.js?v=20260320d"></script>
-    <script src="toast.js?v=20260320d"></script>
-    <script src="config-api.js?v=20260320d"></script>
-    <script src="api-quote.js?v=20260320d"></script>
-    <script src="price-list-picker.js?v=20260320d"></script>
+    <script src="utils.js?v=20260320f"></script>
+    <script src="auth.js?v=20260320f"></script>
+    <script src="toast.js?v=20260320f"></script>
+    <script src="config-api.js?v=20260320f"></script>
+    <script src="api-quote.js?v=20260320f"></script>
+    <script src="price-list-picker.js?v=20260320f"></script>
     <script>
         const currentUser = Auth.requireLogin();
         let itemCount = 0;
         let items = [];
         let formModified = false;
         let priceTable = [];
+        let contractorOptions = [];
         let projectId = new URLSearchParams(window.location.search).get('id');
         let originalData = null;
 
@@ -99,6 +107,49 @@
                 }
                 priceTable = result.items || [];
                 PriceListPicker.setItems(priceTable);
+            }
+
+            async function loadContractors() {
+                const result = await QuoteAPI.getContractors({ status: 'active' });
+                if (!result.success) {
+                    contractorOptions = [];
+                    renderContractorOptions();
+                    Toast.error('工程行載入失敗：' + (result.error || '未知錯誤'));
+                    return;
+                }
+                contractorOptions = result.contractors || [];
+                renderContractorOptions();
+            }
+
+            function renderContractorOptions(selectedId = '') {
+                const select = document.getElementById('contractorId');
+                select.innerHTML = '<option value="">未指定</option>' + contractorOptions.map(item => `
+                    <option value="${Utils.escapeHtml(item.id)}" ${String(selectedId) === String(item.id) ? 'selected' : ''}>${Utils.escapeHtml(item.companyName)}｜${Utils.escapeHtml(item.contactName || '')}</option>
+                `).join('');
+                updateContractorInfo(select.value);
+            }
+
+            function updateContractorInfo(contractorId) {
+                const info = document.getElementById('contractorInfo');
+                const contractor = contractorOptions.find(item => String(item.id) === String(contractorId));
+                if (!contractor) {
+                    info.style.display = 'none';
+                    info.innerHTML = '';
+                    return;
+                }
+                info.style.display = 'block';
+                info.innerHTML = `
+                    <div><strong>${Utils.escapeHtml(contractor.companyName || '')}</strong>（${Utils.escapeHtml(contractor.contactName || '-')}）</div>
+                    <div class="contractor-contact-row">
+                        <a href="tel:${encodeURIComponent(contractor.phone || '')}">📞 ${Utils.escapeHtml(contractor.phone || '-')}</a>
+                        ${contractor.lineUrl ? `<a href="${Utils.escapeHtml(contractor.lineUrl)}" target="_blank" rel="noopener">LINE 聯絡</a>` : ''}
+                        ${contractor.email ? `<span>✉️ ${Utils.escapeHtml(contractor.email)}</span>` : ''}
+                    </div>
+                `;
+            }
+
+            function handleContractorChange() {
+                updateContractorInfo(document.getElementById('contractorId').value);
             }
 
             function addItem(data = {}) {
@@ -211,18 +262,7 @@
                     const desc = (document.getElementById(`itemDesc${id}`)?.value || '').trim();
                     const note = (document.getElementById(`itemNote${id}`)?.value || '').trim();
                     if (!name) return;
-                    result.push({
-                        name,
-                        category,
-                        qty,
-                        price,
-                        unit,
-                        desc,
-                        spec: desc,
-                        note,
-                        remark: note,
-                        subtotal: qty * price
-                    });
+                    result.push({ name, category, qty, price, unit, desc, spec: desc, note, remark: note, subtotal: qty * price });
                 });
                 return result;
             }
@@ -271,6 +311,7 @@
                 document.getElementById('phone').value = result.project.phone === '-' ? '' : (result.project.phone || '');
                 document.getElementById('projectNumber').value = result.project.projectNumber || '';
                 document.getElementById('status').value = result.project.status || 'quoted';
+                renderContractorOptions(result.project.contractorId || '');
 
                 const initialItems = Array.isArray(result.project.items) && result.project.items.length
                     ? result.project.items
@@ -295,12 +336,18 @@
 
                 const quoteItems = collectItems();
                 const totalPrice = quoteItems.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
+                const selectedContractor = contractorOptions.find(item => String(item.id) === String(document.getElementById('contractorId').value));
                 const payload = {
                     ...originalData,
                     projectNumber: document.getElementById('projectNumber').value,
                     customerName: document.getElementById('customerName').value.trim(),
                     phone: document.getElementById('phone').value.trim(),
                     status: document.getElementById('status').value,
+                    contractorId: selectedContractor ? selectedContractor.id : '',
+                    contractorName: selectedContractor ? selectedContractor.companyName : '',
+                    contractorPhone: selectedContractor ? selectedContractor.phone : '',
+                    contractorLineUrl: selectedContractor ? selectedContractor.lineUrl : '',
+                    contractorContactName: selectedContractor ? selectedContractor.contactName : '',
                     items: quoteItems,
                     totalPrice
                 };
@@ -335,9 +382,10 @@
             window.addItem = addItem;
             window.removeItem = removeItem;
             window.selectFromPriceTable = selectFromPriceTable;
+            window.handleContractorChange = handleContractorChange;
 
             (async function init() {
-                await loadPriceTable();
+                await Promise.all([loadPriceTable(), loadContractors()]);
                 await loadProject();
             })();
         }
@@ -360,6 +408,9 @@
         .form-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .form-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         .readonly-input { background: #f8fafc; }
+        .contractor-panel { padding: 14px; border: 1px solid #dbe2ea; border-radius: 10px; background: #f8fafc; margin-top: 12px; }
+        .contractor-info { margin-top: 10px; padding: 12px; border-radius: 10px; background: #fff; border: 1px dashed #cbd5e1; color: #334155; }
+        .contractor-contact-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
         .danger-chip { position: absolute; top: 12px; right: 12px; border: none; background: #ef4444; color: #fff; border-radius: 999px; width: 32px; height: 32px; cursor: pointer; }
         @media (max-width: 768px) {
             .field-inline, .form-grid-2, .form-grid-4 { grid-template-columns: 1fr; display: grid; }

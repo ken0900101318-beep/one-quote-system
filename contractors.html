@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工程行管理 - ONE桌遊報價系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" class="logo">
+            ONE桌遊報價系統
+        </div>
+        <div class="navbar-user">
+            <button class="btn btn-secondary" onclick="location.href='dashboard-simple.html'">← 返回專案列表</button>
+        </div>
+    </nav>
+
+    <div class="container contractors-page">
+        <div class="card">
+            <div class="card-header header-wrap">
+                <div>
+                    <h2>🧰 工程行 / 廠商管理</h2>
+                    <p class="subtle">支援搜尋、篩選、快速聯絡、詳細資料與 CRUD 管理。</p>
+                </div>
+                <div class="action-group">
+                    <button class="btn btn-secondary" onclick="seedContractors()">🌱 建立示範資料</button>
+                    <button class="btn btn-primary" onclick="openModal()">➕ 新增工程行</button>
+                </div>
+            </div>
+
+            <div class="filters-panel">
+                <div class="filter-grid">
+                    <div class="form-row">
+                        <label>搜尋</label>
+                        <input type="text" id="searchInput" placeholder="公司名 / 聯絡人 / 電話" oninput="filterDebounced()">
+                    </div>
+                    <div class="form-row">
+                        <label>評價</label>
+                        <select id="ratingFilter" onchange="applyFilters()">
+                            <option value="">全部評價</option>
+                            <option value="4.5">4.5 ★ 以上</option>
+                            <option value="4">4 ★ 以上</option>
+                            <option value="3">3 ★ 以上</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label>狀態</label>
+                        <select id="statusFilter" onchange="applyFilters()">
+                            <option value="">全部狀態</option>
+                            <option value="active">合作中</option>
+                            <option value="inactive">停用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="specialty-filter" id="specialtyFilter"></div>
+            </div>
+
+            <div id="loadingState" class="loading-state" style="display:none;">載入中...</div>
+            <div id="emptyState" class="empty-box" style="display:none;">目前沒有符合條件的工程行</div>
+            <div id="contractorList" class="contractor-grid"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="contractorModal" aria-hidden="true">
+        <div class="modal-backdrop" onclick="closeModal()"></div>
+        <div class="modal-dialog card">
+            <div class="card-header">
+                <h3 id="modalTitle">新增工程行</h3>
+                <button class="icon-btn" onclick="closeModal()">✕</button>
+            </div>
+            <form id="contractorForm" class="modal-form">
+                <div class="form-grid-2">
+                    <div class="form-row">
+                        <label>公司名稱 *</label>
+                        <input type="text" id="companyName" maxlength="50" required>
+                    </div>
+                    <div class="form-row">
+                        <label>聯絡人 *</label>
+                        <input type="text" id="contactName" maxlength="30" required>
+                    </div>
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-row">
+                        <label>電話 *</label>
+                        <input type="tel" id="phone" maxlength="10" placeholder="0912345678 / 0223456789" required>
+                    </div>
+                    <div class="form-row">
+                        <label>Email</label>
+                        <input type="email" id="email" maxlength="100" placeholder="name@example.com">
+                    </div>
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-row">
+                        <label>LINE ID</label>
+                        <input type="text" id="lineId" maxlength="50" placeholder="@onevendor">
+                    </div>
+                    <div class="form-row">
+                        <label>狀態</label>
+                        <select id="status">
+                            <option value="active">合作中</option>
+                            <option value="inactive">停用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>地址</label>
+                    <input type="text" id="address" maxlength="120">
+                </div>
+                <div class="form-grid-2 rating-row">
+                    <div class="form-row">
+                        <label>評價</label>
+                        <div class="rating-picker" id="ratingPicker"></div>
+                        <input type="hidden" id="rating" value="5">
+                    </div>
+                    <div class="form-row">
+                        <label>專長（可多選）</label>
+                        <div class="specialty-options" id="specialtyOptions"></div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>備註</label>
+                    <textarea id="note" rows="3" maxlength="300" placeholder="例如：可夜間施工、報價速度快"></textarea>
+                </div>
+                <div class="action-group end">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">💾 儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="utils.js?v=20260320f"></script>
+    <script src="auth.js?v=20260320f"></script>
+    <script src="toast.js?v=20260320f"></script>
+    <script src="config-api.js?v=20260320f"></script>
+    <script src="api-quote.js?v=20260320f"></script>
+    <script>
+        const currentUser = Auth.requireLogin();
+        const SPECIALTIES = ['水電配線', '燈具安裝', '弱電', '冷氣', '空調保養', '排水', '輕隔間', '木作', '天花板', '麻將桌', '設備安裝', '維修', '統包'];
+        let contractors = [];
+        let filteredContractors = [];
+        let editingId = '';
+        let selectedRating = 5;
+
+        if (currentUser) {
+            document.getElementById('contractorForm').addEventListener('submit', submitForm);
+            renderSpecialtyOptions();
+            renderRatingPicker();
+            loadContractors();
+        }
+
+        async function loadContractors() {
+            toggleLoading(true);
+            const result = await QuoteAPI.getContractors();
+            toggleLoading(false);
+            if (!result.success) {
+                Toast.error('載入工程行失敗：' + (result.error || '未知錯誤'));
+                return;
+            }
+            contractors = result.contractors || [];
+            renderSpecialtyFilter();
+            applyFilters();
+            const editId = new URLSearchParams(location.search).get('edit');
+            if (editId && contractors.some(item => String(item.id) === String(editId))) {
+                openModal(encodeURIComponent(editId));
+                history.replaceState({}, '', 'contractors.html');
+            }
+        }
+
+        function toggleLoading(show) {
+            document.getElementById('loadingState').style.display = show ? 'block' : 'none';
+        }
+
+        const filterDebounced = Utils.debounce(applyFilters, 250);
+
+        function getSelectedSpecialties(rootSelector) {
+            return Array.from(document.querySelectorAll(`${rootSelector} input[type="checkbox"]:checked`)).map(input => input.value);
+        }
+
+        function renderSpecialtyFilter() {
+            const container = document.getElementById('specialtyFilter');
+            const all = new Set(SPECIALTIES);
+            contractors.forEach(item => (item.specialties || []).forEach(s => all.add(s)));
+            container.innerHTML = `<strong>專長篩選：</strong>` + Array.from(all).map(s => `
+                <label class="badge-check"><input type="checkbox" value="${Utils.escapeHtml(s)}" onchange="applyFilters()"><span>${Utils.escapeHtml(s)}</span></label>
+            `).join('');
+        }
+
+        function renderSpecialtyOptions(selected = []) {
+            const container = document.getElementById('specialtyOptions');
+            container.innerHTML = SPECIALTIES.map(s => `
+                <label class="badge-check"><input type="checkbox" value="${Utils.escapeHtml(s)}" ${selected.includes(s) ? 'checked' : ''}><span>${Utils.escapeHtml(s)}</span></label>
+            `).join('');
+        }
+
+        function renderRatingPicker() {
+            const container = document.getElementById('ratingPicker');
+            container.innerHTML = [1,2,3,4,5].map(score => `
+                <button type="button" class="star-btn ${score <= selectedRating ? 'active' : ''}" onclick="setRating(${score})">★</button>
+            `).join('');
+            document.getElementById('rating').value = selectedRating;
+        }
+
+        function setRating(score) {
+            selectedRating = score;
+            renderRatingPicker();
+        }
+
+        function renderStars(rating) {
+            const rounded = Math.round(Number(rating || 0));
+            return `<span class="stars">${'★'.repeat(rounded)}<span class="muted-stars">${'★'.repeat(Math.max(0, 5-rounded))}</span></span><span class="rating-text">${Number(rating || 0).toFixed(1)}</span>`;
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('searchInput').value.trim().toLowerCase();
+            const ratingFilter = Number(document.getElementById('ratingFilter').value || 0);
+            const statusFilter = document.getElementById('statusFilter').value;
+            const specialtyFilters = getSelectedSpecialties('#specialtyFilter');
+
+            filteredContractors = contractors.filter(item => {
+                const haystack = [item.companyName, item.contactName, item.phone].join(' ').toLowerCase();
+                if (search && !haystack.includes(search)) return false;
+                if (ratingFilter && Number(item.rating || 0) < ratingFilter) return false;
+                if (statusFilter && item.status !== statusFilter) return false;
+                if (specialtyFilters.length && !specialtyFilters.every(s => (item.specialties || []).includes(s))) return false;
+                return true;
+            });
+            renderContractors(filteredContractors);
+        }
+
+        function renderContractors(list) {
+            const container = document.getElementById('contractorList');
+            const empty = document.getElementById('emptyState');
+            empty.style.display = list.length ? 'none' : 'block';
+            container.innerHTML = list.map(item => `
+                <article class="contractor-card">
+                    <div class="card-top">
+                        <div>
+                            <div class="title-row">
+                                <h3>${Utils.escapeHtml(item.companyName || '-')}</h3>
+                                <span class="status-badge status-${Utils.escapeHtml(item.status)}">${item.status === 'inactive' ? '停用' : '合作中'}</span>
+                            </div>
+                            <p class="subtle">聯絡人：${Utils.escapeHtml(item.contactName || '-')}</p>
+                        </div>
+                        <div class="rating-box">${renderStars(item.rating)}</div>
+                    </div>
+                    <div class="meta-list">
+                        <div>📞 <a href="tel:${encodeURIComponent(item.phone || '')}">${Utils.escapeHtml(item.phone || '-')}</a></div>
+                        <div>✉️ ${Utils.escapeHtml(item.email || '-')}</div>
+                        <div>📍 ${Utils.escapeHtml(item.address || '未填寫')}</div>
+                    </div>
+                    <div class="badge-wrap">${(item.specialties || []).map(s => `<span class="specialty-badge">${Utils.escapeHtml(s)}</span>`).join('') || '<span class="subtle">無專長標籤</span>'}</div>
+                    <div class="action-group wrap">
+                        <a class="btn btn-sm btn-secondary" href="contractor-detail.html?id=${encodeURIComponent(item.id || '')}">👁️ 詳情</a>
+                        <button class="btn btn-sm btn-primary" onclick="openModal('${encodeURIComponent(item.id || '')}')">✏️ 編輯</button>
+                        <a class="btn btn-sm btn-secondary" href="tel:${encodeURIComponent(item.phone || '')}">📲 快撥</a>
+                        ${item.lineUrl ? `<a class="btn btn-sm btn-secondary" href="${Utils.escapeHtml(item.lineUrl)}" target="_blank" rel="noopener">LINE</a>` : ''}
+                        <button class="btn btn-sm btn-danger" onclick="removeContractor('${encodeURIComponent(item.id || '')}')">🗑️ 刪除</button>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        function openModal(id = '') {
+            editingId = id ? decodeURIComponent(id) : '';
+            document.getElementById('contractorModal').classList.add('show');
+            document.getElementById('contractorModal').setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('contractorForm').reset();
+            renderSpecialtyOptions();
+            selectedRating = 5;
+            renderRatingPicker();
+            document.getElementById('modalTitle').textContent = editingId ? '編輯工程行' : '新增工程行';
+
+            if (editingId) {
+                const item = contractors.find(c => c.id === editingId);
+                if (!item) {
+                    Toast.error('找不到工程行資料');
+                    closeModal();
+                    return;
+                }
+                document.getElementById('companyName').value = item.companyName || '';
+                document.getElementById('contactName').value = item.contactName || '';
+                document.getElementById('phone').value = item.phone || '';
+                document.getElementById('email').value = item.email || '';
+                document.getElementById('lineId').value = item.lineId || '';
+                document.getElementById('status').value = item.status || 'active';
+                document.getElementById('address').value = item.address || '';
+                document.getElementById('note').value = item.note || '';
+                selectedRating = Math.round(Number(item.rating || 5));
+                renderRatingPicker();
+                renderSpecialtyOptions(item.specialties || []);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('contractorModal').classList.remove('show');
+            document.getElementById('contractorModal').setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        function collectFormData() {
+            return {
+                companyName: document.getElementById('companyName').value.trim(),
+                contactName: document.getElementById('contactName').value.trim(),
+                phone: document.getElementById('phone').value.trim().replace(/\D/g, ''),
+                email: document.getElementById('email').value.trim(),
+                lineId: document.getElementById('lineId').value.trim(),
+                status: document.getElementById('status').value,
+                address: document.getElementById('address').value.trim(),
+                note: document.getElementById('note').value.trim(),
+                rating: selectedRating,
+                specialties: getSelectedSpecialties('#specialtyOptions')
+            };
+        }
+
+        function validateContractor(data) {
+            if (!data.companyName) return '請輸入公司名稱';
+            if (!data.contactName) return '請輸入聯絡人';
+            if (!/^0\d{8,9}$/.test(data.phone)) return '電話格式錯誤，請輸入 09 手機或市話';
+            if (data.email && !Utils.validateEmail(data.email)) return 'Email 格式錯誤';
+            return '';
+        }
+
+        async function submitForm(event) {
+            event.preventDefault();
+            const payload = collectFormData();
+            const error = validateContractor(payload);
+            if (error) {
+                Toast.error(error);
+                return;
+            }
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '儲存中...';
+            const result = editingId
+                ? await QuoteAPI.updateContractor(editingId, payload)
+                : await QuoteAPI.addContractor(payload);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '💾 儲存';
+
+            if (!result.success) {
+                Toast.error('儲存失敗：' + (result.error || '未知錯誤'));
+                return;
+            }
+            Toast.success(editingId ? '工程行已更新' : '工程行已新增');
+            closeModal();
+            await loadContractors();
+        }
+
+        async function removeContractor(id) {
+            const realId = decodeURIComponent(id);
+            const item = contractors.find(c => c.id === realId);
+            if (!item) return;
+            if (!confirm(`確定要刪除「${item.companyName}」嗎？`)) return;
+            const result = await QuoteAPI.deleteContractor(realId);
+            if (!result.success) {
+                Toast.error('刪除失敗：' + (result.error || '未知錯誤'));
+                return;
+            }
+            Toast.success('工程行已刪除');
+            await loadContractors();
+        }
+
+        async function seedContractors() {
+            if (!confirm('將建立預設工程行資料，若已有資料會略過。確定繼續？')) return;
+            const result = await QuoteAPI.seedContractors();
+            if (!result.success) {
+                Toast.error('建立示範資料失敗：' + (result.error || '未知錯誤'));
+                return;
+            }
+            Toast.success(result.message || '示範資料建立完成');
+            await loadContractors();
+        }
+
+        window.filterDebounced = filterDebounced;
+        window.applyFilters = applyFilters;
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.setRating = setRating;
+        window.removeContractor = removeContractor;
+        window.seedContractors = seedContractors;
+    </script>
+
+    <style>
+        .subtle { color: #64748b; }
+        .header-wrap, .action-group { gap: 12px; }
+        .action-group { display:flex; align-items:center; }
+        .action-group.wrap { flex-wrap: wrap; }
+        .action-group.end { justify-content: flex-end; }
+        .filters-panel { background:#f8fafc; padding:18px; border-radius:12px; margin-bottom:20px; }
+        .filter-grid, .form-grid-2 { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px; }
+        .form-row label { display:block; margin-bottom:6px; font-weight:600; }
+        .form-row input, .form-row select, .form-row textarea { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; }
+        .specialty-filter, .specialty-options, .badge-wrap { display:flex; flex-wrap:wrap; gap:8px; }
+        .badge-check input { display:none; }
+        .badge-check span, .specialty-badge { display:inline-flex; align-items:center; padding:6px 10px; border-radius:999px; background:#eef2ff; color:#4338ca; font-size:.92rem; }
+        .badge-check input:checked + span { background:#4338ca; color:#fff; }
+        .contractor-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; }
+        .contractor-card { border:1px solid #e2e8f0; border-radius:16px; padding:18px; display:flex; flex-direction:column; gap:14px; background:#fff; box-shadow:0 8px 24px rgba(15,23,42,.05); }
+        .card-top, .title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+        .meta-list { display:grid; gap:8px; color:#334155; }
+        .rating-box, .stars { color:#f59e0b; font-weight:700; }
+        .muted-stars { color:#e2e8f0; }
+        .rating-text { margin-left:8px; color:#475569; }
+        .loading-state { text-align:center; padding:30px; color:#64748b; }
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-inactive { background: #fee2e2; color: #991b1b; }
+        .modal { position:fixed; inset:0; display:none; z-index:999; }
+        .modal.show { display:block; }
+        .modal-backdrop { position:absolute; inset:0; background:rgba(15,23,42,.55); }
+        .modal-dialog { position:relative; width:min(860px, calc(100vw - 24px)); margin:30px auto; max-height:calc(100vh - 60px); overflow:auto; }
+        .modal-form { display:grid; gap:14px; }
+        .icon-btn { border:none; background:transparent; font-size:20px; cursor:pointer; }
+        .rating-picker { display:flex; gap:6px; }
+        .star-btn { border:none; background:#e2e8f0; color:#94a3b8; border-radius:10px; width:40px; height:40px; font-size:22px; cursor:pointer; }
+        .star-btn.active { background:#fef3c7; color:#f59e0b; }
+        @media (max-width: 768px) {
+            .header-wrap, .filter-grid, .form-grid-2, .card-top, .title-row { grid-template-columns:1fr; flex-direction:column; }
+            .container.contractors-page { padding:0 12px; }
+            .modal-dialog { margin:12px auto; max-height:calc(100vh - 24px); }
+            .action-group { width:100%; flex-wrap:wrap; }
+            .action-group .btn { width:100%; }
+        }
+    </style>
+</body>
+</html>

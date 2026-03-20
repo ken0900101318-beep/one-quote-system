@@ -291,6 +291,49 @@ const QuoteAPI = {
         return await this.requestPost('deletePayment', { id }, { timeout: 60000 });
     },
 
+    async getContractors(filters = {}) {
+        return await this.request('getContractors', filters, { timeout: 60000 });
+    },
+
+    async getContractor(id) {
+        if (!id) {
+            return { success: false, error: '缺少工程行 ID' };
+        }
+        return await this.request('getContractor', { id }, { timeout: 60000 });
+    },
+
+    async addContractor(contractor) {
+        if (!contractor || !contractor.companyName) {
+            return { success: false, error: '缺少工程行資料' };
+        }
+        return await this.requestPost('addContractor', { contractor }, { timeout: 60000 });
+    },
+
+    async updateContractor(id, contractor) {
+        if (!id || !contractor) {
+            return { success: false, error: '缺少工程行 ID 或資料' };
+        }
+        return await this.requestPost('updateContractor', { id, contractor }, { timeout: 60000 });
+    },
+
+    async deleteContractor(id) {
+        if (!id) {
+            return { success: false, error: '缺少工程行 ID' };
+        }
+        return await this.requestPost('deleteContractor', { id }, { timeout: 60000 });
+    },
+
+    async getContractorProjects(id) {
+        if (!id) {
+            return { success: false, error: '缺少工程行 ID' };
+        }
+        return await this.request('getContractorProjects', { id }, { timeout: 60000 });
+    },
+
+    async seedContractors(options = {}) {
+        return await this.requestPost('seedContractors', { options }, { timeout: 60000 });
+    },
+
     async getStatisticsOverview(filters = {}) {
         return await this.request('getStatisticsOverview', filters, { timeout: 60000 });
     },

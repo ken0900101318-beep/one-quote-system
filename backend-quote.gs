@@ -12,7 +12,8 @@ const SHEETS = {
   PROJECTS: '專案報價',
   PRICE_TABLE: '價目表',
   CATEGORIES: '分類',
-  PAYMENTS: '收款記錄'
+  PAYMENTS: '收款記錄',
+  CONTRACTORS: '工程行'
 };
 
 const PAYMENT_METHODS = ['現金', '匯款', '支票', '刷卡', 'LINE Pay', '其他'];
@@ -44,6 +45,7 @@ function initializeSheets() {
   }
 
   ensurePaymentSheet_(ss);
+  ensureContractorSheet_(ss);
   return { success: true, message: '✅ 初始化完成', priceListCategories: PRICE_LIST_CATEGORIES };
 }
 
@@ -95,6 +97,18 @@ function doPost(e) {
         break;
       case 'deletePayment':
         result = deletePayment(data.id);
+        break;
+      case 'addContractor':
+        result = addContractor(data.contractor || {});
+        break;
+      case 'updateContractor':
+        result = updateContractor(data.id, data.contractor || {});
+        break;
+      case 'deleteContractor':
+        result = deleteContractor(data.id);
+        break;
+      case 'seedContractors':
+        result = seedContractors(data.options || {});
         break;
       default:
         result = { success: false, error: '不支援的操作' };
@@ -149,6 +163,18 @@ function doGet(e) {
       break;
     case 'getCategories':
       result = getCategories();
+      break;
+    case 'getContractors':
+      result = getContractors(e.parameter || {});
+      break;
+    case 'getContractor':
+      result = getContractor(e.parameter.id);
+      break;
+    case 'getContractorProjects':
+      result = getContractorProjects(e.parameter.id || e.parameter.contractorId);
+      break;
+    case 'seedContractors':
+      result = seedContractors(e.parameter || {});
       break;
     case 'getStatisticsOverview':
       result = getStatisticsOverview(e.parameter || {});
@@ -321,18 +347,19 @@ function addProject(project) {
   const customerName = project.customerName || project.storeName || '';
   const phone = project.phone || project.contact || '';
   const projectNumber = project.projectNumber || project.id || id;
+  const normalizedProject = enrichProjectContractor_(Object.assign({}, project, { id: id }), false);
 
   sheet.appendRow([
     id,
     projectNumber,
     customerName,
     phone,
-    project.status || 'quoted',
-    normalizeNumber_(project.totalPrice || project.totalAmount || project.paidAmount || 0),
-    project.createdBy || project.assignee || '',
-    project.createdDate || now,
+    normalizedProject.status || 'quoted',
+    normalizeNumber_(normalizedProject.totalPrice || normalizedProject.totalAmount || normalizedProject.paidAmount || 0),
+    normalizedProject.createdBy || normalizedProject.assignee || '',
+    normalizedProject.createdDate || now,
     now,
-    JSON.stringify(project)
+    JSON.stringify(normalizedProject)
   ]);
 
   return { success: true, message: '專案已新增', id };
@@ -344,17 +371,19 @@ function updateProject(id, project) {
 
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === id) {
-      const customerName = project.customerName || project.storeName || data[i][2];
-      const phone = project.phone || project.contact || data[i][3];
-      const totalPrice = normalizeNumber_(project.totalPrice || project.totalAmount || project.paidAmount || data[i][5]);
+      const existingProject = parseJsonSafe_(data[i][9], {});
+      const mergedProject = enrichProjectContractor_(Object.assign({}, existingProject, project || {}, { id: id }), true);
+      const customerName = mergedProject.customerName || mergedProject.storeName || data[i][2];
+      const phone = mergedProject.phone || mergedProject.contact || data[i][3];
+      const totalPrice = normalizeNumber_(mergedProject.totalPrice || mergedProject.totalAmount || mergedProject.paidAmount || data[i][5]);
 
-      sheet.getRange(i + 1, 2).setValue(project.projectNumber || data[i][1]);
+      sheet.getRange(i + 1, 2).setValue(mergedProject.projectNumber || data[i][1]);
       sheet.getRange(i + 1, 3).setValue(customerName);
       sheet.getRange(i + 1, 4).setValue(phone);
-      sheet.getRange(i + 1, 5).setValue(project.status || data[i][4]);
+      sheet.getRange(i + 1, 5).setValue(mergedProject.status || data[i][4]);
       sheet.getRange(i + 1, 6).setValue(totalPrice);
       sheet.getRange(i + 1, 9).setValue(new Date());
-      sheet.getRange(i + 1, 10).setValue(JSON.stringify(project));
+      sheet.getRange(i + 1, 10).setValue(JSON.stringify(mergedProject));
 
       return { success: true, message: '專案已更新' };
     }
@@ -603,6 +632,261 @@ function deletePayment(id) {
   return { success: false, error: '找不到收款記錄' };
 }
 
+
+function ensureContractorSheet_(ss) {
+  let sheet = ss.getSheetByName(SHEETS.CONTRACTORS);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.CONTRACTORS);
+    sheet.appendRow(['ID', '公司名稱', '聯絡人', '電話', 'Email', 'LINE ID', 'LINE 連結', '專長(JSON)', '評價', '狀態', '地址', '備註', '建立時間', '更新時間']);
+  }
+  return sheet;
+}
+
+function getContractorSheet_() {
+  const ss = SpreadsheetApp.openById(QUOTE_SHEET_ID);
+  return ensureContractorSheet_(ss);
+}
+
+function mapContractorRow_(row) {
+  const specialties = parseJsonSafe_(row[7], []);
+  const rating = normalizeNumber_(row[8]);
+  const status = String(row[9] || 'active').trim() || 'active';
+  const contractor = {
+    id: String(row[0] || ''),
+    companyName: String(row[1] || ''),
+    contactName: String(row[2] || ''),
+    phone: String(row[3] || ''),
+    email: String(row[4] || ''),
+    lineId: String(row[5] || ''),
+    lineUrl: String(row[6] || ''),
+    specialties: Array.isArray(specialties) ? specialties : [],
+    rating: Math.max(0, Math.min(5, rating)),
+    status: status,
+    address: String(row[10] || ''),
+    note: String(row[11] || ''),
+    createdAt: row[12] || '',
+    updatedAt: row[13] || ''
+  };
+  contractor.statusLabel = contractor.status === 'inactive' ? '停用' : '合作中';
+  return contractor;
+}
+
+function contractorToRow_(contractor) {
+  return [
+    contractor.id,
+    contractor.companyName,
+    contractor.contactName,
+    contractor.phone,
+    contractor.email,
+    contractor.lineId,
+    contractor.lineUrl,
+    JSON.stringify(contractor.specialties || []),
+    contractor.rating,
+    contractor.status,
+    contractor.address,
+    contractor.note,
+    contractor.createdAt,
+    contractor.updatedAt
+  ];
+}
+
+function normalizePhone_(phone) {
+  return String(phone || '').replace(/[^0-9]/g, '');
+}
+
+function isValidPhone_(phone) {
+  return /^0\d{8,9}$/.test(phone);
+}
+
+function isValidEmail_(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+}
+
+function normalizeSpecialties_(specialties) {
+  if (!specialties) return [];
+  if (Object.prototype.toString.call(specialties) === '[object Array]') {
+    return specialties.map(function(item) { return String(item || '').trim(); }).filter(Boolean);
+  }
+  return String(specialties).split(',').map(function(item) { return String(item || '').trim(); }).filter(Boolean);
+}
+
+function buildLineUrl_(contractor) {
+  const direct = String(contractor.lineUrl || '').trim();
+  if (direct) return direct;
+  const lineId = String(contractor.lineId || '').trim().replace(/^@/, '');
+  return lineId ? 'https://line.me/R/ti/p/@' + encodeURIComponent(lineId) : '';
+}
+
+function validateAndNormalizeContractor_(contractor, isCreate, createdAt) {
+  const now = new Date();
+  const phone = normalizePhone_(contractor.phone || '');
+  const email = String(contractor.email || '').trim();
+  const rating = Math.max(0, Math.min(5, normalizeNumber_(contractor.rating)));
+  const companyName = String(contractor.companyName || '').trim();
+  const contactName = String(contractor.contactName || '').trim();
+  const status = String(contractor.status || 'active').trim() === 'inactive' ? 'inactive' : 'active';
+  const specialties = normalizeSpecialties_(contractor.specialties);
+
+  if (!companyName) return { success: false, error: '請輸入公司名稱' };
+  if (!contactName) return { success: false, error: '請輸入聯絡人' };
+  if (!phone || !isValidPhone_(phone)) return { success: false, error: '請輸入正確電話（市話或手機）' };
+  if (email && !isValidEmail_(email)) return { success: false, error: 'Email 格式不正確' };
+
+  const normalized = {
+    id: String(contractor.id || (isCreate ? ('CTR' + Date.now()) : '')).trim(),
+    companyName: companyName,
+    contactName: contactName,
+    phone: phone,
+    email: email,
+    lineId: String(contractor.lineId || '').trim(),
+    lineUrl: '',
+    specialties: specialties,
+    rating: Math.round(rating * 10) / 10,
+    status: status,
+    address: String(contractor.address || '').trim(),
+    note: String(contractor.note || '').trim(),
+    createdAt: createdAt || contractor.createdAt || now,
+    updatedAt: now
+  };
+  normalized.lineUrl = buildLineUrl_(Object.assign({}, contractor, normalized));
+  return { success: true, contractor: normalized };
+}
+
+function getContractors(filters) {
+  const sheet = getContractorSheet_();
+  const data = sheet.getDataRange().getValues();
+  const contractors = [];
+  const params = filters || {};
+  const query = String(params.query || params.search || '').toLowerCase();
+  const status = String(params.status || '').trim();
+  const minRating = normalizeNumber_(params.minRating || params.rating || 0);
+  const specialties = normalizeSpecialties_(params.specialties || params.specialty || '');
+
+  for (let i = 1; i < data.length; i++) {
+    const contractor = mapContractorRow_(data[i]);
+    if (query) {
+      const haystack = [contractor.companyName, contractor.contactName, contractor.phone].join(' ').toLowerCase();
+      if (haystack.indexOf(query) === -1) continue;
+    }
+    if (status && contractor.status !== status) continue;
+    if (minRating && contractor.rating < minRating) continue;
+    if (specialties.length) {
+      const hit = specialties.every(function(s) { return contractor.specialties.indexOf(s) !== -1; });
+      if (!hit) continue;
+    }
+    contractors.push(contractor);
+  }
+
+  contractors.sort(function(a, b) {
+    return String(a.companyName || '').localeCompare(String(b.companyName || ''), 'zh-Hant');
+  });
+  return { success: true, contractors: contractors };
+}
+
+function getContractor(id) {
+  if (!id) return { success: false, error: '缺少工程行 ID' };
+  const sheet = getContractorSheet_();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const contractor = mapContractorRow_(data[i]);
+    if (contractor.id === id) {
+      return { success: true, contractor: contractor };
+    }
+  }
+  return { success: false, error: '找不到工程行' };
+}
+
+function addContractor(contractor) {
+  const sheet = getContractorSheet_();
+  const normalized = validateAndNormalizeContractor_(contractor, true);
+  if (!normalized.success) return normalized;
+  sheet.appendRow(contractorToRow_(normalized.contractor));
+  return { success: true, message: '工程行已新增', id: normalized.contractor.id, contractor: normalized.contractor };
+}
+
+function updateContractor(id, contractor) {
+  if (!id) return { success: false, error: '缺少工程行 ID' };
+  const sheet = getContractorSheet_();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const current = mapContractorRow_(data[i]);
+    if (current.id === id) {
+      const merged = Object.assign({}, current, contractor || {}, { id: id });
+      const normalized = validateAndNormalizeContractor_(merged, false, current.createdAt || new Date());
+      if (!normalized.success) return normalized;
+      sheet.getRange(i + 1, 1, 1, 14).setValues([contractorToRow_(normalized.contractor)]);
+      return { success: true, message: '工程行已更新', contractor: normalized.contractor };
+    }
+  }
+  return { success: false, error: '找不到工程行' };
+}
+
+function deleteContractor(id) {
+  if (!id) return { success: false, error: '缺少工程行 ID' };
+  const projectsResult = getContractorProjects(id);
+  if (projectsResult.success && (projectsResult.projects || []).length > 0) {
+    return { success: false, error: '此工程行已有關聯專案，請先解除指派後再刪除' };
+  }
+  const sheet = getContractorSheet_();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) {
+      sheet.deleteRow(i + 1);
+      return { success: true, message: '工程行已刪除' };
+    }
+  }
+  return { success: false, error: '找不到工程行' };
+}
+
+function getContractorProjects(contractorId) {
+  if (!contractorId) return { success: false, error: '缺少工程行 ID' };
+  const projectsResult = getProjects();
+  if (!projectsResult.success) return projectsResult;
+  const projects = (projectsResult.projects || []).filter(function(project) {
+    return String(project.contractorId || '') === String(contractorId);
+  }).map(function(project) {
+    return {
+      id: project.id,
+      projectNumber: project.projectNumber || '',
+      customerName: project.customerName || '',
+      totalPrice: normalizeNumber_(project.totalPrice),
+      completedDate: project.completedDate || project.updatedAt || project.createdAt || '',
+      status: project.status || '',
+      contractorId: contractorId
+    };
+  });
+  return { success: true, projects: projects };
+}
+
+function seedContractors(options) {
+  const params = options || {};
+  const force = String(params.force || '') === 'true' || params.force === true;
+  const sheet = getContractorSheet_();
+  const existingRows = Math.max(sheet.getLastRow() - 1, 0);
+  if (existingRows > 0 && !force) {
+    return { success: true, message: '工程行資料已存在，略過 seed', count: existingRows };
+  }
+  if (existingRows > 0 && force) {
+    sheet.deleteRows(2, existingRows);
+  }
+
+  const seeds = [
+    { companyName: '信義水電工程', contactName: '陳信宏', phone: '0911222333', email: 'service@xinyi-waterpower.tw', lineId: '@xinyi-water', specialties: ['水電配線', '燈具安裝', '弱電'], rating: 4.8, status: 'active', address: '台北市信義區松仁路 88 號', note: '擅長現場估價與急修。' },
+    { companyName: '大安冷氣行', contactName: '林志安', phone: '0922333444', email: 'daan.cooling@example.com', lineId: '@daan-ac', specialties: ['冷氣', '空調保養', '排水'], rating: 4.6, status: 'active', address: '台北市大安區復興南路二段 120 號', note: '可配合夜間施工。' },
+    { companyName: '永和輕隔間', contactName: '張雅文', phone: '0933444555', email: 'partition@yh-space.tw', lineId: '@yonghe-wall', specialties: ['輕隔間', '木作', '天花板'], rating: 4.5, status: 'active', address: '新北市永和區中正路 210 號', note: '擅長小坪數包廂規劃。' },
+    { companyName: '專業麻將桌安裝', contactName: '吳柏翰', phone: '0944555666', email: 'mahjong.install@example.com', lineId: '@mj-table-pro', specialties: ['麻將桌', '設備安裝', '維修'], rating: 4.9, status: 'active', address: '桃園市蘆竹區南山路一段 66 號', note: '含運送、組裝、教育訓練。' },
+    { companyName: '綜合工程行', contactName: '黃美玲', phone: '0955666777', email: 'service@total-engineering.tw', lineId: '@total-build', specialties: ['統包', '水電配線', '冷氣', '輕隔間'], rating: 4.4, status: 'inactive', address: '新北市板橋區文化路一段 300 號', note: '可做整體統包，但目前合作暫停。' }
+  ];
+
+  const rows = seeds.map(function(seed) {
+    return contractorToRow_(validateAndNormalizeContractor_(seed, true).contractor);
+  });
+  if (rows.length) {
+    sheet.getRange(2, 1, rows.length, 14).setValues(rows);
+  }
+  return { success: true, message: '工程行 seed 完成', count: rows.length };
+}
+
 function ensurePaymentSheet_(ss) {
   let sheet = ss.getSheetByName(SHEETS.PAYMENTS);
   if (!sheet) {
@@ -656,6 +940,36 @@ function getPaymentMap_() {
   return paymentMap;
 }
 
+function getContractorMap_() {
+  const result = getContractors();
+  const map = {};
+  if (result.success) {
+    (result.contractors || []).forEach(function(contractor) {
+      map[contractor.id] = contractor;
+    });
+  }
+  return map;
+}
+
+function enrichProjectContractor_(project, keepExistingName) {
+  const data = Object.assign({}, project || {});
+  const contractorId = String(data.contractorId || '').trim();
+  if (!contractorId) {
+    data.contractorId = '';
+    data.contractorName = keepExistingName ? String(data.contractorName || '').trim() : '';
+    return data;
+  }
+  const contractorResult = getContractor(contractorId);
+  if (contractorResult.success) {
+    data.contractorId = contractorId;
+    data.contractorName = contractorResult.contractor.companyName;
+    data.contractorPhone = contractorResult.contractor.phone;
+    data.contractorLineUrl = contractorResult.contractor.lineUrl;
+    data.contractorContactName = contractorResult.contractor.contactName;
+  }
+  return data;
+}
+
 function buildProjectFromRow_(row, paymentMap) {
   const projectData = parseJsonSafe_(row[9], {});
   const customerName = row[2] || projectData.storeName || projectData.customerName || '';
@@ -664,6 +978,8 @@ function buildProjectFromRow_(row, paymentMap) {
   const projectId = row[0];
   const payments = paymentMap[projectId] || [];
   const paymentSummary = buildPaymentSummary_(totalPrice, payments);
+  const contractor = projectData.contractorId ? getContractor(projectData.contractorId) : null;
+  const contractorInfo = contractor && contractor.success ? contractor.contractor : null;
 
   return Object.assign({}, projectData, {
     id: row[0],
@@ -675,6 +991,11 @@ function buildProjectFromRow_(row, paymentMap) {
     createdBy: row[6],
     createdAt: row[7],
     updatedAt: row[8],
+    contractorId: projectData.contractorId || '',
+    contractorName: (contractorInfo && contractorInfo.companyName) || projectData.contractorName || '',
+    contractorPhone: (contractorInfo && contractorInfo.phone) || projectData.contractorPhone || '',
+    contractorLineUrl: (contractorInfo && contractorInfo.lineUrl) || projectData.contractorLineUrl || '',
+    contractorContactName: (contractorInfo && contractorInfo.contactName) || projectData.contractorContactName || '',
     payments: payments,
     paymentSummary: paymentSummary,
     totalPaid: paymentSummary.totalPaid,
