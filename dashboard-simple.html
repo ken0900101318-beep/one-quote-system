@@ -36,12 +36,11 @@
                     <option value="construction">施工中</option>
                     <option value="completed">已完工</option>
                 </select>
-                
-                <input type="text" id="searchInput" placeholder="搜尋客戶名稱或專案編號..." 
+
+                <input type="text" id="searchInput" placeholder="搜尋客戶名稱或專案編號..."
                        onkeyup="searchDebounced()" style="padding: 8px; width: 300px;">
             </div>
 
-            <!-- Loading 狀態 -->
             <div id="loadingState" style="display: none; text-align: center; padding: 40px;">
                 <div class="spinner"></div>
                 <p>載入中...</p>
@@ -54,6 +53,8 @@
                         <th>客戶姓名</th>
                         <th>聯絡電話</th>
                         <th>總價</th>
+                        <th>收款進度</th>
+                        <th>待收款</th>
                         <th>狀態</th>
                         <th>建立時間</th>
                         <th>操作</th>
@@ -64,178 +65,180 @@
         </div>
     </div>
 
-    <!-- 引入共用工具 -->
-    <script src="utils.js?v=20260320b"></script>
-    <script src="auth.js?v=20260320b"></script>
-    <script src="toast.js?v=20260320b"></script>
-    <script src="config-api.js?v=20260320b"></script>
-    <script src="api-quote.js?v=20260320b"></script>
+    <script src="utils.js?v=20260320c"></script>
+    <script src="auth.js?v=20260320c"></script>
+    <script src="toast.js?v=20260320c"></script>
+    <script src="config-api.js?v=20260320c"></script>
+    <script src="api-quote.js?v=20260320c"></script>
     <script>
         const statusNames = {
-            'quoted': '已報價',
-            'signed': '已簽約',
-            'construction': '施工中',
-            'completed': '已完工'
+            quoted: '已報價',
+            signed: '已簽約',
+            construction: '施工中',
+            completed: '已完工'
         };
-        
+
         let allProjects = [];
         let isLoading = false;
-        
-        // 檢查登入（使用共用工具）
         const currentUser = Auth.requireLogin();
-        
+
         if (!currentUser) {
             console.warn('未登入或登入資訊失效，停止載入 dashboard');
         } else {
-            // 顯示使用者
             document.getElementById('userName').textContent = `${currentUser.avatar || ''} ${currentUser.name}`;
-        
-        // 顯示/隱藏 Loading
-        function showLoading(show) {
-            isLoading = show;
-            document.getElementById('loadingState').style.display = show ? 'block' : 'none';
-            document.querySelector('.table').style.display = show ? 'none' : 'table';
-        }
-        
-        // 載入專案列表
-        async function loadProjects() {
-            if (isLoading) return;
-            
-            showLoading(true);
-            
-            try {
-                const result = await QuoteAPI.getProjects();
-                
-                if (result.success) {
-                    allProjects = result.projects || [];
-                    filterProjects();
-                    Toast.success(`已載入 ${allProjects.length} 個專案`);
-                } else {
-                    Toast.error('載入失敗：' + result.error);
+
+            function showLoading(show) {
+                isLoading = show;
+                document.getElementById('loadingState').style.display = show ? 'block' : 'none';
+                document.querySelector('.table').style.display = show ? 'none' : 'table';
+            }
+
+            async function loadProjects() {
+                if (isLoading) return;
+                showLoading(true);
+
+                try {
+                    const result = await QuoteAPI.getProjects();
+                    if (result.success) {
+                        allProjects = result.projects || [];
+                        filterProjects();
+                    } else {
+                        Toast.error('載入失敗：' + result.error);
+                    }
+                } catch (error) {
+                    console.error('載入專案失敗:', error);
+                    Toast.error('連線失敗：' + error.message);
+                } finally {
+                    showLoading(false);
                 }
-            } catch (error) {
-                console.error('載入專案失敗:', error);
-                Toast.error('連線失敗：' + error.message);
-            } finally {
-                showLoading(false);
             }
-        }
-        
-        // 搜尋防抖（使用共用工具）
-        const searchDebounced = Utils.debounce(filterProjects, 300);
-        
-        // 篩選專案
-        function filterProjects() {
-            const statusFilter = document.getElementById('statusFilter').value;
-            const searchText = document.getElementById('searchInput').value.toLowerCase();
-            
-            let filtered = allProjects;
-            
-            // 狀態篩選
-            if (statusFilter) {
-                filtered = filtered.filter(p => p.status === statusFilter);
+
+            const searchDebounced = Utils.debounce(filterProjects, 300);
+
+            function filterProjects() {
+                const statusFilter = document.getElementById('statusFilter').value;
+                const searchText = document.getElementById('searchInput').value.toLowerCase();
+
+                let filtered = allProjects;
+                if (statusFilter) {
+                    filtered = filtered.filter(p => p.status === statusFilter);
+                }
+                if (searchText) {
+                    filtered = filtered.filter(p =>
+                        (p.customerName || '').toLowerCase().includes(searchText) ||
+                        (p.projectNumber || '').toLowerCase().includes(searchText)
+                    );
+                }
+
+                renderProjects(filtered);
             }
-            
-            // 搜尋篩選
-            if (searchText) {
-                filtered = filtered.filter(p => 
-                    (p.customerName || '').toLowerCase().includes(searchText) ||
-                    (p.projectNumber || '').toLowerCase().includes(searchText)
-                );
+
+            function renderProjects(projects) {
+                const tbody = document.getElementById('projectList');
+                if (projects.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px;">暫無專案資料</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = projects.map(p => {
+                    const summary = p.paymentSummary || {};
+                    const totalPrice = Number(p.totalPrice || 0);
+                    const totalPaid = Number(summary.totalPaid || p.totalPaid || 0);
+                    const pendingAmount = Number(summary.pendingAmount ?? p.pendingAmount ?? Math.max(totalPrice - totalPaid, 0));
+                    const progress = Math.max(0, Math.min(100, Number(summary.progressPercent ?? p.paymentProgress ?? 0)));
+                    const pendingClass = pendingAmount > 0 ? 'pending-amount pending-amount--alert' : 'pending-amount';
+
+                    return `
+                        <tr>
+                            <td data-label="專案編號">${Utils.escapeHtml(p.projectNumber) || '-'}</td>
+                            <td data-label="客戶姓名">${Utils.escapeHtml(p.customerName) || '-'}</td>
+                            <td data-label="聯絡電話">${Utils.escapeHtml(p.phone) || '-'}</td>
+                            <td data-label="總價">${Utils.formatPrice(totalPrice)}</td>
+                            <td data-label="收款進度">
+                                <div class="payment-progress-cell">
+                                    <div class="payment-progress-bar">
+                                        <div class="payment-progress-fill" style="width: ${progress}%;"></div>
+                                    </div>
+                                    <div class="payment-progress-meta">
+                                        <span>${progress.toFixed(0)}%</span>
+                                        <small>${Utils.formatPrice(totalPaid)} / ${Utils.formatPrice(totalPrice)}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td data-label="待收款"><span class="${pendingClass}">${Utils.formatPrice(pendingAmount)}</span></td>
+                            <td data-label="狀態"><span class="status-badge status-${Utils.escapeHtml(p.status)}">${Utils.escapeHtml(statusNames[p.status] || p.status)}</span></td>
+                            <td data-label="建立時間">${Utils.formatDate(p.createdAt)}</td>
+                            <td data-label="操作">
+                                <button class="btn btn-sm btn-primary" onclick="editProject('${encodeURIComponent(String(p.id || ''))}')">✏️ 編輯</button>
+                                <button class="btn btn-sm btn-secondary" onclick="viewProject('${encodeURIComponent(String(p.id || ''))}')">👁️ 檢視</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteProject('${encodeURIComponent(String(p.id || ''))}')">🗑️ 刪除</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             }
-            
-            renderProjects(filtered);
-        }
-        
-        // 顯示專案（修正 XSS 漏洞）
-        function renderProjects(projects) {
-            const tbody = document.getElementById('projectList');
-            
-            if (projects.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px;">暫無專案資料</td></tr>';
-                return;
+
+            function editProject(id) {
+                location.href = `edit-quote.html?id=${id}`;
             }
-            
-            tbody.innerHTML = projects.map(p => `
-                <tr>
-                    <td>${Utils.escapeHtml(p.projectNumber) || '-'}</td>
-                    <td>${Utils.escapeHtml(p.customerName) || '-'}</td>
-                    <td>${Utils.escapeHtml(p.phone) || '-'}</td>
-                    <td>${Utils.formatPrice(p.totalPrice)}</td>
-                    <td><span class="status-badge status-${Utils.escapeHtml(p.status)}">${Utils.escapeHtml(statusNames[p.status] || p.status)}</span></td>
-                    <td>${Utils.formatDate(p.createdAt)}</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary" onclick="editProject('${Utils.escapeHtml(p.id)}')">✏️ 編輯</button>
-                        <button class="btn btn-sm btn-secondary" onclick="viewProject('${Utils.escapeHtml(p.id)}')">👁️ 檢視</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteProject('${Utils.escapeHtml(p.id)}')">🗑️ 刪除</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-        
-        // 編輯專案
-        function editProject(id) {
-            location.href = `edit-quote.html?id=${encodeURIComponent(id)}`;
-        }
-        
-        // 檢視專案
-        function viewProject(id) {
-            location.href = `view-quote.html?id=${encodeURIComponent(id)}`;
-        }
-        
-        // 刪除專案（加入確認對話框）
-        async function deleteProject(id) {
-            const project = allProjects.find(p => p.id === id);
-            if (!project) {
-                Toast.error('找不到專案');
-                return;
+
+            function viewProject(id) {
+                location.href = `view-quote.html?id=${id}`;
             }
-            
-            if (!confirm(`⚠️ 確定要刪除專案「${project.customerName}」嗎？\n\n此操作無法復原！`)) {
-                return;
-            }
-            
-            // 樂觀更新 UI（立即移除）
-            allProjects = allProjects.filter(p => p.id !== id);
-            filterProjects();
-            
-            try {
-                const result = await QuoteAPI.deleteProject(id);
-                
-                if (result.success) {
-                    Toast.success('已成功刪除專案');
-                } else {
-                    Toast.error('刪除失敗：' + result.error);
-                    // 失敗時重新載入
+
+            async function deleteProject(id) {
+                const realId = decodeURIComponent(id);
+                const project = allProjects.find(p => p.id === realId);
+                if (!project) {
+                    Toast.error('找不到專案');
+                    return;
+                }
+
+                if (!confirm(`⚠️ 確定要刪除專案「${project.customerName}」嗎？\n\n此操作無法復原！`)) {
+                    return;
+                }
+
+                allProjects = allProjects.filter(p => p.id !== realId);
+                filterProjects();
+
+                try {
+                    const result = await QuoteAPI.deleteProject(realId);
+                    if (result.success) {
+                        Toast.success('已成功刪除專案');
+                    } else {
+                        Toast.error('刪除失敗：' + result.error);
+                        await loadProjects();
+                    }
+                } catch (error) {
+                    console.error('刪除失敗:', error);
+                    Toast.error('連線失敗：' + error.message);
                     await loadProjects();
                 }
-            } catch (error) {
-                console.error('刪除失敗:', error);
-                Toast.error('連線失敗：' + error.message);
-                // 失敗時重新載入
-                await loadProjects();
             }
-        }
-        
-        // 登出（使用共用工具）
-        function logout() {
-            Auth.logout();
-        }
-        
-        // 頁面載入時執行
-        loadProjects();
-        
-        // 快捷鍵：N = 新增報價
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.target.matches('input, textarea')) {
-                location.href = 'create-quote-simple.html';
+
+            function logout() {
+                Auth.logout();
             }
-        });
+
+            loadProjects();
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.target.matches('input, textarea')) {
+                    location.href = 'create-quote-simple.html';
+                }
+            });
+
+            window.loadProjects = loadProjects;
+            window.searchDebounced = searchDebounced;
+            window.filterProjects = filterProjects;
+            window.editProject = editProject;
+            window.viewProject = viewProject;
+            window.deleteProject = deleteProject;
+            window.logout = logout;
         }
     </script>
-    
+
     <style>
-        /* Loading 動畫 */
         .spinner {
             margin: 0 auto;
             width: 40px;
@@ -245,22 +248,57 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        /* 行動裝置優化 */
+
+        .payment-progress-cell {
+            min-width: 180px;
+        }
+
+        .payment-progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e5e7eb;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .payment-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+            border-radius: 999px;
+        }
+
+        .payment-progress-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 12px;
+            color: #4b5563;
+        }
+
+        .pending-amount {
+            font-weight: 700;
+            color: #047857;
+        }
+
+        .pending-amount--alert {
+            color: #dc2626;
+        }
+
         @media (max-width: 768px) {
             .table {
                 display: none;
             }
-            
+
             #projectList {
                 display: block !important;
             }
-            
+
             #projectList tr {
                 display: block;
                 margin-bottom: 15px;
@@ -269,29 +307,36 @@
                 padding: 15px;
                 background: white;
             }
-            
+
             #projectList td {
                 display: block;
                 padding: 8px 0;
                 border: none;
             }
-            
+
             #projectList td:before {
                 content: attr(data-label);
+                display: inline-block;
+                min-width: 90px;
                 font-weight: bold;
                 margin-right: 10px;
             }
-            
+
             .filters {
                 display: flex;
                 flex-direction: column;
                 gap: 10px;
             }
-            
+
             .filters select,
             .filters input {
                 width: 100% !important;
                 margin: 0 !important;
+            }
+
+            .payment-progress-meta {
+                flex-direction: column;
+                gap: 2px;
             }
         }
     </style>
