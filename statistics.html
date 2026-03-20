@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>統計報表 - ONE桌遊報價系統</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-muted: #64748b;
+            --surface: #ffffff;
+            --surface-soft: #f8fafc;
+            --border-soft: #e2e8f0;
+            --shadow-soft: 0 20px 45px rgba(102, 126, 234, 0.12);
+        }
+
+        body {
+            background:
+                radial-gradient(circle at top left, rgba(102, 126, 234, 0.18), transparent 28%),
+                radial-gradient(circle at top right, rgba(118, 75, 162, 0.16), transparent 24%),
+                linear-gradient(180deg, #f8faff 0%, #eef2ff 100%);
+            min-height: 100vh;
+        }
+
+        .statistics-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .hero-card,
+        .panel,
+        .metric-card,
+        .top-card,
+        .collection-card,
+        .chart-card,
+        .table-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.85);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .hero-card {
+            border-radius: 24px;
+            padding: 28px;
+            color: white;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        }
+
+        .hero-card h1 {
+            margin: 0 0 10px;
+            font-size: 30px;
+        }
+
+        .hero-card p {
+            margin: 0;
+            opacity: 0.92;
+        }
+
+        .hero-meta {
+            margin-top: 16px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .hero-pill {
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.18);
+            font-size: 13px;
+        }
+
+        .panel {
+            border-radius: 20px;
+            padding: 22px;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 14px;
+            align-items: end;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-field label {
+            display: block;
+            margin-bottom: 8px;
+            color: #334155;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .filter-field input,
+        .filter-field select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border-soft);
+            background: white;
+            font-size: 14px;
+        }
+
+        .btn-gradient {
+            border: none;
+            color: white;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        }
+
+        .btn-ghost {
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            background: rgba(102, 126, 234, 0.06);
+            color: #4338ca;
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .metric-card {
+            border-radius: 20px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::after {
+            content: '';
+            position: absolute;
+            inset: auto -25px -25px auto;
+            width: 90px;
+            height: 90px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.12));
+        }
+
+        .metric-label {
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .metric-value {
+            margin-top: 10px;
+            font-size: 32px;
+            font-weight: 800;
+            color: #0f172a;
+            word-break: break-word;
+        }
+
+        .metric-subtext {
+            margin-top: 8px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .insight-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 18px;
+        }
+
+        .collection-card,
+        .chart-card,
+        .table-card,
+        .top-card {
+            border-radius: 22px;
+            padding: 22px;
+        }
+
+        .section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .section-title {
+            margin: 0;
+            font-size: 20px;
+            color: #0f172a;
+        }
+
+        .section-desc {
+            margin: 6px 0 0;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .collection-layout {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .collection-ring {
+            width: 220px;
+            height: 220px;
+            margin: 0 auto;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: conic-gradient(var(--collection-color, var(--danger)) calc(var(--progress, 0) * 1%), #e5e7eb 0);
+            position: relative;
+        }
+
+        .collection-ring::before {
+            content: '';
+            position: absolute;
+            inset: 20px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+        }
+
+        .collection-ring-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .collection-rate {
+            font-size: 42px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .collection-caption {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        .collection-stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .mini-stat {
+            padding: 16px;
+            border-radius: 16px;
+            background: var(--surface-soft);
+            border: 1px solid var(--border-soft);
+        }
+
+        .mini-stat-label {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .mini-stat-value {
+            color: #0f172a;
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        .visual-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        .chart-wrap {
+            position: relative;
+            min-height: 320px;
+        }
+
+        .table-card table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table-card th,
+        .table-card td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #eef2f7;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .table-card th {
+            color: #334155;
+            font-weight: 800;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .table-card th.active-sort {
+            color: #4338ca;
+        }
+
+        .table-card tbody tr:hover {
+            background: rgba(99, 102, 241, 0.04);
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(102, 126, 234, 0.1);
+            color: #4338ca;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .tops-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        .top-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .top-item {
+            display: grid;
+            grid-template-columns: 44px 1fr auto;
+            gap: 14px;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: var(--surface-soft);
+            border: 1px solid var(--border-soft);
+        }
+
+        .top-rank {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            color: white;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        }
+
+        .top-name {
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .top-meta {
+            margin-top: 4px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .top-value {
+            color: #111827;
+            font-weight: 800;
+            text-align: right;
+        }
+
+        .empty-state {
+            padding: 30px 16px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.35);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-box {
+            width: min(92vw, 320px);
+            padding: 26px 22px;
+            border-radius: 22px;
+            background: white;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            border: 5px solid rgba(102, 126, 234, 0.12);
+            border-top-color: var(--primary);
+            animation: spin 0.9s linear infinite;
+        }
+
+        .loading-box h3 {
+            margin: 0 0 8px;
+            color: #0f172a;
+        }
+
+        .loading-box p {
+            margin: 0;
+            color: var(--text-muted);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1200px) {
+            .overview-grid,
+            .visual-grid,
+            .tops-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .filter-grid,
+            .insight-grid,
+            .collection-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .hero-card,
+            .panel,
+            .metric-card,
+            .collection-card,
+            .chart-card,
+            .table-card,
+            .top-card {
+                padding: 18px;
+                border-radius: 18px;
+            }
+
+            .overview-grid,
+            .visual-grid,
+            .tops-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .collection-ring {
+                width: 180px;
+                height: 180px;
+            }
+
+            .collection-rate {
+                font-size: 34px;
+            }
+
+            .collection-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-actions {
+                width: 100%;
+            }
+
+            .filter-actions .btn {
+                flex: 1;
+            }
+
+            .table-responsive {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-box">
+            <div class="loading-spinner"></div>
+            <h3>統計資料載入中</h3>
+            <p>正在整理專案與收款數據，請稍候...</p>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="one-logo.jpg" alt="ONE桌遊" class="logo">
+            ONE桌遊報價系統 - 統計報表
+        </div>
+        <div class="navbar-user">
+            <span id="userName">載入中...</span>
+            <button class="btn-logout" onclick="goBack()">← 返回列表</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="statistics-shell">
+            <section class="hero-card">
+                <h1>📊 統計數據儀表板</h1>
+                <p>整合專案、收款與人員績效，一頁掌握經營狀況。</p>
+                <div class="hero-meta">
+                    <span class="hero-pill" id="heroGeneratedAt">資料時間：--</span>
+                    <span class="hero-pill" id="heroFilterSummary">目前篩選：全部資料</span>
+                    <span class="hero-pill" id="heroCacheStatus">快取狀態：--</span>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="section-head">
+                    <div>
+                        <h2 class="section-title">篩選條件</h2>
+                        <p class="section-desc">支援日期範圍、負責人與專案狀態，即時刷新儀表板。</p>
+                    </div>
+                </div>
+                <div class="filter-grid">
+                    <div class="filter-field">
+                        <label for="dateStart">開始日期</label>
+                        <input type="date" id="dateStart">
+                    </div>
+                    <div class="filter-field">
+                        <label for="dateEnd">結束日期</label>
+                        <input type="date" id="dateEnd">
+                    </div>
+                    <div class="filter-field">
+                        <label for="assigneeFilter">負責人</label>
+                        <select id="assigneeFilter">
+                            <option value="">全部負責人</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="statusFilter">專案狀態</label>
+                        <select id="statusFilter">
+                            <option value="">全部狀態</option>
+                            <option value="draft">草稿中</option>
+                            <option value="quoted">已報價</option>
+                            <option value="signed">已簽約</option>
+                            <option value="construction">施工中</option>
+                            <option value="completed">已完工</option>
+                            <option value="paid">已結清</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-gradient" id="applyFiltersBtn">套用篩選</button>
+                        <button class="btn btn-ghost" id="resetFiltersBtn">重置</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="overview-grid">
+                <article class="metric-card">
+                    <div class="metric-label">總營收</div>
+                    <div class="metric-value" id="totalRevenue">$0</div>
+                    <div class="metric-subtext">篩選條件下的專案總報價</div>
+                </article>
+                <article class="metric-card">
+                    <div class="metric-label">已收款</div>
+                    <div class="metric-value" id="totalPaid">$0</div>
+                    <div class="metric-subtext">累計完成入帳金額</div>
+                </article>
+                <article class="metric-card">
+                    <div class="metric-label">待收款</div>
+                    <div class="metric-value" id="pendingAmount">$0</div>
+                    <div class="metric-subtext">尚未完成收款的差額</div>
+                </article>
+                <article class="metric-card">
+                    <div class="metric-label">專案數量</div>
+                    <div class="metric-value" id="projectCount">0</div>
+                    <div class="metric-subtext">符合條件的專案筆數</div>
+                </article>
+            </section>
+
+            <section class="insight-grid">
+                <article class="collection-card">
+                    <div class="section-head">
+                        <div>
+                            <h2 class="section-title">收款率</h2>
+                            <p class="section-desc">依總營收與已收款計算，並依門檻切換顏色。</p>
+                        </div>
+                        <span class="tag" id="collectionTag">待計算</span>
+                    </div>
+                    <div class="collection-layout">
+                        <div class="collection-ring" id="collectionRing">
+                            <div class="collection-ring-content">
+                                <div class="collection-rate" id="collectionRate">0%</div>
+                                <div class="collection-caption">目前收款率</div>
+                            </div>
+                        </div>
+                        <div class="collection-stats">
+                            <div class="mini-stat">
+                                <div class="mini-stat-label">總營收</div>
+                                <div class="mini-stat-value" id="collectionRevenue">$0</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="mini-stat-label">已收款</div>
+                                <div class="mini-stat-value" id="collectionPaid">$0</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="mini-stat-label">待收款</div>
+                                <div class="mini-stat-value" id="collectionPending">$0</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="mini-stat-label">專案數量</div>
+                                <div class="mini-stat-value" id="collectionProjects">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="chart-card">
+                    <div class="section-head">
+                        <div>
+                            <h2 class="section-title">最近 12 個月營收趨勢</h2>
+                            <p class="section-desc">比較月度總營收與月度已收款走勢。</p>
+                        </div>
+                    </div>
+                    <div class="chart-wrap">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </article>
+            </section>
+
+            <section class="visual-grid">
+                <article class="chart-card">
+                    <div class="section-head">
+                        <div>
+                            <h2 class="section-title">專案狀態分布</h2>
+                            <p class="section-desc">掌握各階段專案占比。</p>
+                        </div>
+                    </div>
+                    <div class="chart-wrap">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </article>
+
+                <article class="top-card">
+                    <div class="section-head">
+                        <div>
+                            <h2 class="section-title">Top 5 排行</h2>
+                            <p class="section-desc">查看收款最多的客戶與專案最多的負責人。</p>
+                        </div>
+                    </div>
+                    <div class="tops-grid">
+                        <div>
+                            <h3 style="margin-top: 0; margin-bottom: 12px; color: #334155;">🏆 收款最多客戶</h3>
+                            <div class="top-list" id="topCustomersList"></div>
+                        </div>
+                        <div>
+                            <h3 style="margin-top: 0; margin-bottom: 12px; color: #334155;">👨‍💼 專案最多負責人</h3>
+                            <div class="top-list" id="topEmployeesList"></div>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="table-card">
+                <div class="section-head">
+                    <div>
+                        <h2 class="section-title">最近 6 個月月度統計</h2>
+                        <p class="section-desc">可點欄位標題排序：月份、新增專案數、總營收、已收款、收款率。</p>
+                    </div>
+                    <span class="tag" id="tableSortHint">排序：月份 ↓</span>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th data-sort-key="month">月份</th>
+                                <th data-sort-key="newProjects">新增專案數</th>
+                                <th data-sort-key="totalRevenue">總營收</th>
+                                <th data-sort-key="totalPaid">已收款</th>
+                                <th data-sort-key="collectionRate">收款率</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthlyTableBody">
+                            <tr><td colspan="5" class="empty-state">載入中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="utils.js?v=20260320e"></script>
+    <script src="auth.js?v=20260320e"></script>
+    <script src="toast.js?v=20260320e"></script>
+    <script src="config-api.js?v=20260320e"></script>
+    <script src="api-quote.js?v=20260320e"></script>
+    <script>
+        const currentUser = Auth.requireLogin();
+        const CACHE_TTL = 5 * 60 * 1000;
+        const STATUS_COLORS = {
+            draft: '#94a3b8',
+            quoted: '#667eea',
+            signed: '#8b5cf6',
+            construction: '#f59e0b',
+            completed: '#10b981',
+            paid: '#06b6d4',
+            unknown: '#cbd5e1'
+        };
+        const statusLabels = {
+            draft: '草稿中',
+            quoted: '已報價',
+            signed: '已簽約',
+            construction: '施工中',
+            completed: '已完工',
+            paid: '已結清',
+            unknown: '未分類'
+        };
+
+        let dashboardState = {
+            users: [],
+            monthlyStatistics: [],
+            sort: { key: 'month', direction: 'desc' },
+            charts: {}
+        };
+
+        if (!currentUser) {
+            console.warn('未登入，停止載入 statistics.html');
+        } else {
+            document.getElementById('userName').textContent = `${currentUser.avatar || ''} ${currentUser.name}`;
+            init();
+        }
+
+        async function init() {
+            bindEvents();
+            await loadUsers();
+            await loadDashboard(true);
+        }
+
+        function bindEvents() {
+            document.getElementById('applyFiltersBtn').addEventListener('click', () => loadDashboard(true));
+            document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+            document.querySelectorAll('th[data-sort-key]').forEach(th => {
+                th.addEventListener('click', () => toggleSort(th.dataset.sortKey));
+            });
+        }
+
+        function getFilters() {
+            return {
+                dateStart: document.getElementById('dateStart').value,
+                dateEnd: document.getElementById('dateEnd').value,
+                assignee: document.getElementById('assigneeFilter').value,
+                status: document.getElementById('statusFilter').value
+            };
+        }
+
+        function resetFilters() {
+            document.getElementById('dateStart').value = '';
+            document.getElementById('dateEnd').value = '';
+            document.getElementById('assigneeFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            loadDashboard(true);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').classList.toggle('active', show);
+        }
+
+        async function loadUsers() {
+            try {
+                const result = await QuoteAPI.getUsers();
+                if (!result.success) {
+                    throw new Error(result.error || '載入使用者失敗');
+                }
+                dashboardState.users = result.users || [];
+                renderUserFilter();
+            } catch (error) {
+                console.error('載入使用者失敗', error);
+                Toast.warning('負責人清單載入失敗，仍可繼續查看統計。');
+            }
+        }
+
+        function renderUserFilter() {
+            const select = document.getElementById('assigneeFilter');
+            const currentValue = select.value;
+            const options = ['<option value="">全部負責人</option>'];
+            (dashboardState.users || []).forEach(user => {
+                options.push(`<option value="${Utils.escapeHtml(String(user.id))}">${Utils.escapeHtml((user.avatar || '') + ' ' + (user.name || user.id))}</option>`);
+            });
+            select.innerHTML = options.join('');
+            select.value = currentValue;
+        }
+
+        function getCacheKey(filters) {
+            return `quote-statistics-cache:${JSON.stringify(filters)}`;
+        }
+
+        function getCachedData(filters) {
+            try {
+                const raw = localStorage.getItem(getCacheKey(filters));
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                if (!parsed.timestamp || (Date.now() - parsed.timestamp) > CACHE_TTL) {
+                    localStorage.removeItem(getCacheKey(filters));
+                    return null;
+                }
+                return parsed.data;
+            } catch (error) {
+                console.error('讀取快取失敗', error);
+                return null;
+            }
+        }
+
+        function setCachedData(filters, data) {
+            try {
+                localStorage.setItem(getCacheKey(filters), JSON.stringify({ timestamp: Date.now(), data }));
+            } catch (error) {
+                console.error('寫入快取失敗', error);
+            }
+        }
+
+        async function loadDashboard(forceRefresh = false) {
+            const filters = getFilters();
+            const cached = !forceRefresh ? getCachedData(filters) : null;
+
+            if (cached) {
+                renderDashboard(cached, true);
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const [overviewRes, monthlyRes, statusRes, revenueRes, customersRes, employeesRes] = await Promise.all([
+                    QuoteAPI.getStatisticsOverview(filters),
+                    QuoteAPI.getMonthlyStatistics(filters),
+                    QuoteAPI.getProjectStatusDistribution(filters),
+                    QuoteAPI.getRevenueChart(filters),
+                    QuoteAPI.getTopCustomers(filters),
+                    QuoteAPI.getTopEmployees(filters)
+                ]);
+
+                const responses = [overviewRes, monthlyRes, statusRes, revenueRes, customersRes, employeesRes];
+                const failed = responses.find(item => !item.success);
+                if (failed) {
+                    throw new Error(failed.error || '統計資料載入失敗');
+                }
+
+                const payload = {
+                    overview: overviewRes.overview || {},
+                    monthlyStatistics: monthlyRes.monthlyStatistics || [],
+                    distribution: statusRes.distribution || [],
+                    revenueChart: revenueRes.revenueChart || { labels: [], totalRevenue: [], totalPaid: [] },
+                    topCustomers: customersRes.customers || [],
+                    topEmployees: employeesRes.employees || [],
+                    generatedAt: overviewRes.generatedAt || monthlyRes.generatedAt || new Date().toISOString(),
+                    filters: overviewRes.filters || filters
+                };
+
+                setCachedData(filters, payload);
+                renderDashboard(payload, false);
+            } catch (error) {
+                console.error('載入統計失敗', error);
+                Toast.error('統計載入失敗：' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderDashboard(payload, fromCache) {
+            dashboardState.monthlyStatistics = payload.monthlyStatistics || [];
+            renderOverview(payload.overview || {});
+            renderCollection(payload.overview || {});
+            renderMonthlyTable();
+            renderTopList('topCustomersList', payload.topCustomers || [], 'customer');
+            renderTopList('topEmployeesList', payload.topEmployees || [], 'employee');
+            renderRevenueChart(payload.revenueChart || { labels: [], totalRevenue: [], totalPaid: [] });
+            renderStatusChart(payload.distribution || []);
+            renderMeta(payload, fromCache);
+        }
+
+        function renderOverview(overview) {
+            document.getElementById('totalRevenue').textContent = Utils.formatPrice(overview.totalRevenue || 0);
+            document.getElementById('totalPaid').textContent = Utils.formatPrice(overview.totalPaid || 0);
+            document.getElementById('pendingAmount').textContent = Utils.formatPrice(overview.pendingAmount || 0);
+            document.getElementById('projectCount').textContent = Number(overview.projectCount || 0).toLocaleString('zh-TW');
+        }
+
+        function renderCollection(overview) {
+            const rate = Number(overview.collectionRate || 0);
+            const color = overview.collectionRateColor || getCollectionRateColor(rate);
+            const ring = document.getElementById('collectionRing');
+            ring.style.setProperty('--progress', Math.max(0, Math.min(rate, 100)));
+            ring.style.setProperty('--collection-color', color);
+            document.getElementById('collectionRate').textContent = `${rate.toFixed(2)}%`;
+            document.getElementById('collectionRevenue').textContent = Utils.formatPrice(overview.totalRevenue || 0);
+            document.getElementById('collectionPaid').textContent = Utils.formatPrice(overview.totalPaid || 0);
+            document.getElementById('collectionPending').textContent = Utils.formatPrice(overview.pendingAmount || 0);
+            document.getElementById('collectionProjects').textContent = Number(overview.projectCount || 0).toLocaleString('zh-TW');
+            document.getElementById('collectionTag').textContent = getCollectionLabel(rate);
+            document.getElementById('collectionTag').style.background = `${hexToRgba(color, 0.14)}`;
+            document.getElementById('collectionTag').style.color = color;
+        }
+
+        function toggleSort(key) {
+            if (dashboardState.sort.key === key) {
+                dashboardState.sort.direction = dashboardState.sort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                dashboardState.sort.key = key;
+                dashboardState.sort.direction = key === 'month' ? 'desc' : 'desc';
+            }
+            renderMonthlyTable();
+        }
+
+        function renderMonthlyTable() {
+            const tbody = document.getElementById('monthlyTableBody');
+            const rows = [...dashboardState.monthlyStatistics];
+            const { key, direction } = dashboardState.sort;
+            const order = direction === 'asc' ? 1 : -1;
+
+            rows.sort((a, b) => {
+                const av = a[key];
+                const bv = b[key];
+                if (key === 'month') {
+                    return String(av).localeCompare(String(bv), 'zh-Hant') * order;
+                }
+                return ((Number(av || 0) - Number(bv || 0)) * order);
+            });
+
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">目前沒有符合條件的月度資料</td></tr>';
+            } else {
+                tbody.innerHTML = rows.map(row => `
+                    <tr>
+                        <td>${Utils.escapeHtml(row.month || '-')}</td>
+                        <td>${Number(row.newProjects || 0).toLocaleString('zh-TW')}</td>
+                        <td>${Utils.formatPrice(row.totalRevenue || 0)}</td>
+                        <td>${Utils.formatPrice(row.totalPaid || 0)}</td>
+                        <td>${Number(row.collectionRate || 0).toFixed(2)}%</td>
+                    </tr>
+                `).join('');
+            }
+
+            document.querySelectorAll('th[data-sort-key]').forEach(th => {
+                const active = th.dataset.sortKey === key;
+                th.classList.toggle('active-sort', active);
+                const arrow = active ? (direction === 'asc' ? ' ↑' : ' ↓') : '';
+                th.textContent = `${th.dataset.sortKey === 'month' ? '月份' : th.textContent.replace(/[↑↓]/g, '').trim()}${arrow}`;
+            });
+
+            const titles = {
+                month: '月份',
+                newProjects: '新增專案數',
+                totalRevenue: '總營收',
+                totalPaid: '已收款',
+                collectionRate: '收款率'
+            };
+            document.getElementById('tableSortHint').textContent = `排序：${titles[key]} ${direction === 'asc' ? '↑' : '↓'}`;
+
+            const headers = document.querySelectorAll('th[data-sort-key]');
+            headers.forEach(th => {
+                const baseTitle = titles[th.dataset.sortKey];
+                const active = th.dataset.sortKey === key;
+                th.textContent = `${baseTitle}${active ? (direction === 'asc' ? ' ↑' : ' ↓') : ''}`;
+            });
+        }
+
+        function renderRevenueChart(data) {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            if (dashboardState.charts.revenueChart) {
+                dashboardState.charts.revenueChart.destroy();
+            }
+            dashboardState.charts.revenueChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels || [],
+                    datasets: [
+                        {
+                            label: '總營收',
+                            data: data.totalRevenue || [],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.16)',
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: '已收款',
+                            data: data.totalPaid || [],
+                            borderColor: '#764ba2',
+                            backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                            fill: false,
+                            tension: 0.35,
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }
+                    ]
+                },
+                options: getChartOptions({ currency: true })
+            });
+        }
+
+        function renderStatusChart(items) {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            if (dashboardState.charts.statusChart) {
+                dashboardState.charts.statusChart.destroy();
+            }
+
+            const labels = items.map(item => item.label || statusLabels[item.status] || item.status);
+            const colors = items.map(item => STATUS_COLORS[item.status] || STATUS_COLORS.unknown);
+            dashboardState.charts.statusChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: items.map(item => Number(item.count || 0)),
+                        backgroundColor: colors,
+                        borderColor: '#ffffff',
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label(context) {
+                                    return `${context.label}：${context.raw} 個`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTopList(containerId, items, type) {
+            const container = document.getElementById(containerId);
+            if (!items.length) {
+                container.innerHTML = '<div class="empty-state">目前沒有符合條件的排行資料</div>';
+                return;
+            }
+
+            container.innerHTML = items.map((item, index) => {
+                if (type === 'customer') {
+                    return `
+                        <div class="top-item">
+                            <div class="top-rank">${index + 1}</div>
+                            <div>
+                                <div class="top-name">${Utils.escapeHtml(item.customerName || '未命名客戶')}</div>
+                                <div class="top-meta">${Number(item.projectCount || 0).toLocaleString('zh-TW')} 個專案 · 總營收 ${Utils.formatPrice(item.totalRevenue || 0)}</div>
+                            </div>
+                            <div class="top-value">${Utils.formatPrice(item.totalPaid || 0)}</div>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="top-item">
+                        <div class="top-rank">${index + 1}</div>
+                        <div>
+                            <div class="top-name">${Utils.escapeHtml(item.employeeName || '未指派')}</div>
+                            <div class="top-meta">已收款 ${Utils.formatPrice(item.totalPaid || 0)} · 總營收 ${Utils.formatPrice(item.totalRevenue || 0)}</div>
+                        </div>
+                        <div class="top-value">${Number(item.projectCount || 0).toLocaleString('zh-TW')} 件</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderMeta(payload, fromCache) {
+            document.getElementById('heroGeneratedAt').textContent = `資料時間：${formatDateTime(payload.generatedAt)}`;
+            document.getElementById('heroFilterSummary').textContent = `目前篩選：${buildFilterSummary(payload.filters || {})}`;
+            document.getElementById('heroCacheStatus').textContent = `快取狀態：${fromCache ? '前端快取' : '即時更新'}`;
+        }
+
+        function buildFilterSummary(filters) {
+            const parts = [];
+            if (filters.dateStart || filters.dateEnd) {
+                parts.push(`日期 ${filters.dateStart || '起'} ～ ${filters.dateEnd || '迄'}`);
+            }
+            if (filters.assignee) {
+                const user = (dashboardState.users || []).find(item => String(item.id) === String(filters.assignee));
+                parts.push(`負責人 ${user ? user.name : filters.assignee}`);
+            }
+            if (filters.status) {
+                parts.push(`狀態 ${statusLabels[filters.status] || filters.status}`);
+            }
+            return parts.length ? parts.join(' / ') : '全部資料';
+        }
+
+        function getChartOptions({ currency = false } = {}) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label(context) {
+                                const value = Number(context.raw || 0);
+                                return `${context.dataset.label}：${currency ? Utils.formatPrice(value) : value}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback(value) {
+                                return currency ? Utils.formatPrice(value) : value;
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.15)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            };
+        }
+
+        function formatDateTime(value) {
+            if (!value) return '--';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '--';
+            return date.toLocaleString('zh-TW', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function getCollectionRateColor(rate) {
+            if (rate > 70) return '#10b981';
+            if (rate >= 50) return '#f59e0b';
+            return '#ef4444';
+        }
+
+        function getCollectionLabel(rate) {
+            if (rate > 70) return '收款健康';
+            if (rate >= 50) return '收款追蹤中';
+            return '收款待加強';
+        }
+
+        function hexToRgba(hex, alpha) {
+            const value = hex.replace('#', '');
+            const normalized = value.length === 3 ? value.split('').map(ch => ch + ch).join('') : value;
+            const bigint = parseInt(normalized, 16);
+            const r = (bigint >> 16) & 255;
+            const g = (bigint >> 8) & 255;
+            const b = bigint & 255;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function goBack() {
+            location.href = 'dashboard-simple.html?v=20260320e';
+        }
+
+        window.goBack = goBack;
+    </script>
+</body>
+</html>

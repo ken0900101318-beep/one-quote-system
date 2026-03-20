@@ -289,5 +289,29 @@ const QuoteAPI = {
             return { success: false, error: '缺少收款記錄 ID' };
         }
         return await this.requestPost('deletePayment', { id }, { timeout: 60000 });
+    },
+
+    async getStatisticsOverview(filters = {}) {
+        return await this.request('getStatisticsOverview', filters, { timeout: 60000 });
+    },
+
+    async getMonthlyStatistics(filters = {}) {
+        return await this.request('getMonthlyStatistics', filters, { timeout: 60000 });
+    },
+
+    async getProjectStatusDistribution(filters = {}) {
+        return await this.request('getProjectStatusDistribution', filters, { timeout: 60000 });
+    },
+
+    async getRevenueChart(filters = {}) {
+        return await this.request('getRevenueChart', filters, { timeout: 60000 });
+    },
+
+    async getTopCustomers(filters = {}) {
+        return await this.request('getTopCustomers', filters, { timeout: 60000 });
+    },
+
+    async getTopEmployees(filters = {}) {
+        return await this.request('getTopEmployees', filters, { timeout: 60000 });
     }
 };

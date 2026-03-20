@@ -150,6 +150,24 @@ function doGet(e) {
     case 'getCategories':
       result = getCategories();
       break;
+    case 'getStatisticsOverview':
+      result = getStatisticsOverview(e.parameter || {});
+      break;
+    case 'getMonthlyStatistics':
+      result = getMonthlyStatistics(e.parameter || {});
+      break;
+    case 'getProjectStatusDistribution':
+      result = getProjectStatusDistribution(e.parameter || {});
+      break;
+    case 'getRevenueChart':
+      result = getRevenueChart(e.parameter || {});
+      break;
+    case 'getTopCustomers':
+      result = getTopCustomers(e.parameter || {});
+      break;
+    case 'getTopEmployees':
+      result = getTopEmployees(e.parameter || {});
+      break;
     case 'addProject':
       result = addProject(parseJsonSafe_(e.parameter.data, {}));
       break;
@@ -1007,6 +1025,339 @@ function buildSeedPriceItems_() {
     { category: '其他設備', name: '監視器鏡頭', spec: '500 萬畫素', price: 4200, unit: '支', note: '不含主機', status: '啟用' },
     { category: '其他設備', name: '招牌燈箱', spec: '雙面無接縫', price: 18500, unit: '式', note: '含基本安裝', status: '停用' }
   ];
+}
+
+
+function getStatisticsOverview(filters) {
+  const stats = getStatisticsDataset_(filters || {});
+  return {
+    success: true,
+    filters: stats.filters,
+    overview: stats.overview,
+    generatedAt: stats.generatedAt
+  };
+}
+
+function getMonthlyStatistics(filters) {
+  const stats = getStatisticsDataset_(filters || {});
+  return {
+    success: true,
+    filters: stats.filters,
+    monthlyStatistics: stats.monthlyStatistics,
+    generatedAt: stats.generatedAt
+  };
+}
+
+function getProjectStatusDistribution(filters) {
+  const stats = getStatisticsDataset_(filters || {});
+  return {
+    success: true,
+    filters: stats.filters,
+    distribution: stats.projectStatusDistribution,
+    generatedAt: stats.generatedAt
+  };
+}
+
+function getRevenueChart(filters) {
+  const stats = getStatisticsDataset_(filters || {});
+  return {
+    success: true,
+    filters: stats.filters,
+    revenueChart: stats.revenueChart,
+    generatedAt: stats.generatedAt
+  };
+}
+
+function getTopCustomers(filters) {
+  const stats = getStatisticsDataset_(filters || {});
+  return {
+    success: true,
+    filters: stats.filters,
+    customers: stats.topCustomers,
+    generatedAt: stats.generatedAt
+  };
+}
+
+function getTopEmployees(filters) {
+  const stats = getStatisticsDataset_(filters || {});
+  return {
+    success: true,
+    filters: stats.filters,
+    employees: stats.topEmployees,
+    generatedAt: stats.generatedAt
+  };
+}
+
+function getStatisticsDataset_(rawFilters) {
+  const filters = normalizeStatisticsFilters_(rawFilters || {});
+  const cacheKey = 'quote_stats_' + Utilities.base64EncodeWebSafe(JSON.stringify(filters)).slice(0, 120);
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    const parsed = JSON.parse(cached);
+    parsed.cacheHit = true;
+    return parsed;
+  }
+
+  const projectsResult = getProjects();
+  const usersResult = getUsers();
+  const projects = (projectsResult.projects || []);
+  const users = (usersResult.users || []);
+  const usersById = {};
+  users.forEach(function(user) {
+    usersById[String(user.id)] = user;
+  });
+
+  const filteredProjects = projects.filter(function(project) {
+    return matchStatisticsProjectFilters_(project, filters);
+  });
+
+  const totalRevenue = filteredProjects.reduce(function(sum, project) {
+    return sum + normalizeNumber_(project.totalPrice);
+  }, 0);
+  const totalPaid = filteredProjects.reduce(function(sum, project) {
+    return sum + normalizeNumber_(project.totalPaid || (project.paymentSummary || {}).totalPaid);
+  }, 0);
+  const pendingAmount = Math.max(totalRevenue - totalPaid, 0);
+  const collectionRate = totalRevenue > 0 ? Math.round((totalPaid / totalRevenue) * 10000) / 100 : 0;
+
+  const result = {
+    filters: filters,
+    generatedAt: new Date().toISOString(),
+    overview: {
+      totalRevenue: totalRevenue,
+      totalPaid: totalPaid,
+      pendingAmount: pendingAmount,
+      projectCount: filteredProjects.length,
+      collectionRate: collectionRate,
+      collectionRateColor: getCollectionRateColor_(collectionRate)
+    },
+    monthlyStatistics: buildMonthlyStatistics_(filteredProjects, 6),
+    projectStatusDistribution: buildProjectStatusDistribution_(filteredProjects),
+    revenueChart: buildRevenueChart_(filteredProjects, 12),
+    topCustomers: buildTopCustomers_(filteredProjects, 5),
+    topEmployees: buildTopEmployees_(filteredProjects, usersById, 5)
+  };
+
+  cache.put(cacheKey, JSON.stringify(result), 300);
+  return result;
+}
+
+function normalizeStatisticsFilters_(filters) {
+  return {
+    dateStart: normalizeDateInput_(filters.dateStart || filters.startDate || ''),
+    dateEnd: normalizeDateInput_(filters.dateEnd || filters.endDate || ''),
+    assignee: String(filters.assignee || '').trim(),
+    status: String(filters.status || '').trim()
+  };
+}
+
+function matchStatisticsProjectFilters_(project, filters) {
+  if (filters.assignee) {
+    const assignee = String(project.assignee || project.createdBy || '').trim();
+    if (assignee !== filters.assignee) {
+      return false;
+    }
+  }
+
+  if (filters.status) {
+    if (String(project.status || '').trim() !== filters.status) {
+      return false;
+    }
+  }
+
+  if (filters.dateStart || filters.dateEnd) {
+    const createdAt = parseDateValue_(project.createdAt || project.createdDate || project.signDate || project.updatedAt);
+    if (!createdAt) {
+      return false;
+    }
+    if (filters.dateStart) {
+      const start = parseDateValue_(filters.dateStart);
+      if (start && createdAt.getTime() < start.getTime()) {
+        return false;
+      }
+    }
+    if (filters.dateEnd) {
+      const end = parseDateValue_(filters.dateEnd);
+      if (end && createdAt.getTime() > end.getTime() + 86399999) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function buildMonthlyStatistics_(projects, monthCount) {
+  const monthKeys = buildRecentMonthKeys_(monthCount);
+  const buckets = {};
+
+  monthKeys.forEach(function(monthKey) {
+    buckets[monthKey] = {
+      monthKey: monthKey,
+      month: formatMonthLabel_(monthKey),
+      newProjects: 0,
+      totalRevenue: 0,
+      totalPaid: 0,
+      collectionRate: 0
+    };
+  });
+
+  projects.forEach(function(project) {
+    const createdMonth = getMonthKey_(project.createdAt || project.createdDate || project.signDate || project.updatedAt);
+    if (createdMonth && buckets[createdMonth]) {
+      buckets[createdMonth].newProjects += 1;
+      buckets[createdMonth].totalRevenue += normalizeNumber_(project.totalPrice);
+    }
+
+    (project.payments || []).forEach(function(payment) {
+      const paymentMonth = getMonthKey_(payment.paymentDate || payment.date || payment.createdAt);
+      if (paymentMonth && buckets[paymentMonth]) {
+        buckets[paymentMonth].totalPaid += normalizeNumber_(payment.amount);
+      }
+    });
+  });
+
+  return monthKeys.map(function(monthKey) {
+    const item = buckets[monthKey];
+    item.collectionRate = item.totalRevenue > 0 ? Math.round((item.totalPaid / item.totalRevenue) * 10000) / 100 : 0;
+    return item;
+  });
+}
+
+function buildRevenueChart_(projects, monthCount) {
+  const monthly = buildMonthlyStatistics_(projects, monthCount);
+  return {
+    labels: monthly.map(function(item) { return item.month; }),
+    totalRevenue: monthly.map(function(item) { return item.totalRevenue; }),
+    totalPaid: monthly.map(function(item) { return item.totalPaid; })
+  };
+}
+
+function buildProjectStatusDistribution_(projects) {
+  const counts = {};
+  projects.forEach(function(project) {
+    const status = String(project.status || 'unknown');
+    counts[status] = (counts[status] || 0) + 1;
+  });
+
+  return Object.keys(counts).sort().map(function(status) {
+    return {
+      status: status,
+      label: getStatusLabel_(status),
+      count: counts[status]
+    };
+  });
+}
+
+function buildTopCustomers_(projects, limit) {
+  const totals = {};
+  projects.forEach(function(project) {
+    const customer = String(project.customerName || project.storeName || '未命名客戶').trim() || '未命名客戶';
+    if (!totals[customer]) {
+      totals[customer] = {
+        customerName: customer,
+        totalPaid: 0,
+        totalRevenue: 0,
+        projectCount: 0
+      };
+    }
+    totals[customer].totalPaid += normalizeNumber_(project.totalPaid || (project.paymentSummary || {}).totalPaid);
+    totals[customer].totalRevenue += normalizeNumber_(project.totalPrice);
+    totals[customer].projectCount += 1;
+  });
+
+  return Object.keys(totals).map(function(key) {
+    return totals[key];
+  }).sort(function(a, b) {
+    return b.totalPaid - a.totalPaid;
+  }).slice(0, limit || 5);
+}
+
+function buildTopEmployees_(projects, usersById, limit) {
+  const totals = {};
+  projects.forEach(function(project) {
+    const rawAssignee = String(project.assignee || project.createdBy || '').trim();
+    const user = usersById[rawAssignee];
+    const label = user ? (user.name || rawAssignee) : (rawAssignee || '未指派');
+    const key = rawAssignee || label;
+    if (!totals[key]) {
+      totals[key] = {
+        employeeId: rawAssignee || '',
+        employeeName: label,
+        projectCount: 0,
+        totalRevenue: 0,
+        totalPaid: 0
+      };
+    }
+    totals[key].projectCount += 1;
+    totals[key].totalRevenue += normalizeNumber_(project.totalPrice);
+    totals[key].totalPaid += normalizeNumber_(project.totalPaid || (project.paymentSummary || {}).totalPaid);
+  });
+
+  return Object.keys(totals).map(function(key) {
+    return totals[key];
+  }).sort(function(a, b) {
+    return b.projectCount - a.projectCount || b.totalPaid - a.totalPaid;
+  }).slice(0, limit || 5);
+}
+
+function buildRecentMonthKeys_(count) {
+  const months = [];
+  const today = new Date();
+  const base = new Date(today.getFullYear(), today.getMonth(), 1);
+  for (var i = count - 1; i >= 0; i--) {
+    const current = new Date(base.getFullYear(), base.getMonth() - i, 1);
+    months.push(Utilities.formatDate(current, Session.getScriptTimeZone(), 'yyyy-MM'));
+  }
+  return months;
+}
+
+function getMonthKey_(value) {
+  const date = parseDateValue_(value);
+  if (!date) return '';
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM');
+}
+
+function formatMonthLabel_(monthKey) {
+  if (!monthKey || monthKey.indexOf('-') === -1) return monthKey || '';
+  var parts = monthKey.split('-');
+  return parts[0] + '/' + parts[1];
+}
+
+function parseDateValue_(value) {
+  if (!value) return null;
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
+    return value;
+  }
+  var parsed = new Date(value);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function normalizeDateInput_(value) {
+  if (!value) return '';
+  var date = parseDateValue_(value);
+  if (!date) return '';
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+function getCollectionRateColor_(rate) {
+  if (rate > 70) return '#10b981';
+  if (rate >= 50) return '#f59e0b';
+  return '#ef4444';
+}
+
+function getStatusLabel_(status) {
+  var labels = {
+    draft: '草稿中',
+    quoted: '已報價',
+    signed: '已簽約',
+    construction: '施工中',
+    completed: '已完工',
+    paid: '已結清',
+    unknown: '未分類'
+  };
+  return labels[status] || status;
 }
 
 function normalizeNumber_(value) {
