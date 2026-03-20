@@ -16,6 +16,8 @@ const SHEETS = {
 };
 
 const PAYMENT_METHODS = ['現金', '匯款', '支票', '刷卡', 'LINE Pay', '其他'];
+const PRICE_LIST_CATEGORIES = ['麻將桌', '冷氣', '水電配線', '輕隔間', '包廂門', '智能門鎖', '其他設備'];
+const PRICE_LIST_HEADERS = ['ID', '分類', '項目名稱', '規格說明', '單價', '單位', '備註', '狀態', '建立日期', '更新日期'];
 
 function initializeSheets() {
   const ss = SpreadsheetApp.openById(QUOTE_SHEET_ID);
@@ -26,13 +28,7 @@ function initializeSheets() {
     projectsSheet.appendRow(['ID', '專案編號', '客戶姓名', '聯絡電話', '狀態', '總價', '建立人', '建立時間', '更新時間', '資料JSON']);
   }
 
-  let priceSheet = ss.getSheetByName(SHEETS.PRICE_TABLE);
-  if (!priceSheet) {
-    priceSheet = ss.insertSheet(SHEETS.PRICE_TABLE);
-    priceSheet.appendRow(['ID', '分類', '項目名稱', '單價', '單位', '子分類', '建立時間']);
-  } else {
-    priceSheet.getRange(1, 6).setValue('子分類');
-  }
+  ensurePriceTableSheet_(ss);
 
   let categoriesSheet = ss.getSheetByName(SHEETS.CATEGORIES);
   if (!categoriesSheet) {
@@ -48,7 +44,7 @@ function initializeSheets() {
   }
 
   ensurePaymentSheet_(ss);
-  return '✅ 初始化完成';
+  return { success: true, message: '✅ 初始化完成', priceListCategories: PRICE_LIST_CATEGORIES };
 }
 
 function doPost(e) {
@@ -75,6 +71,12 @@ function doPost(e) {
         break;
       case 'deletePriceItem':
         result = deletePriceItem(data.id);
+        break;
+      case 'initializeSheets':
+        result = initializeSheets();
+        break;
+      case 'seedPriceList':
+        result = seedPriceList(data.options || {});
         break;
       case 'addCategory':
         result = addCategory(data.category || {});
@@ -135,6 +137,15 @@ function doGet(e) {
       break;
     case 'getPriceTable':
       result = getPriceTable();
+      break;
+    case 'getPriceListCategories':
+      result = getPriceListCategories();
+      break;
+    case 'initializeSheets':
+      result = initializeSheets();
+      break;
+    case 'seedPriceList':
+      result = seedPriceList();
       break;
     case 'getCategories':
       result = getCategories();
@@ -241,22 +252,32 @@ function getProjectPayments(projectId) {
 }
 
 function getPriceTable() {
-  const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.PRICE_TABLE);
+  const sheet = ensurePriceTableSheet_();
   const data = sheet.getDataRange().getValues();
   const items = [];
 
   for (let i = 1; i < data.length; i++) {
-    items.push({
-      id: data[i][0],
-      category: data[i][1],
-      name: data[i][2],
-      price: data[i][3],
-      unit: data[i][4],
-      subCategory: data[i][5]
-    });
+    const item = mapPriceItemRow_(data[i]);
+    if (!item.id || !item.name) continue;
+    items.push(item);
   }
 
-  return { success: true, items };
+  items.sort(function(a, b) {
+    const categoryCompare = PRICE_LIST_CATEGORIES.indexOf(a.category) - PRICE_LIST_CATEGORIES.indexOf(b.category);
+    if (categoryCompare !== 0) return categoryCompare;
+    return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hant');
+  });
+
+  return { success: true, items: items, categories: PRICE_LIST_CATEGORIES };
+}
+
+function getPriceListCategories() {
+  return {
+    success: true,
+    categories: PRICE_LIST_CATEGORIES.map(function(name, index) {
+      return { id: 'PLCAT' + (index + 1), name: name };
+    })
+  };
 }
 
 function getCategories() {
@@ -339,60 +360,54 @@ function deleteProject(id) {
 }
 
 function importPriceTable(items) {
-  const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.PRICE_TABLE);
+  const sheet = ensurePriceTableSheet_();
   const lastRow = sheet.getLastRow();
   if (lastRow > 1) {
     sheet.deleteRows(2, lastRow - 1);
   }
 
-  const rows = items.map(function(item) {
-    return [
-      item.id,
-      item.category || '',
-      item.name,
-      normalizeNumber_(item.price || 0),
-      item.unit || '',
-      item.subCategory || '',
-      new Date()
-    ];
-  });
+  const now = new Date();
+  const rows = [];
+  for (let i = 0; i < items.length; i++) {
+    const normalized = validateAndNormalizePriceItem_(items[i], true, now);
+    if (!normalized.success) {
+      return { success: false, error: '第 ' + (i + 1) + ' 筆資料錯誤：' + normalized.error };
+    }
+    rows.push(priceItemToRow_(normalized.item));
+  }
 
   if (rows.length > 0) {
-    sheet.getRange(2, 1, rows.length, 7).setValues(rows);
+    sheet.getRange(2, 1, rows.length, PRICE_LIST_HEADERS.length).setValues(rows);
   }
 
   return { success: true, message: '已匯入 ' + items.length + ' 項價目', count: items.length };
 }
 
 function addPriceItem(item) {
-  const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.PRICE_TABLE);
-  const id = item.id || ('ITEM' + Date.now());
+  const sheet = ensurePriceTableSheet_();
+  const normalized = validateAndNormalizePriceItem_(item, true);
+  if (!normalized.success) {
+    return normalized;
+  }
 
-  sheet.appendRow([
-    id,
-    item.category || '',
-    item.name || '',
-    normalizeNumber_(item.price || 0),
-    item.unit || '',
-    item.subCategory || '',
-    new Date()
-  ]);
-
-  return { success: true, message: '項目已新增', id };
+  sheet.appendRow(priceItemToRow_(normalized.item));
+  return { success: true, message: '項目已新增', id: normalized.item.id, item: normalized.item };
 }
 
 function updatePriceItem(id, item) {
-  const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.PRICE_TABLE);
+  const sheet = ensurePriceTableSheet_();
   const data = sheet.getDataRange().getValues();
 
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === id) {
-      sheet.getRange(i + 1, 2).setValue(item.category || data[i][1]);
-      sheet.getRange(i + 1, 3).setValue(item.name || data[i][2]);
-      sheet.getRange(i + 1, 4).setValue(item.price !== undefined ? normalizeNumber_(item.price) : data[i][3]);
-      sheet.getRange(i + 1, 5).setValue(item.unit || data[i][4]);
-      sheet.getRange(i + 1, 6).setValue(item.subCategory || data[i][5]);
-      return { success: true, message: '項目已更新' };
+    const current = mapPriceItemRow_(data[i]);
+    if (current.id === id) {
+      const merged = mergePriceItem_(current, item || {});
+      const normalized = validateAndNormalizePriceItem_(merged, false, current.createdAt || new Date());
+      if (!normalized.success) {
+        return normalized;
+      }
+      sheet.getRange(i + 1, 1, 1, PRICE_LIST_HEADERS.length).setValues([priceItemToRow_(normalized.item)]);
+      return { success: true, message: '項目已更新', item: normalized.item };
     }
   }
 
@@ -400,11 +415,11 @@ function updatePriceItem(id, item) {
 }
 
 function deletePriceItem(id) {
-  const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.PRICE_TABLE);
+  const sheet = ensurePriceTableSheet_();
   const data = sheet.getDataRange().getValues();
 
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === id) {
+    if (String(data[i][0]) === String(id)) {
       sheet.deleteRow(i + 1);
       return { success: true, message: '項目已刪除' };
     }
@@ -759,6 +774,239 @@ function mapPaymentRow_(row) {
     createdAt: row[9] || '',
     updatedAt: row[10] || ''
   };
+}
+
+function ensurePriceTableSheet_(ss) {
+  const spreadsheet = ss || SpreadsheetApp.openById(QUOTE_SHEET_ID);
+  let sheet = spreadsheet.getSheetByName(SHEETS.PRICE_TABLE);
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(SHEETS.PRICE_TABLE);
+  }
+
+  const headerRange = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), PRICE_LIST_HEADERS.length));
+  const currentHeaders = sheet.getLastColumn() > 0 ? headerRange.getValues()[0] : [];
+  const hasNewHeader = String(currentHeaders[3] || '') === '規格說明' && String(currentHeaders[7] || '') === '狀態';
+
+  if (!hasNewHeader) {
+    if (sheet.getLastRow() <= 1) {
+      sheet.clear();
+      sheet.getRange(1, 1, 1, PRICE_LIST_HEADERS.length).setValues([PRICE_LIST_HEADERS]);
+    } else {
+      migrateLegacyPriceTable_(sheet, currentHeaders);
+    }
+  }
+
+  if (sheet.getFrozenRows() < 1) {
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function migrateLegacyPriceTable_(sheet, headers) {
+  const lastRow = sheet.getLastRow();
+  const lastColumn = Math.max(sheet.getLastColumn(), 7);
+  const data = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, lastColumn).getValues() : [];
+  const normalizedRows = data.map(function(row) {
+    return priceItemToRow_(mapLegacyPriceItemRow_(row, headers));
+  });
+  sheet.clear();
+  sheet.getRange(1, 1, 1, PRICE_LIST_HEADERS.length).setValues([PRICE_LIST_HEADERS]);
+  if (normalizedRows.length > 0) {
+    sheet.getRange(2, 1, normalizedRows.length, PRICE_LIST_HEADERS.length).setValues(normalizedRows);
+  }
+}
+
+function mapLegacyPriceItemRow_(row, headers) {
+  const headerText = (headers || []).map(function(value) { return String(value || '').trim(); });
+  const hasNamedColumns = headerText.indexOf('分類') >= 0 && headerText.indexOf('項目名稱') >= 0;
+  if (hasNamedColumns) {
+    const obj = {};
+    for (let i = 0; i < headerText.length; i++) {
+      obj[headerText[i]] = row[i];
+    }
+    return {
+      id: obj['ID'] || ('ITEM' + Date.now()),
+      category: obj['分類'] || '',
+      name: obj['項目名稱'] || '',
+      spec: obj['規格說明'] || '',
+      price: obj['單價'] || 0,
+      unit: obj['單位'] || '',
+      note: obj['備註'] || obj['子分類'] || '',
+      status: obj['狀態'] || '啟用',
+      createdAt: obj['建立日期'] || obj['建立時間'] || new Date(),
+      updatedAt: obj['更新日期'] || obj['更新時間'] || new Date()
+    };
+  }
+
+  return {
+    id: row[0] || ('ITEM' + Date.now()),
+    category: row[1] || '',
+    name: row[2] || '',
+    spec: '',
+    price: row[3] || 0,
+    unit: row[4] || '',
+    note: row[5] || '',
+    status: '啟用',
+    createdAt: row[6] || new Date(),
+    updatedAt: new Date()
+  };
+}
+
+function mapPriceItemRow_(row) {
+  return {
+    id: String(row[0] || '').trim(),
+    category: String(row[1] || '').trim(),
+    name: String(row[2] || '').trim(),
+    spec: String(row[3] || '').trim(),
+    price: normalizeNumber_(row[4]),
+    unit: String(row[5] || '').trim(),
+    note: String(row[6] || '').trim(),
+    status: normalizePriceStatus_(row[7]),
+    createdAt: row[8] || '',
+    updatedAt: row[9] || '',
+    description: String(row[3] || '').trim(),
+    remark: String(row[6] || '').trim(),
+    subCategory: String(row[6] || '').trim(),
+    isActive: normalizePriceStatus_(row[7]) === '啟用'
+  };
+}
+
+function validateAndNormalizePriceItem_(item, isCreate, createdAtOverride) {
+  const now = new Date();
+  const category = String(item.category || '').trim();
+  const name = String(item.name || '').trim();
+  const spec = String(item.spec || item.description || '').trim().slice(0, 200);
+  const unit = String(item.unit || '').trim().slice(0, 20);
+  const note = String(item.note || item.remark || item.subCategory || '').trim().slice(0, 500);
+  const price = normalizeNumber_(item.price);
+  const status = normalizePriceStatus_(item.status || (item.isActive === false ? '停用' : '啟用'));
+
+  if (PRICE_LIST_CATEGORIES.indexOf(category) === -1) {
+    return { success: false, error: '分類不正確' };
+  }
+  if (!name) {
+    return { success: false, error: '請輸入項目名稱' };
+  }
+  if (name.length > 100) {
+    return { success: false, error: '項目名稱不可超過 100 字' };
+  }
+  if (price < 0) {
+    return { success: false, error: '單價不可小於 0' };
+  }
+
+  return {
+    success: true,
+    item: {
+      id: String(item.id || '').trim() || ('ITEM' + Date.now()),
+      category: category,
+      name: name.slice(0, 100),
+      spec: spec,
+      price: price,
+      unit: unit,
+      note: note,
+      status: status,
+      createdAt: isCreate ? (createdAtOverride || now) : (createdAtOverride || item.createdAt || now),
+      updatedAt: now,
+      description: spec,
+      remark: note,
+      subCategory: note,
+      isActive: status === '啟用'
+    }
+  };
+}
+
+function mergePriceItem_(existing, patch) {
+  return {
+    id: existing.id,
+    category: patch.category !== undefined ? patch.category : existing.category,
+    name: patch.name !== undefined ? patch.name : existing.name,
+    spec: patch.spec !== undefined ? patch.spec : (patch.description !== undefined ? patch.description : existing.spec),
+    price: patch.price !== undefined ? patch.price : existing.price,
+    unit: patch.unit !== undefined ? patch.unit : existing.unit,
+    note: patch.note !== undefined ? patch.note : (patch.remark !== undefined ? patch.remark : (patch.subCategory !== undefined ? patch.subCategory : existing.note)),
+    status: patch.status !== undefined ? patch.status : existing.status,
+    createdAt: existing.createdAt
+  };
+}
+
+function priceItemToRow_(item) {
+  return [
+    item.id,
+    item.category,
+    item.name,
+    item.spec || '',
+    normalizeNumber_(item.price),
+    item.unit || '',
+    item.note || '',
+    normalizePriceStatus_(item.status),
+    item.createdAt || new Date(),
+    item.updatedAt || new Date()
+  ];
+}
+
+function normalizePriceStatus_(value) {
+  const text = String(value || '').trim();
+  return (text === '停用' || text.toLowerCase() === 'inactive') ? '停用' : '啟用';
+}
+
+function seedPriceList(options) {
+  const sheet = ensurePriceTableSheet_();
+  const existing = getPriceTable();
+  const existingKeys = {};
+  (existing.items || []).forEach(function(item) {
+    existingKeys[item.category + '::' + item.name] = true;
+  });
+
+  const seedItems = buildSeedPriceItems_();
+  const rows = [];
+  seedItems.forEach(function(item) {
+    const key = item.category + '::' + item.name;
+    if (!existingKeys[key]) {
+      const normalized = validateAndNormalizePriceItem_(item, true);
+      if (normalized.success) {
+        rows.push(priceItemToRow_(normalized.item));
+      }
+    }
+  });
+
+  if (rows.length > 0) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, PRICE_LIST_HEADERS.length).setValues(rows);
+  }
+
+  return {
+    success: true,
+    message: rows.length > 0 ? ('已新增測試資料 ' + rows.length + ' 筆') : '測試資料已存在，未新增',
+    insertedCount: rows.length,
+    totalSeedCount: seedItems.length,
+    categories: PRICE_LIST_CATEGORIES,
+    note: '此 seed function 採補齊模式，不會清空既有正式資料。'
+  };
+}
+
+function buildSeedPriceItems_() {
+  return [
+    { category: '麻將桌', name: '電動麻將桌 M1', spec: '四口機種，含基本安裝', price: 28000, unit: '台', note: '標準門市款', status: '啟用' },
+    { category: '麻將桌', name: '折疊麻將椅', spec: '皮革坐墊', price: 1200, unit: '張', note: '可與桌組搭配', status: '啟用' },
+    { category: '麻將桌', name: '桌面防刮墊', spec: '客製尺寸', price: 1800, unit: '組', note: '含裁切', status: '啟用' },
+    { category: '冷氣', name: '變頻分離式冷氣 5kW', spec: '含銅管 5 米', price: 36500, unit: '台', note: '含基本安裝', status: '啟用' },
+    { category: '冷氣', name: '冷氣排水工程', spec: 'PVC 排水配置', price: 4500, unit: '式', note: '依現場調整', status: '啟用' },
+    { category: '冷氣', name: '室外機吊架', spec: '鍍鋅防鏽', price: 2800, unit: '組', note: '不含高空作業', status: '啟用' },
+    { category: '水電配線', name: '插座新增', spec: '含線材與面板', price: 1800, unit: '處', note: '110V', status: '啟用' },
+    { category: '水電配線', name: '迴路配線', spec: '2.0mm 線材', price: 3500, unit: '迴路', note: '含無熔絲開關', status: '啟用' },
+    { category: '水電配線', name: '弱電網路佈線', spec: 'CAT6', price: 2200, unit: '點', note: '含資訊面板', status: '啟用' },
+    { category: '輕隔間', name: '輕鋼架隔間', spec: '雙面石膏板', price: 3800, unit: '坪', note: '含批土打磨', status: '啟用' },
+    { category: '輕隔間', name: '隔音棉加強', spec: '高密度隔音棉', price: 1200, unit: '坪', note: '加購項目', status: '啟用' },
+    { category: '輕隔間', name: '玻璃觀景窗開孔', spec: '含框料收邊', price: 6800, unit: '處', note: '不含玻璃', status: '啟用' },
+    { category: '包廂門', name: '包廂木門', spec: '含門框五金', price: 12500, unit: '樘', note: '標準尺寸', status: '啟用' },
+    { category: '包廂門', name: '門弓器', spec: '緩衝回彈', price: 1800, unit: '組', note: '可搭配木門', status: '啟用' },
+    { category: '包廂門', name: '門牌燈', spec: 'LED 客製編號', price: 2200, unit: '組', note: '含安裝', status: '啟用' },
+    { category: '智能門鎖', name: '指紋密碼鎖', spec: '含卡片與密碼', price: 9800, unit: '組', note: '標準銀色', status: '啟用' },
+    { category: '智能門鎖', name: '門鎖連網模組', spec: 'Wi-Fi 遠端管理', price: 3200, unit: '組', note: '需現場 Wi-Fi', status: '啟用' },
+    { category: '智能門鎖', name: '門鎖安裝校正', spec: '舊門扇調整', price: 1800, unit: '次', note: '維護服務', status: '啟用' },
+    { category: '其他設備', name: '藍牙喇叭', spec: '吸頂式', price: 2600, unit: '顆', note: '含配線', status: '啟用' },
+    { category: '其他設備', name: '監視器鏡頭', spec: '500 萬畫素', price: 4200, unit: '支', note: '不含主機', status: '啟用' },
+    { category: '其他設備', name: '招牌燈箱', spec: '雙面無接縫', price: 18500, unit: '式', note: '含基本安裝', status: '停用' }
+  ];
 }
 
 function normalizeNumber_(value) {

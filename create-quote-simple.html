@@ -52,7 +52,7 @@
                 <div id="itemsContainer"></div>
                 <button type="button" class="btn btn-secondary" onclick="addItem()">➕ 新增項目</button>
 
-                <div style="margin-top: 30px; padding: 15px; background: #f0f0f0; border-radius: 5px;">
+                <div style="margin-top: 30px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
                     <h3>總計：$<span id="totalPrice">0</span></h3>
                 </div>
 
@@ -64,451 +64,282 @@
         </div>
     </div>
 
-    <!-- 引入共用工具 -->
-    <script src="utils.js"></script>
-    <script src="auth.js"></script>
-    <script src="toast.js"></script>
-    <script src="config-api.js"></script>
-    <script src="api-quote.js"></script>
+    <script src="utils.js?v=20260320d"></script>
+    <script src="auth.js?v=20260320d"></script>
+    <script src="toast.js?v=20260320d"></script>
+    <script src="config-api.js?v=20260320d"></script>
+    <script src="api-quote.js?v=20260320d"></script>
+    <script src="price-list-picker.js?v=20260320d"></script>
     <script>
-        // 全域變數
         let currentUser = null;
         let itemCount = 0;
         let items = [];
         let formModified = false;
-        let categories = []; // 儲存分類資料
-        let priceTable = []; // 儲存價目表資料
-        
-        // 檢查登入（延遲執行，不阻塞函數定義）
+        let priceTable = [];
+
         function checkAuth() {
             currentUser = Auth.requireLogin();
-            if (!currentUser) {
-                console.warn('[新增報價] 未登入，將轉跳登入頁');
-                return false;
-            }
-            return true;
+            return !!currentUser;
         }
 
-        // 初始化表單
         function initForm() {
-            // 產生專案編號（使用共用工具）
             document.getElementById('projectNumber').value = Utils.generateProjectNo();
-
-            // 監控表單變更
             document.getElementById('quoteForm').addEventListener('input', () => {
                 formModified = true;
             });
         }
 
-        // 載入分類
-        async function loadCategories() {
-            try {
-                const result = await QuoteAPI.getCategories();
-                if (result.success && result.categories) {
-                    categories = result.categories;
-                    console.log('已載入分類:', categories.length, '個');
-                } else {
-                    console.warn('無法載入分類:', result.error || '未知錯誤');
-                    categories = [];
-                }
-            } catch (error) {
-                console.error('載入分類失敗:', error);
-                categories = [];
-            }
-        }
-        
-        // 載入價目表
         async function loadPriceTable() {
-            try {
-                const result = await QuoteAPI.getPriceTable();
-                if (result.success && result.items) {
-                    priceTable = result.items;
-                    console.log('已載入價目表:', priceTable.length, '項');
-                } else {
-                    console.warn('無法載入價目表:', result.error || '未知錯誤');
-                    priceTable = [];
-                }
-            } catch (error) {
-                console.error('載入價目表失敗:', error);
+            const result = await QuoteAPI.getPriceTable();
+            if (!result.success) {
                 priceTable = [];
-            }
-        }
-
-        // 填充分類選單
-        function populateCategorySelect(selectElement) {
-            selectElement.innerHTML = '<option value="">請選擇分類</option>';
-            categories.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat.name;
-                option.textContent = cat.name;
-                selectElement.appendChild(option);
-            });
-        }
-
-        // 返回前確認
-        function goBack() {
-            if (formModified && !confirm('⚠️ 表單尚未儲存，確定要離開嗎？')) {
+                Toast.error('價目表載入失敗：' + (result.error || '未知錯誤'));
                 return;
             }
+            priceTable = result.items || [];
+            PriceListPicker.setItems(priceTable);
+        }
+
+        function goBack() {
+            if (formModified && !confirm('⚠️ 表單尚未儲存，確定要離開嗎？')) return;
             location.href = 'dashboard-simple.html';
         }
 
-        // 新增項目
-        function addItem() {
-            console.log('[新增報價] 新增項目', itemCount + 1);
-            itemCount++;
-            const container = document.getElementById('itemsContainer');
-            
-            if (!container) {
-                console.error('[新增報價] 找不到 itemsContainer 元素！');
-                return;
-            }
-            
+        function addItem(data = {}) {
+            itemCount += 1;
+            const id = itemCount;
+            items.push(id);
+
             const itemDiv = document.createElement('div');
             itemDiv.className = 'item-row';
-            itemDiv.id = `item${itemCount}`;
-            itemDiv.style.cssText = 'border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; position: relative;';
-            
+            itemDiv.id = `item${id}`;
             itemDiv.innerHTML = `
-                <button type="button" onclick="removeItem(${itemCount})" 
-                        style="position: absolute; top: 10px; right: 10px; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">
-                    ✕
-                </button>
+                <button type="button" onclick="removeItem(${id})" class="danger-chip">✕</button>
                 <div class="form-row">
                     <label>項目名稱 *</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="itemName${itemCount}" required maxlength="100" style="flex: 1;">
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="selectFromPriceTable(${itemCount})">
-                            📋 從價目表選擇
-                        </button>
+                    <div class="field-inline">
+                        <input type="text" id="itemName${id}" required maxlength="100" value="${Utils.escapeHtml(data.name || '')}" style="flex: 1;">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="selectFromPriceTable(${id})">📋 從價目表選擇</button>
                     </div>
                 </div>
-                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div>
+                <div class="form-grid-2">
+                    <div class="form-row">
                         <label>分類</label>
-                        <select id="itemCategory${itemCount}">
-                            <option value="">請選擇分類</option>
-                        </select>
+                        <input type="text" id="itemCategory${id}" maxlength="20" value="${Utils.escapeHtml(data.category || '')}" list="priceCategoryList">
                     </div>
-                    <div>
-                        <label>子分類</label>
-                        <input type="text" id="itemSubCategory${itemCount}" maxlength="50" placeholder="選填">
+                    <div class="form-row">
+                        <label>規格 / 說明</label>
+                        <input type="text" id="itemDesc${id}" maxlength="200" value="${Utils.escapeHtml(data.desc || data.spec || '')}">
                     </div>
                 </div>
-                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
-                    <div>
+                <div class="form-grid-4">
+                    <div class="form-row">
                         <label>數量 *</label>
-                        <input type="number" id="itemQty${itemCount}" value="1" min="1" max="9999" required onchange="calculateTotal()">
+                        <input type="number" id="itemQty${id}" value="${Number(data.qty || 1)}" min="1" max="9999" step="1" required onchange="calculateTotal()">
                     </div>
-                    <div>
+                    <div class="form-row">
                         <label>單價 *</label>
-                        <input type="number" id="itemPrice${itemCount}" value="0" min="0" max="9999999" step="0.01" required onchange="calculateTotal()">
+                        <input type="number" id="itemPrice${id}" value="${Number(data.price || 0)}" min="0" max="9999999" step="0.01" required onchange="calculateTotal()">
                     </div>
-                    <div>
+                    <div class="form-row">
                         <label>單位</label>
-                        <input type="text" id="itemUnit${itemCount}" maxlength="10" placeholder="個/組/式">
+                        <input type="text" id="itemUnit${id}" maxlength="20" value="${Utils.escapeHtml(data.unit || '')}" placeholder="個 / 組 / 式">
                     </div>
-                    <div>
+                    <div class="form-row">
                         <label>小計</label>
-                        <input type="text" id="itemSubtotal${itemCount}" readonly style="background: #f0f0f0;">
+                        <input type="text" id="itemSubtotal${id}" readonly class="readonly-input">
                     </div>
                 </div>
                 <div class="form-row">
-                    <label>說明</label>
-                    <input type="text" id="itemDesc${itemCount}" maxlength="200">
+                    <label>備註</label>
+                    <input type="text" id="itemNote${id}" maxlength="200" value="${Utils.escapeHtml(data.note || '')}" placeholder="例如：安裝位置、客製需求">
                 </div>
             `;
-            
-            container.appendChild(itemDiv);
-            items.push(itemCount);
-            
-            // 填充分類選單
-            const categorySelect = document.getElementById(`itemCategory${itemCount}`);
-            if (categorySelect) {
-                populateCategorySelect(categorySelect);
-            }
-            
+            document.getElementById('itemsContainer').appendChild(itemDiv);
             calculateTotal();
         }
 
-        // 移除項目（加入確認）
         function removeItem(id) {
-            const itemName = document.getElementById(`itemName${id}`)?.value;
-            
-            // 如果項目有填寫內容，需要確認
-            if (itemName && !confirm(`確定要移除項目「${itemName}」嗎？`)) {
-                return;
-            }
-            
-            const itemDiv = document.getElementById(`item${id}`);
-            if (itemDiv) {
-                itemDiv.remove();
-                items = items.filter(i => i !== id);
-                calculateTotal();
-            }
+            const name = (document.getElementById(`itemName${id}`)?.value || '').trim();
+            if (name && !confirm(`確定要移除項目「${name}」嗎？`)) return;
+            document.getElementById(`item${id}`)?.remove();
+            items = items.filter(itemId => itemId !== id);
+            calculateTotal();
         }
 
-        // 計算總計（修正為使用 parseFloat 支援小數）
         function calculateTotal() {
             let total = 0;
-            
             items.forEach(id => {
                 const qty = parseFloat(document.getElementById(`itemQty${id}`)?.value || 0);
                 const price = parseFloat(document.getElementById(`itemPrice${id}`)?.value || 0);
                 const subtotal = qty * price;
-                
                 const subtotalInput = document.getElementById(`itemSubtotal${id}`);
-                if (subtotalInput) {
-                    subtotalInput.value = Utils.formatPrice(subtotal);
-                }
-                
+                if (subtotalInput) subtotalInput.value = Utils.formatPrice(subtotal);
                 total += subtotal;
             });
-            
             document.getElementById('totalPrice').textContent = total.toLocaleString();
         }
 
-        // 表單驗證
+        function selectFromPriceTable(itemId) {
+            if (!priceTable.length) {
+                Toast.error('價目表尚未載入');
+                return;
+            }
+            const defaultCategory = (document.getElementById(`itemCategory${itemId}`)?.value || '').trim();
+            PriceListPicker.open(itemId, {
+                defaultCategory,
+                onSelect: fillPriceItem
+            });
+        }
+
+        function fillPriceItem(priceItem, itemId) {
+            document.getElementById(`itemName${itemId}`).value = priceItem.name || '';
+            document.getElementById(`itemCategory${itemId}`).value = priceItem.category || '';
+            document.getElementById(`itemDesc${itemId}`).value = priceItem.spec || priceItem.description || '';
+            document.getElementById(`itemPrice${itemId}`).value = Number(priceItem.price || 0);
+            document.getElementById(`itemUnit${itemId}`).value = priceItem.unit || '';
+            document.getElementById(`itemNote${itemId}`).value = priceItem.note || priceItem.remark || '';
+            const qtyInput = document.getElementById(`itemQty${itemId}`);
+            if (qtyInput && (!qtyInput.value || Number(qtyInput.value) < 1)) {
+                qtyInput.value = 1;
+            }
+            calculateTotal();
+            Toast.success('已帶入價目表項目，可再調整數量');
+        }
+
+        function collectItems() {
+            const result = [];
+            items.forEach(id => {
+                const name = (document.getElementById(`itemName${id}`)?.value || '').trim();
+                const category = (document.getElementById(`itemCategory${id}`)?.value || '').trim();
+                const qty = parseFloat(document.getElementById(`itemQty${id}`)?.value || 0);
+                const price = parseFloat(document.getElementById(`itemPrice${id}`)?.value || 0);
+                const unit = (document.getElementById(`itemUnit${id}`)?.value || '').trim();
+                const desc = (document.getElementById(`itemDesc${id}`)?.value || '').trim();
+                const note = (document.getElementById(`itemNote${id}`)?.value || '').trim();
+                if (!name) return;
+                result.push({
+                    name,
+                    category,
+                    qty,
+                    price,
+                    unit,
+                    desc,
+                    spec: desc,
+                    note,
+                    remark: note,
+                    subtotal: qty * price
+                });
+            });
+            return result;
+        }
+
         function validateForm() {
             const customerName = document.getElementById('customerName').value.trim();
             const phone = document.getElementById('phone').value.trim();
-            
-            // 姓名驗證
             if (!customerName || customerName.length < 2) {
                 Toast.error('請輸入客戶姓名（至少 2 個字）');
                 document.getElementById('customerName').focus();
                 return false;
             }
-            
-            if (customerName.length > 50) {
-                Toast.error('客戶姓名不可超過 50 個字');
-                document.getElementById('customerName').focus();
-                return false;
-            }
-            
-            // 電話驗證
             if (!Utils.validatePhone(phone)) {
                 Toast.error('請輸入正確的手機號碼（例如：0912345678）');
                 document.getElementById('phone').focus();
                 return false;
             }
-            
-            // 項目驗證
-            let hasValidItem = false;
-            items.forEach(id => {
-                const name = document.getElementById(`itemName${id}`)?.value.trim();
-                const qty = parseFloat(document.getElementById(`itemQty${id}`)?.value || 0);
-                const price = parseFloat(document.getElementById(`itemPrice${id}`)?.value || 0);
-                
-                if (name && qty > 0) {
-                    hasValidItem = true;
-                    
-                    // 驗證數量範圍
-                    if (!Utils.validateNumber(qty, 1, 9999)) {
-                        Toast.error(`項目「${name}」的數量必須在 1-9999 之間`);
-                        return false;
-                    }
-                    
-                    // 驗證價格範圍
-                    if (!Utils.validateNumber(price, 0, 9999999)) {
-                        Toast.error(`項目「${name}」的單價必須在 0-9,999,999 之間`);
-                        return false;
-                    }
-                }
-            });
-            
-            if (!hasValidItem) {
+            const quoteItems = collectItems();
+            if (!quoteItems.length) {
                 Toast.error('請至少新增一個報價項目');
                 return false;
             }
-            
+            for (const item of quoteItems) {
+                if (!Utils.validateNumber(item.qty, 1, 9999)) {
+                    Toast.error(`項目「${item.name}」的數量必須在 1-9999 之間`);
+                    return false;
+                }
+                if (!Utils.validateNumber(item.price, 0, 9999999)) {
+                    Toast.error(`項目「${item.name}」的單價必須在 0-9,999,999 之間`);
+                    return false;
+                }
+            }
             return true;
         }
 
-        // 儲存報價
-        document.getElementById('quoteForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            // 表單驗證
-            if (!validateForm()) {
-                return;
-            }
-            
-            // 停用按鈕防止重複提交
+        document.getElementById('quoteForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!validateForm()) return;
+
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.textContent = '儲存中...';
-            
-            // 收集資料
-            const projectData = {
+
+            const quoteItems = collectItems();
+            const totalPrice = quoteItems.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
+            const payload = {
                 projectNumber: document.getElementById('projectNumber').value,
                 customerName: document.getElementById('customerName').value.trim(),
                 phone: document.getElementById('phone').value.trim(),
                 status: document.getElementById('status').value,
                 createdBy: currentUser.name,
-                items: [],
-                totalPrice: 0
+                items: quoteItems,
+                totalPrice
             };
-            
-            // 收集項目
-            let total = 0;
-            items.forEach(id => {
-                const name = document.getElementById(`itemName${id}`)?.value.trim() || '';
-                const category = document.getElementById(`itemCategory${id}`)?.value.trim() || '';
-                const subCategory = document.getElementById(`itemSubCategory${id}`)?.value.trim() || '';
-                const qty = parseFloat(document.getElementById(`itemQty${id}`)?.value || 0);
-                const price = parseFloat(document.getElementById(`itemPrice${id}`)?.value || 0);
-                const unit = document.getElementById(`itemUnit${id}`)?.value.trim() || '';
-                const desc = document.getElementById(`itemDesc${id}`)?.value.trim() || '';
-                
-                if (name && qty > 0) {
-                    const subtotal = qty * price;
-                    projectData.items.push({
-                        name, 
-                        category, 
-                        subCategory, 
-                        qty, 
-                        price, 
-                        unit,
-                        desc, 
-                        subtotal
-                    });
-                    total += subtotal;
-                }
-            });
-            
-            projectData.totalPrice = total;
-            
-            try {
-                console.log('準備儲存:', projectData);
-                const result = await QuoteAPI.addProject(projectData);
-                
-                if (result.success) {
-                    Toast.success('報價已成功儲存！');
-                    formModified = false; // 重置表單變更標記
-                    setTimeout(() => {
-                        location.href = 'dashboard-simple.html';
-                    }, 1000);
-                } else {
-                    Toast.error('儲存失敗：' + result.error);
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = '💾 儲存報價';
-                }
-            } catch (error) {
-                console.error('儲存失敗:', error);
-                Toast.error('連線失敗：' + error.message);
-                submitBtn.disabled = false;
-                submitBtn.textContent = '💾 儲存報價';
+
+            const result = await QuoteAPI.addProject(payload);
+            if (result.success) {
+                formModified = false;
+                Toast.success('報價已成功儲存！');
+                setTimeout(() => location.href = 'dashboard-simple.html', 800);
+                return;
             }
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = '💾 儲存報價';
+            Toast.error('儲存失敗：' + (result.error || '未知錯誤'));
         });
 
-        // 從價目表選擇
-        function selectFromPriceTable(itemId) {
-            if (priceTable.length === 0) {
-                Toast.error('價目表尚未載入或為空');
-                return;
-            }
-            
-            const keyword = prompt('請輸入項目關鍵字搜尋：');
-            if (!keyword) return;
-            
-            const filtered = priceTable.filter(item => 
-                item.name.includes(keyword)
-            );
-            
-            if (filtered.length === 0) {
-                Toast.error('找不到相關項目');
-                return;
-            }
-            
-            // 只有一個結果，直接填入
-            if (filtered.length === 1) {
-                fillPriceItem(itemId, filtered[0]);
-                return;
-            }
-            
-            // 多個結果，顯示選單
-            const options = filtered.map((item, idx) => 
-                `${idx + 1}. ${item.name} - ${item.price} 元/${item.unit || '個'}`
-            ).join('\n');
-            
-            const choice = prompt(`找到 ${filtered.length} 項結果：\n${options}\n\n請輸入編號：`);
-            const index = parseInt(choice) - 1;
-            
-            if (index >= 0 && index < filtered.length) {
-                fillPriceItem(itemId, filtered[index]);
-            } else {
-                Toast.error('無效的選擇');
-            }
-        }
-        
-        // 填入價目資料
-        function fillPriceItem(itemId, priceItem) {
-            document.getElementById(`itemName${itemId}`).value = priceItem.name || '';
-            
-            const categorySelect = document.getElementById(`itemCategory${itemId}`);
-            if (categorySelect && priceItem.category) {
-                categorySelect.value = priceItem.category;
-            }
-            
-            document.getElementById(`itemSubCategory${itemId}`).value = priceItem.subCategory || '';
-            document.getElementById(`itemPrice${itemId}`).value = priceItem.price || 0;
-            document.getElementById(`itemUnit${itemId}`).value = priceItem.unit || '';
-            
-            calculateTotal();
-            Toast.success('已填入價目資料');
-        }
-        
-        // 頁面載入時初始化
-        (async function init() {
-            console.log('[新增報價] 頁面初始化');
-            
-            // 1. 檢查登入
-            if (!checkAuth()) {
-                console.error('[新增報價] 認證失敗');
-                return;
-            }
-            
-            // 2. 初始化表單
-            initForm();
-            
-            // 3. 載入分類和價目表
-            await loadCategories();
-            await loadPriceTable();
-            
-            // 4. 初始新增一個項目
-            addItem();
-            
-            console.log('[新增報價] 初始化完成');
-        })();
-        
-        // 快捷鍵：Ctrl+S 或 Cmd+S = 儲存
-        document.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
+        document.addEventListener('keydown', (event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                event.preventDefault();
                 document.getElementById('quoteForm').dispatchEvent(new Event('submit'));
             }
         });
-        
-        // 離開前提醒
-        window.addEventListener('beforeunload', (e) => {
-            if (formModified) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
+
+        window.addEventListener('beforeunload', (event) => {
+            if (!formModified) return;
+            event.preventDefault();
+            event.returnValue = '';
         });
+
+        (async function init() {
+            if (!checkAuth()) return;
+            initForm();
+            await loadPriceTable();
+            addItem();
+        })();
     </script>
-    
+
+    <datalist id="priceCategoryList">
+        <option value="麻將桌"></option>
+        <option value="冷氣"></option>
+        <option value="水電配線"></option>
+        <option value="輕隔間"></option>
+        <option value="包廂門"></option>
+        <option value="智能門鎖"></option>
+        <option value="其他設備"></option>
+    </datalist>
+
     <style>
-        /* 行動裝置優化 */
+        .item-row { position: relative; border: 1px solid #dbe2ea; border-radius: 10px; padding: 18px; margin-bottom: 14px; background: #fff; }
+        .field-inline { display: flex; gap: 10px; }
+        .form-grid-2, .form-grid-4 { display: grid; gap: 12px; }
+        .form-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .form-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .readonly-input { background: #f8fafc; }
+        .danger-chip { position: absolute; top: 12px; right: 12px; border: none; background: #ef4444; color: #fff; border-radius: 999px; width: 32px; height: 32px; cursor: pointer; }
         @media (max-width: 768px) {
-            .form-row > div {
-                grid-template-columns: 1fr !important;
-            }
-            
-            .item-row {
-                padding-top: 40px !important;
-            }
+            .field-inline, .form-grid-2, .form-grid-4 { grid-template-columns: 1fr; display: grid; }
+            .item-row { padding-top: 52px; }
         }
     </style>
 </body>

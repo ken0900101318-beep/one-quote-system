@@ -201,6 +201,18 @@ const QuoteAPI = {
         return await this.request('getPriceTable');
     },
 
+    async getPriceListCategories() {
+        return await this.request('getPriceListCategories');
+    },
+
+    async initializeSheets() {
+        return await this.requestPost('initializeSheets', {});
+    },
+
+    async seedPriceList(options = {}) {
+        return await this.requestPost('seedPriceList', { options }, { timeout: 60000 });
+    },
+
     async getCategories() {
         return await this.request('getCategories');
     },
