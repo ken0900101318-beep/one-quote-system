@@ -59,6 +59,7 @@
                         <th>總價</th>
                         <th>收款進度</th>
                         <th>待收款</th>
+                        <th>工班進度</th>
                         <th>狀態</th>
                         <th>建立時間</th>
                         <th>操作</th>
@@ -140,7 +141,7 @@
             function renderProjects(projects) {
                 const tbody = document.getElementById('projectList');
                 if (projects.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 40px;">暫無專案資料</td></tr>'; 
+                    tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 40px;">暫無專案資料</td></tr>'; 
                     return;
                 }
 
@@ -151,10 +152,14 @@
                     const pendingAmount = Number(summary.pendingAmount ?? p.pendingAmount ?? Math.max(totalPrice - totalPaid, 0));
                     const progress = Math.max(0, Math.min(100, Number(summary.progressPercent ?? p.paymentProgress ?? 0)));
                     const pendingClass = pendingAmount > 0 ? 'pending-amount pending-amount--alert' : 'pending-amount';
+                    const progressSummary = p.progressSummary || {};
+                    const constructionPercent = Math.max(0, Math.min(100, Number(progressSummary.overallPercent || 0)));
+                    const overdueCount = Number(progressSummary.overdueCount || 0);
+                    const currentStage = progressSummary.currentStage ? String(progressSummary.currentStage.stageName || '') : '';
 
                     return `
-                        <tr>
-                            <td data-label="專案編號">${Utils.escapeHtml(p.projectNumber) || '-'}</td>
+                        <tr class="${overdueCount > 0 ? 'project-row--overdue' : ''}">
+                            <td data-label="專案編號">${Utils.escapeHtml(p.projectNumber) || '-'}${overdueCount > 0 ? `<div class="project-alert-badge">⚠️ ${overdueCount} 項逾期</div>` : ''}</td>
                             <td data-label="客戶姓名">${Utils.escapeHtml(p.customerName) || '-'}</td>
                             <td data-label="聯絡電話">${Utils.escapeHtml(p.phone) || '-'}</td>
                             <td data-label="指定工程行">${Utils.escapeHtml(p.contractorName || '-') }</td>
@@ -171,6 +176,18 @@
                                 </div>
                             </td>
                             <td data-label="待收款"><span class="${pendingClass}">${Utils.formatPrice(pendingAmount)}</span></td>
+                            <td data-label="工班進度">
+                                <div class="construction-progress-cell">
+                                    <div class="construction-progress-head">
+                                        <strong>${constructionPercent}%</strong>
+                                        ${overdueCount > 0 ? `<span class="construction-progress-alert">逾期 ${overdueCount}</span>` : ''}
+                                    </div>
+                                    <div class="payment-progress-bar">
+                                        <div class="construction-progress-fill" style="width: ${constructionPercent}%;"></div>
+                                    </div>
+                                    <small>${Utils.escapeHtml(currentStage || '全部完成')}</small>
+                                </div>
+                            </td>
                             <td data-label="狀態"><span class="status-badge status-${Utils.escapeHtml(p.status)}">${Utils.escapeHtml(statusNames[p.status] || p.status)}</span></td>
                             <td data-label="建立時間">${Utils.formatDate(p.createdAt)}</td>
                             <td data-label="操作">
@@ -277,6 +294,18 @@
             background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
             border-radius: 999px;
         }
+
+        .construction-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2563eb 0%, #60a5fa 100%);
+            border-radius: 999px;
+        }
+
+        .construction-progress-cell { min-width: 150px; }
+        .construction-progress-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+        .construction-progress-alert { color:#b91c1c; font-size:12px; font-weight:700; }
+        .project-alert-badge { margin-top:6px; display:inline-flex; padding:3px 8px; border-radius:999px; background:#fee2e2; color:#b91c1c; font-size:12px; font-weight:700; }
+        .project-row--overdue { background: #fff7f7; }
 
         .payment-progress-meta {
             display: flex;

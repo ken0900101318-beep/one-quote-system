@@ -263,6 +263,29 @@ const QuoteAPI = {
         return await this.requestPost('deleteCategory', { id });
     },
 
+
+    async getProjectProgress(projectId) {
+        if (!projectId) {
+            return { success: false, error: '缺少專案 ID' };
+        }
+        return await this.request('getProjectProgress', { projectId }, { timeout: 60000 });
+    },
+
+    async updateProgress(data) {
+        if (!data || !data.projectId || !data.stageKey) {
+            return { success: false, error: '缺少進度資料' };
+        }
+        return await this.requestPost('updateProgress', { data }, { timeout: 60000 });
+    },
+
+    async getProgressAlerts(options = {}) {
+        return await this.request('getProgressAlerts', options, { timeout: 60000 });
+    },
+
+    async seedProgressData(options = {}) {
+        return await this.requestPost('seedProgressData', { options }, { timeout: 60000 });
+    },
+
     async getProjectPayments(projectId) {
         if (!projectId) {
             return { success: false, error: '缺少專案 ID' };

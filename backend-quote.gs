@@ -13,12 +13,25 @@ const SHEETS = {
   PRICE_TABLE: '價目表',
   CATEGORIES: '分類',
   PAYMENTS: '收款記錄',
-  CONTRACTORS: '工程行'
+  CONTRACTORS: '工程行',
+  PROGRESS: '工班進度'
 };
 
 const PAYMENT_METHODS = ['現金', '匯款', '支票', '刷卡', 'LINE Pay', '其他'];
 const PRICE_LIST_CATEGORIES = ['麻將桌', '冷氣', '水電配線', '輕隔間', '包廂門', '智能門鎖', '其他設備'];
 const PRICE_LIST_HEADERS = ['ID', '分類', '項目名稱', '規格說明', '單價', '單位', '備註', '狀態', '建立日期', '更新日期'];
+
+const PROGRESS_STAGE_DEFINITIONS = [
+  { key: 'site_survey', name: '現場勘查', order: 1, defaultDueDays: 3, requiredFields: [] },
+  { key: 'partition', name: '隔間工程', order: 2, defaultDueDays: 7, requiredFields: ['contractorName'] },
+  { key: 'electrical', name: '水電工程', order: 3, defaultDueDays: 10, requiredFields: ['contractorName'] },
+  { key: 'wallpaper', name: '壁紙工程', order: 4, defaultDueDays: 14, requiredFields: ['contractorName'] },
+  { key: 'aircon', name: '冷氣安裝', order: 5, defaultDueDays: 18, requiredFields: ['contractorName', 'installItems'] },
+  { key: 'mahjong', name: '麻將桌安裝', order: 6, defaultDueDays: 21, requiredFields: ['contractorName', 'installItems'] },
+  { key: 'acceptance', name: '驗收交付', order: 7, defaultDueDays: 24, requiredFields: ['acceptanceResult'] }
+];
+const PROGRESS_STATUSES = ['not_started', 'in_progress', 'completed', 'delayed'];
+const PROGRESS_HEADERS = ['ID', '專案ID', '階段Key', '階段名稱', '排序', '狀態', '進度%', '預計日期', '實際日期', '逾期天數', '工程行', '安裝項目', '驗收結果', '備註', '照片(JSON)', '更新人', '建立時間', '更新時間'];
 
 function initializeSheets() {
   const ss = SpreadsheetApp.openById(QUOTE_SHEET_ID);
@@ -46,6 +59,7 @@ function initializeSheets() {
 
   ensurePaymentSheet_(ss);
   ensureContractorSheet_(ss);
+  ensureProgressSheet_(ss);
   return { success: true, message: '✅ 初始化完成', priceListCategories: PRICE_LIST_CATEGORIES };
 }
 
@@ -109,6 +123,18 @@ function doPost(e) {
         break;
       case 'seedContractors':
         result = seedContractors(data.options || {});
+        break;
+      case 'getProjectProgress':
+        result = getProjectProgress(data.projectId || data.id);
+        break;
+      case 'updateProgress':
+        result = updateProgress(data.data || data.progress || data || {});
+        break;
+      case 'getProgressAlerts':
+        result = getProgressAlerts(data.options || data || {});
+        break;
+      case 'seedProgressData':
+        result = seedProgressData(data.options || data || {});
         break;
       default:
         result = { success: false, error: '不支援的操作' };
@@ -175,6 +201,18 @@ function doGet(e) {
       break;
     case 'seedContractors':
       result = seedContractors(e.parameter || {});
+      break;
+    case 'getProjectProgress':
+      result = getProjectProgress(e.parameter.projectId || e.parameter.id);
+      break;
+    case 'updateProgress':
+      result = updateProgress(parseJsonSafe_(e.parameter.data, {}));
+      break;
+    case 'getProgressAlerts':
+      result = getProgressAlerts(e.parameter || {});
+      break;
+    case 'seedProgressData':
+      result = seedProgressData(e.parameter || {});
       break;
     case 'getStatisticsOverview':
       result = getStatisticsOverview(e.parameter || {});
@@ -633,6 +671,360 @@ function deletePayment(id) {
 }
 
 
+
+function ensureProgressSheet_(ss) {
+  const spreadsheet = ss || SpreadsheetApp.openById(QUOTE_SHEET_ID);
+  let sheet = spreadsheet.getSheetByName(SHEETS.PROGRESS);
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(SHEETS.PROGRESS);
+    sheet.getRange(1, 1, 1, PROGRESS_HEADERS.length).setValues([PROGRESS_HEADERS]);
+  } else {
+    const headers = sheet.getLastColumn() > 0 ? sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), PROGRESS_HEADERS.length)).getValues()[0] : [];
+    const valid = String(headers[0] || '') === 'ID' && String(headers[1] || '') === '專案ID' && String(headers[14] || '') === '照片(JSON)';
+    if (!valid && sheet.getLastRow() <= 1) {
+      sheet.clear();
+      sheet.getRange(1, 1, 1, PROGRESS_HEADERS.length).setValues([PROGRESS_HEADERS]);
+    }
+  }
+  if (sheet.getFrozenRows() < 1) sheet.setFrozenRows(1);
+  return sheet;
+}
+
+function getProgressSheet_() {
+  return ensureProgressSheet_(SpreadsheetApp.openById(QUOTE_SHEET_ID));
+}
+
+function getProgressStageDefinitions_() {
+  return PROGRESS_STAGE_DEFINITIONS.map(function(stage) {
+    return Object.assign({}, stage);
+  });
+}
+
+function getDefaultProgressStages_(projectId, baseProject) {
+  const project = baseProject || {};
+  const contractorName = String(project.contractorName || '').trim();
+  const installItems = extractInstallItemsFromProject_(project);
+  const createdAt = parseDateValue_(project.createdAt) || new Date();
+  return getProgressStageDefinitions_().map(function(stage) {
+    const dueDate = new Date(createdAt.getTime());
+    dueDate.setDate(dueDate.getDate() + Number(stage.defaultDueDays || 0));
+    return normalizeProgressRow_(Object.assign({}, stage, {
+      projectId: projectId,
+      stageKey: stage.key,
+      stageName: stage.name,
+      order: stage.order,
+      status: 'not_started',
+      progressPercent: 0,
+      dueDate: dueDate,
+      actualDate: '',
+      overdueDays: 0,
+      contractorName: contractorName,
+      installItems: installItems,
+      acceptanceResult: '',
+      note: '',
+      photos: [],
+      updatedBy: ''
+    }), true);
+  });
+}
+
+function mapProgressRow_(row) {
+  const photos = parseJsonSafe_(row[14], []);
+  const normalizedPhotos = Array.isArray(photos) ? photos.map(function(item) {
+    return sanitizeProgressPhoto_(item);
+  }).filter(function(item) { return !!item; }).slice(0, 6) : [];
+  return {
+    id: String(row[0] || '').trim(),
+    projectId: String(row[1] || '').trim(),
+    stageKey: String(row[2] || '').trim(),
+    stageName: String(row[3] || '').trim(),
+    order: Number(row[4] || 0),
+    status: normalizeProgressStatus_(row[5]),
+    progressPercent: clampProgressPercent_(row[6]),
+    dueDate: normalizeDateInput_(row[7]),
+    actualDate: normalizeDateInput_(row[8]),
+    overdueDays: Math.max(0, Number(row[9] || 0)),
+    contractorName: String(row[10] || '').trim(),
+    installItems: String(row[11] || '').trim(),
+    acceptanceResult: String(row[12] || '').trim(),
+    note: String(row[13] || '').trim(),
+    photos: normalizedPhotos,
+    updatedBy: String(row[15] || '').trim(),
+    createdAt: row[16] || '',
+    updatedAt: row[17] || ''
+  };
+}
+
+function progressToRow_(progress) {
+  return [
+    progress.id,
+    progress.projectId,
+    progress.stageKey,
+    progress.stageName,
+    progress.order,
+    progress.status,
+    progress.progressPercent,
+    progress.dueDate,
+    progress.actualDate,
+    progress.overdueDays,
+    progress.contractorName,
+    progress.installItems,
+    progress.acceptanceResult,
+    progress.note,
+    JSON.stringify(progress.photos || []),
+    progress.updatedBy,
+    progress.createdAt,
+    progress.updatedAt
+  ];
+}
+
+function sanitizeProgressPhoto_(photo) {
+  if (!photo) return null;
+  if (typeof photo === 'string') {
+    const trimmed = photo.trim();
+    if (!trimmed) return null;
+    return { name: 'photo', url: trimmed.slice(0, 12000), thumbnailUrl: trimmed.slice(0, 12000) };
+  }
+  const url = String(photo.url || photo.src || '').trim();
+  const thumbnailUrl = String(photo.thumbnailUrl || photo.thumb || url).trim();
+  if (!url && !thumbnailUrl) return null;
+  return {
+    name: String(photo.name || 'photo').trim().slice(0, 100),
+    url: (url || thumbnailUrl).slice(0, 12000),
+    thumbnailUrl: (thumbnailUrl || url).slice(0, 12000),
+    type: String(photo.type || '').trim().slice(0, 100),
+    size: Number(photo.size || 0) || 0
+  };
+}
+
+function normalizeProgressStatus_(status) {
+  const value = String(status || '').trim();
+  if (PROGRESS_STATUSES.indexOf(value) >= 0) return value;
+  return 'not_started';
+}
+
+function clampProgressPercent_(value) {
+  var percent = Number(value || 0);
+  if (isNaN(percent)) percent = 0;
+  return Math.max(0, Math.min(100, Math.round(percent)));
+}
+
+function extractInstallItemsFromProject_(project) {
+  const items = Array.isArray(project.items) ? project.items : [];
+  const keywords = ['冷氣', '麻將桌', '安裝', '設備'];
+  const matched = items.map(function(item) {
+    const name = String((item || {}).name || '').trim();
+    const category = String((item || {}).category || '').trim();
+    const desc = String((item || {}).desc || (item || {}).spec || '').trim();
+    const hay = [name, category, desc].join(' ');
+    const hit = keywords.some(function(keyword) { return hay.indexOf(keyword) !== -1; });
+    return hit ? name : '';
+  }).filter(Boolean);
+  return matched.join('、').slice(0, 500);
+}
+
+function normalizeProgressRow_(progress, isCreate, createdAtOverride) {
+  const now = new Date();
+  const stageKey = String(progress.stageKey || progress.key || '').trim();
+  const stageDefinition = getProgressStageDefinitions_().filter(function(item) { return item.key === stageKey; })[0];
+  if (!stageDefinition) {
+    return { success: false, error: '無效的施工階段' };
+  }
+  const status = normalizeProgressStatus_(progress.status);
+  const progressPercent = clampProgressPercent_(progress.progressPercent);
+  const dueDate = normalizeDateInput_(progress.dueDate);
+  const actualDate = normalizeDateInput_(progress.actualDate);
+  const contractorName = String(progress.contractorName || '').trim().slice(0, 100);
+  const installItems = String(progress.installItems || '').trim().slice(0, 500);
+  const acceptanceResult = String(progress.acceptanceResult || '').trim().slice(0, 100);
+  const note = String(progress.note || '').trim().slice(0, 1000);
+  const updatedBy = String(progress.updatedBy || '').trim().slice(0, 100);
+  const photos = Array.isArray(progress.photos) ? progress.photos.map(function(item) { return sanitizeProgressPhoto_(item); }).filter(function(item) { return !!item; }).slice(0, 6) : [];
+  if (!String(progress.projectId || '').trim()) return { success: false, error: '缺少專案 ID' };
+  if ((stageDefinition.requiredFields || []).indexOf('contractorName') >= 0 && !contractorName) {
+    return { success: false, error: '此階段需要填寫工程行' };
+  }
+  if ((stageDefinition.requiredFields || []).indexOf('installItems') >= 0 && !installItems) {
+    return { success: false, error: '此階段需要填寫安裝項目' };
+  }
+  if ((stageDefinition.requiredFields || []).indexOf('acceptanceResult') >= 0 && !acceptanceResult) {
+    return { success: false, error: '此階段需要填寫驗收結果' };
+  }
+  return {
+    success: true,
+    progress: {
+      id: String(progress.id || (isCreate ? ('PRG' + Date.now() + '_' + stageDefinition.order) : '')).trim(),
+      projectId: String(progress.projectId || '').trim(),
+      stageKey: stageDefinition.key,
+      stageName: stageDefinition.name,
+      order: Number(stageDefinition.order || progress.order || 0),
+      status: status,
+      progressPercent: status === 'completed' ? 100 : progressPercent,
+      dueDate: dueDate,
+      actualDate: status === 'completed' ? (actualDate || normalizeDateInput_(new Date())) : actualDate,
+      overdueDays: 0,
+      contractorName: contractorName,
+      installItems: installItems,
+      acceptanceResult: acceptanceResult,
+      note: note,
+      photos: photos,
+      updatedBy: updatedBy,
+      createdAt: createdAtOverride || progress.createdAt || now,
+      updatedAt: now
+    }
+  };
+}
+
+function ensureProjectProgressRows_(projectId, project) {
+  const sheet = getProgressSheet_();
+  const data = sheet.getDataRange().getValues();
+  const rows = [];
+  for (var i = 1; i < data.length; i++) {
+    const item = mapProgressRow_(data[i]);
+    if (item.projectId === projectId) rows.push(item);
+  }
+  if (rows.length) return rows.sort(function(a, b) { return a.order - b.order; });
+  const defaults = getDefaultProgressStages_(projectId, project || {});
+  if (defaults.length) {
+    const values = defaults.map(function(item) { return progressToRow_(item.progress || item); });
+    sheet.getRange(sheet.getLastRow() + 1, 1, values.length, PROGRESS_HEADERS.length).setValues(values);
+  }
+  return defaults.map(function(item) { return item.progress || item; });
+}
+
+function calculateOverdueDays_(dueDate, actualDate, status) {
+  const due = parseDateValue_(dueDate);
+  if (!due) return 0;
+  const endDate = parseDateValue_(actualDate) || new Date();
+  if (normalizeProgressStatus_(status) === 'completed' && parseDateValue_(actualDate) && endDate.getTime() <= due.getTime()) {
+    return 0;
+  }
+  const diff = endDate.getTime() - due.getTime();
+  return diff > 0 ? Math.floor(diff / 86400000) : 0;
+}
+
+function buildProjectProgressSummary_(rows) {
+  const list = Array.isArray(rows) ? rows.slice().sort(function(a, b) { return a.order - b.order; }) : [];
+  const total = list.length || PROGRESS_STAGE_DEFINITIONS.length;
+  const completed = list.filter(function(item) { return normalizeProgressStatus_(item.status) === 'completed'; }).length;
+  const percent = total ? Math.round((completed / total) * 100) : 0;
+  let currentStage = null;
+  let nextStage = null;
+  let overdueCount = 0;
+  list.forEach(function(item) {
+    const overdueDays = calculateOverdueDays_(item.dueDate, item.actualDate, item.status);
+    item.overdueDays = overdueDays;
+    item.isOverdue = overdueDays > 0 && normalizeProgressStatus_(item.status) !== 'completed';
+    if (item.isOverdue) overdueCount += 1;
+    if (!currentStage && normalizeProgressStatus_(item.status) !== 'completed') currentStage = item;
+  });
+  if (currentStage) {
+    const index = list.findIndex(function(item) { return item.stageKey === currentStage.stageKey; });
+    nextStage = list[index + 1] || null;
+  }
+  const latestUpdatedAt = list.reduce(function(latest, item) {
+    const current = parseDateValue_(item.updatedAt);
+    if (!current) return latest;
+    if (!latest) return current;
+    return current.getTime() > latest.getTime() ? current : latest;
+  }, null);
+  return {
+    overallPercent: percent,
+    completedStages: completed,
+    totalStages: total,
+    currentStage: currentStage,
+    nextStage: nextStage,
+    overdueCount: overdueCount,
+    hasAlerts: overdueCount > 0,
+    latestUpdatedAt: latestUpdatedAt ? latestUpdatedAt.toISOString() : ''
+  };
+}
+
+function getProjectProgress(projectId) {
+  if (!projectId) return { success: false, error: '缺少專案 ID' };
+  const projectResult = getProject(projectId);
+  if (!projectResult.success) return projectResult;
+  const rows = ensureProjectProgressRows_(projectId, projectResult.project).map(function(item) {
+    item.overdueDays = calculateOverdueDays_(item.dueDate, item.actualDate, item.status);
+    item.isOverdue = item.overdueDays > 0 && normalizeProgressStatus_(item.status) !== 'completed';
+    item.requirements = (getProgressStageDefinitions_().filter(function(stage) { return stage.key === item.stageKey; })[0] || {}).requiredFields || [];
+    return item;
+  }).sort(function(a, b) { return a.order - b.order; });
+  const summary = buildProjectProgressSummary_(rows);
+  return { success: true, projectId: projectId, progress: rows, summary: summary, stageDefinitions: getProgressStageDefinitions_() };
+}
+
+function updateProgress(data) {
+  const payload = data || {};
+  const projectId = String(payload.projectId || '').trim();
+  const stageKey = String(payload.stageKey || '').trim();
+  if (!projectId) return { success: false, error: '缺少專案 ID' };
+  if (!stageKey) return { success: false, error: '缺少階段 Key' };
+  const projectResult = getProject(projectId);
+  if (!projectResult.success) return projectResult;
+  const existingRows = ensureProjectProgressRows_(projectId, projectResult.project);
+  const target = existingRows.filter(function(item) { return item.stageKey === stageKey; })[0];
+  if (!target) return { success: false, error: '找不到施工階段' };
+  const merged = Object.assign({}, target, payload);
+  if (!merged.contractorName) merged.contractorName = String(projectResult.project.contractorName || '').trim();
+  if (!merged.installItems) merged.installItems = extractInstallItemsFromProject_(projectResult.project);
+  const normalized = normalizeProgressRow_(merged, false, target.createdAt || new Date());
+  if (!normalized.success) return normalized;
+  normalized.progress.overdueDays = calculateOverdueDays_(normalized.progress.dueDate, normalized.progress.actualDate, normalized.progress.status);
+  const sheet = getProgressSheet_();
+  const values = sheet.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][1]) === projectId && String(values[i][2]) === stageKey) {
+      sheet.getRange(i + 1, 1, 1, PROGRESS_HEADERS.length).setValues([progressToRow_(normalized.progress)]);
+      break;
+    }
+  }
+  const refreshed = getProjectProgress(projectId);
+  return { success: true, message: '施工進度已更新', stage: normalized.progress, progress: refreshed.progress, summary: refreshed.summary };
+}
+
+function getProgressAlerts(options) {
+  const sheet = getProgressSheet_();
+  const data = sheet.getDataRange().getValues();
+  const alerts = [];
+  const limit = Math.max(1, Math.min(100, Number((options || {}).limit || 20)));
+  for (var i = 1; i < data.length; i++) {
+    const item = mapProgressRow_(data[i]);
+    const overdueDays = calculateOverdueDays_(item.dueDate, item.actualDate, item.status);
+    const needsAttention = overdueDays > 0 || (normalizeProgressStatus_(item.status) === 'in_progress' && item.progressPercent < 100);
+    if (!needsAttention || normalizeProgressStatus_(item.status) === 'completed') continue;
+    const projectResult = getProject(item.projectId);
+    const project = projectResult.success ? projectResult.project : {};
+    alerts.push({
+      projectId: item.projectId,
+      projectNumber: project.projectNumber || item.projectId,
+      customerName: project.customerName || '',
+      stageKey: item.stageKey,
+      stageName: item.stageName,
+      dueDate: item.dueDate,
+      overdueDays: overdueDays,
+      status: item.status,
+      progressPercent: item.progressPercent,
+      contractorName: item.contractorName || project.contractorName || '',
+      isOverdue: overdueDays > 0
+    });
+  }
+  alerts.sort(function(a, b) { return b.overdueDays - a.overdueDays; });
+  return { success: true, alerts: alerts.slice(0, limit), count: alerts.length };
+}
+
+function seedProgressData(options) {
+  const projectsResult = getProjects();
+  if (!projectsResult.success) return projectsResult;
+  const projects = projectsResult.projects || [];
+  let createdProjects = 0;
+  projects.forEach(function(project) {
+    const rows = ensureProjectProgressRows_(project.id, project);
+    if (rows && rows.length) createdProjects += 1;
+  });
+  return { success: true, message: '工班進度 seed 完成', count: createdProjects, stagesPerProject: PROGRESS_STAGE_DEFINITIONS.length };
+}
+
 function ensureContractorSheet_(ss) {
   let sheet = ss.getSheetByName(SHEETS.CONTRACTORS);
   if (!sheet) {
@@ -980,6 +1372,8 @@ function buildProjectFromRow_(row, paymentMap) {
   const paymentSummary = buildPaymentSummary_(totalPrice, payments);
   const contractor = projectData.contractorId ? getContractor(projectData.contractorId) : null;
   const contractorInfo = contractor && contractor.success ? contractor.contractor : null;
+  const progressRows = ensureProjectProgressRows_(projectId, Object.assign({}, projectData, { id: projectId, createdAt: row[7] }));
+  const progressSummary = buildProjectProgressSummary_(progressRows);
 
   return Object.assign({}, projectData, {
     id: row[0],
@@ -1001,7 +1395,8 @@ function buildProjectFromRow_(row, paymentMap) {
     totalPaid: paymentSummary.totalPaid,
     pendingAmount: paymentSummary.pendingAmount,
     paymentProgress: paymentSummary.progressPercent,
-    paymentsCount: paymentSummary.paymentsCount
+    paymentsCount: paymentSummary.paymentsCount,
+    progressSummary: progressSummary
   });
 }
 

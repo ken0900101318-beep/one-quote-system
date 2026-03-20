@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>編輯報價 - ONE桌遊報價系統</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="progress.css?v=20260321a">
 </head>
 <body>
     <nav class="navbar">
@@ -56,6 +57,23 @@
                     <div id="contractorInfo" class="contractor-info" style="display:none;"></div>
                 </div>
 
+
+                <section class="progress-panel">
+                    <div class="progress-panel-header">
+                        <div>
+                            <h3 style="margin:0;">🏗️ 工班進度管理</h3>
+                            <p style="margin:6px 0 0; color:#64748b;">七個固定施工階段，支援逾期提醒、下一步提示、照片紀錄。</p>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="openCurrentProgressStage()">📝 更新目前階段</button>
+                    </div>
+                    <div class="progress-panel-grid">
+                        <div id="progressSummaryBox"></div>
+                        <div id="progressTimeline" class="progress-timeline">
+                            <div class="progress-empty">載入施工進度中...</div>
+                        </div>
+                    </div>
+                </section>
+
                 <h3 style="margin-top: 30px;">報價項目</h3>
                 <div id="itemsContainer"></div>
                 <button type="button" class="btn btn-secondary" onclick="addItem()">➕ 新增項目</button>
@@ -78,8 +96,10 @@
     <script src="config-api.js?v=20260320f"></script>
     <script src="api-quote.js?v=20260320f"></script>
     <script src="price-list-picker.js?v=20260320f"></script>
+    <script src="progress.js?v=20260321a"></script>
     <script>
         const currentUser = Auth.requireLogin();
+        window.currentUser = currentUser;
         let itemCount = 0;
         let items = [];
         let formModified = false;
@@ -87,6 +107,7 @@
         let contractorOptions = [];
         let projectId = new URLSearchParams(window.location.search).get('id');
         let originalData = null;
+        let latestProgressState = null;
 
         if (!currentUser) {
             console.warn('未登入或登入資訊失效，停止載入 edit-quote');
@@ -149,7 +170,12 @@
             }
 
             function handleContractorChange() {
-                updateContractorInfo(document.getElementById('contractorId').value);
+                const selectedId = document.getElementById('contractorId').value;
+                updateContractorInfo(selectedId);
+                const contractor = contractorOptions.find(item => String(item.id) === String(selectedId));
+                if (originalData) {
+                    originalData.contractorName = contractor ? contractor.companyName : '';
+                }
             }
 
             function addItem(data = {}) {
@@ -307,6 +333,8 @@
                     return;
                 }
                 originalData = result.project;
+                await ProgressManager.load(projectId, originalData);
+                latestProgressState = ProgressManager.getState();
                 document.getElementById('customerName').value = result.project.customerName || '';
                 document.getElementById('phone').value = result.project.phone === '-' ? '' : (result.project.phone || '');
                 document.getElementById('projectNumber').value = result.project.projectNumber || '';
@@ -319,6 +347,17 @@
                 initialItems.forEach(addItem);
                 calculateTotal();
                 Toast.success('資料已載入');
+            }
+
+            function openCurrentProgressStage() {
+                const state = ProgressManager.getState();
+                const current = state.summary && state.summary.currentStage;
+                const target = current || (state.progress || [])[0];
+                if (!target) {
+                    Toast.error('尚無可編輯的進度階段');
+                    return;
+                }
+                ProgressManager.openModal(target.stageKey);
             }
 
             function goBack() {
@@ -383,6 +422,11 @@
             window.removeItem = removeItem;
             window.selectFromPriceTable = selectFromPriceTable;
             window.handleContractorChange = handleContractorChange;
+            window.openCurrentProgressStage = openCurrentProgressStage;
+            window.onProgressUpdated = function(state) {
+                latestProgressState = state;
+                formModified = true;
+            };
 
             (async function init() {
                 await Promise.all([loadPriceTable(), loadContractors()]);
