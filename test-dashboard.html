@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>報價系統 - 測試頁面</title>
+</head>
+<body>
+    <h1>報價系統測試</h1>
+    <div id="status">測試中...</div>
+    <div id="results"></div>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbx0vMbZ7X6YL312M88q6NoGgwPb3oB-zZj1TpUt3K7BtV54QE445cyLFDJkhtXm1rZH/exec';
+
+        async function test() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+
+            try {
+                // 測試 1: API 連線
+                statusDiv.innerHTML = '測試 1: API 連線...';
+                const testRes = await fetch(`${API_URL}?action=test`);
+                const testData = await testRes.json();
+                resultsDiv.innerHTML += `<p>✅ API 連線: ${testData.message}</p>`;
+
+                // 測試 2: 讀取專案
+                statusDiv.innerHTML = '測試 2: 讀取專案...';
+                const projectsRes = await fetch(`${API_URL}?action=getProjects`);
+                const projectsData = await projectsRes.json();
+                resultsDiv.innerHTML += `<p>✅ 專案數量: ${projectsData.projects.length}</p>`;
+
+                // 測試 3: 讀取分類
+                statusDiv.innerHTML = '測試 3: 讀取分類...';
+                const categoriesRes = await fetch(`${API_URL}?action=getCategories`);
+                const categoriesData = await categoriesRes.json();
+                resultsDiv.innerHTML += `<p>✅ 分類數量: ${categoriesData.categories.length}</p>`;
+
+                // 顯示專案列表
+                resultsDiv.innerHTML += '<h2>專案列表</h2>';
+                resultsDiv.innerHTML += '<table border="1" cellpadding="5"><tr><th>編號</th><th>客戶</th><th>總價</th><th>狀態</th></tr>';
+                projectsData.projects.forEach(p => {
+                    resultsDiv.innerHTML += `<tr><td>${p.projectNumber}</td><td>${p.customerName}</td><td>${p.totalPrice}</td><td>${p.status}</td></tr>`;
+                });
+                resultsDiv.innerHTML += '</table>';
+
+                statusDiv.innerHTML = '✅ 所有測試完成！';
+            } catch (error) {
+                statusDiv.innerHTML = '❌ 錯誤！';
+                resultsDiv.innerHTML += `<p style="color: red;">錯誤: ${error.message}</p>`;
+                console.error('測試錯誤:', error);
+            }
+        }
+
+        // 執行測試
+        test();
+    </script>
+</body>
+</html>
