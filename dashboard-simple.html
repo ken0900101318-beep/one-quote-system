@@ -83,10 +83,12 @@
         
         // 檢查登入（使用共用工具）
         const currentUser = Auth.requireLogin();
-        if (!currentUser) return;
         
-        // 顯示使用者
-        document.getElementById('userName').textContent = `${currentUser.avatar || ''} ${currentUser.name}`;
+        if (!currentUser) {
+            console.warn('未登入或登入資訊失效，停止載入 dashboard');
+        } else {
+            // 顯示使用者
+            document.getElementById('userName').textContent = `${currentUser.avatar || ''} ${currentUser.name}`;
         
         // 顯示/隱藏 Loading
         function showLoading(show) {
@@ -229,6 +231,7 @@
                 location.href = 'create-quote-simple.html';
             }
         });
+        }
     </script>
     
     <style>
