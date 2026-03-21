@@ -146,6 +146,7 @@
 
         if (currentUser) {
             document.getElementById('contractorForm').addEventListener('submit', submitForm);
+            document.getElementById('searchInput').addEventListener('input', filterDebounced);
             renderSpecialtyOptions();
             renderRatingPicker();
             loadContractors();
@@ -153,7 +154,12 @@
 
         async function loadContractors() {
             toggleLoading(true);
-            const result = await QuoteAPI.getContractors();
+            const result = await QuoteAPI.getContractors({
+                query: document.getElementById('searchInput').value.trim(),
+                rating: document.getElementById('ratingFilter').value,
+                status: document.getElementById('statusFilter').value,
+                specialties: getSelectedSpecialties('#specialtyFilter')
+            });
             toggleLoading(false);
             if (!result.success) {
                 Toast.error('載入工程行失敗：' + (result.error || '未知錯誤'));

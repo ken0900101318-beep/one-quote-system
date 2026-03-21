@@ -735,7 +735,8 @@
             users: [],
             monthlyStatistics: [],
             sort: { key: 'month', direction: 'desc' },
-            charts: {}
+            charts: {},
+            activeRequestId: 0
         };
 
         if (!currentUser) {
@@ -768,11 +769,21 @@
             };
         }
 
+        function clearStatisticsCache() {
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('quote-statistics-cache:')) {
+                    localStorage.removeItem(key);
+                }
+            });
+        }
+
         function resetFilters() {
             document.getElementById('dateStart').value = '';
             document.getElementById('dateEnd').value = '';
             document.getElementById('assigneeFilter').value = '';
             document.getElementById('statusFilter').value = '';
+            dashboardState.sort = { key: 'month', direction: 'desc' };
+            clearStatisticsCache();
             loadDashboard(true);
         }
 
@@ -835,6 +846,7 @@
 
         async function loadDashboard(forceRefresh = false) {
             const filters = getFilters();
+            const requestId = ++dashboardState.activeRequestId;
             const cached = !forceRefresh ? getCachedData(filters) : null;
 
             if (cached) {
@@ -852,6 +864,10 @@
                     QuoteAPI.getTopCustomers(filters),
                     QuoteAPI.getTopEmployees(filters)
                 ]);
+
+                if (requestId !== dashboardState.activeRequestId) {
+                    return;
+                }
 
                 const responses = [overviewRes, monthlyRes, statusRes, revenueRes, customersRes, employeesRes];
                 const failed = responses.find(item => !item.success);
@@ -873,10 +889,15 @@
                 setCachedData(filters, payload);
                 renderDashboard(payload, false);
             } catch (error) {
+                if (requestId !== dashboardState.activeRequestId) {
+                    return;
+                }
                 console.error('載入統計失敗', error);
                 Toast.error('統計載入失敗：' + error.message);
             } finally {
-                showLoading(false);
+                if (requestId === dashboardState.activeRequestId) {
+                    showLoading(false);
+                }
             }
         }
 

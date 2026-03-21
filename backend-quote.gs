@@ -883,13 +883,34 @@ function ensureProjectProgressRows_(projectId, project) {
     const item = mapProgressRow_(data[i]);
     if (item.projectId === projectId) rows.push(item);
   }
-  if (rows.length) return rows.sort(function(a, b) { return a.order - b.order; });
-  const defaults = getDefaultProgressStages_(projectId, project || {});
-  if (defaults.length) {
-    const values = defaults.map(function(item) { return progressToRow_(item.progress || item); });
-    sheet.getRange(sheet.getLastRow() + 1, 1, values.length, PROGRESS_HEADERS.length).setValues(values);
+
+  const defaults = getDefaultProgressStages_(projectId, project || {}).map(function(item) {
+    return item.progress || item;
+  });
+  const existingByStage = {};
+  rows.sort(function(a, b) { return a.order - b.order; }).forEach(function(item) {
+    if (!existingByStage[item.stageKey]) {
+      existingByStage[item.stageKey] = item;
+    }
+  });
+
+  const missing = [];
+  const merged = defaults.map(function(defaultStage) {
+    const existing = existingByStage[defaultStage.stageKey];
+    if (existing) return existing;
+    missing.push(defaultStage);
+    return defaultStage;
+  });
+
+  if (!rows.length || missing.length) {
+    const rowsToInsert = rows.length ? missing : merged;
+    if (rowsToInsert.length) {
+      const values = rowsToInsert.map(function(item) { return progressToRow_(item); });
+      sheet.getRange(sheet.getLastRow() + 1, 1, values.length, PROGRESS_HEADERS.length).setValues(values);
+    }
   }
-  return defaults.map(function(item) { return item.progress || item; });
+
+  return merged.sort(function(a, b) { return a.order - b.order; });
 }
 
 function calculateOverdueDays_(dueDate, actualDate, status) {
@@ -1036,7 +1057,40 @@ function ensureContractorSheet_(ss) {
 
 function getContractorSheet_() {
   const ss = SpreadsheetApp.openById(QUOTE_SHEET_ID);
-  return ensureContractorSheet_(ss);
+  const sheet = ensureContractorSheet_(ss);
+  ensureUniqueContractorIds_(sheet);
+  return sheet;
+}
+
+function generateEntityId_(prefix) {
+  return String(prefix || 'ID') + '_' + Utilities.getUuid().replace(/-/g, '').slice(0, 12);
+}
+
+function ensureUniqueContractorIds_(sheet) {
+  const targetSheet = sheet || ensureContractorSheet_(SpreadsheetApp.openById(QUOTE_SHEET_ID));
+  const lastRow = targetSheet.getLastRow();
+  if (lastRow <= 1) return;
+  const idRange = targetSheet.getRange(2, 1, lastRow - 1, 1);
+  const idValues = idRange.getValues();
+  const seen = {};
+  let changed = false;
+
+  for (var i = 0; i < idValues.length; i++) {
+    var currentId = String(idValues[i][0] || '').trim();
+    if (!currentId || seen[currentId]) {
+      currentId = generateEntityId_('CTR');
+      while (seen[currentId]) {
+        currentId = generateEntityId_('CTR');
+      }
+      idValues[i][0] = currentId;
+      changed = true;
+    }
+    seen[currentId] = true;
+  }
+
+  if (changed) {
+    idRange.setValues(idValues);
+  }
 }
 
 function mapContractorRow_(row) {
@@ -1125,7 +1179,7 @@ function validateAndNormalizeContractor_(contractor, isCreate, createdAt) {
   if (email && !isValidEmail_(email)) return { success: false, error: 'Email 格式不正確' };
 
   const normalized = {
-    id: String(contractor.id || (isCreate ? ('CTR' + Date.now()) : '')).trim(),
+    id: String(contractor.id || (isCreate ? generateEntityId_('CTR') : '')).trim(),
     companyName: companyName,
     contactName: contactName,
     phone: phone,
