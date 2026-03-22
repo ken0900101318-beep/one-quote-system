@@ -965,14 +965,36 @@ function getProjectProgress(projectId) {
   if (!projectId) return { success: false, error: '缺少專案 ID' };
   const projectResult = getProject(projectId);
   if (!projectResult.success) return projectResult;
-  const rows = ensureProjectProgressRows_(projectId, projectResult.project).map(function(item) {
+  const definitions = getProgressStageDefinitions_();
+  const progressMap = {};
+  ensureProjectProgressRows_(projectId, projectResult.project).forEach(function(item) {
+    if (!progressMap[item.stageKey]) progressMap[item.stageKey] = item;
+  });
+  const rows = definitions.map(function(stage) {
+    const item = progressMap[stage.key] || normalizeProgressRow_(Object.assign({}, stage, {
+      projectId: projectId,
+      stageKey: stage.key,
+      stageName: stage.name,
+      order: stage.order,
+      status: 'not_started',
+      progressPercent: 0,
+      dueDate: '',
+      actualDate: '',
+      overdueDays: 0,
+      contractorName: String(projectResult.project.contractorName || '').trim(),
+      installItems: '',
+      acceptanceResult: '',
+      note: '',
+      photos: [],
+      updatedBy: ''
+    }), true).progress;
     item.overdueDays = calculateOverdueDays_(item.dueDate, item.actualDate, item.status);
     item.isOverdue = item.overdueDays > 0 && normalizeProgressStatus_(item.status) !== 'completed';
-    item.requirements = (getProgressStageDefinitions_().filter(function(stage) { return stage.key === item.stageKey; })[0] || {}).requiredFields || [];
+    item.requirements = stage.requiredFields || [];
     return item;
   }).sort(function(a, b) { return a.order - b.order; });
   const summary = buildProjectProgressSummary_(rows);
-  return { success: true, projectId: projectId, progress: rows, summary: summary, stageDefinitions: getProgressStageDefinitions_() };
+  return { success: true, projectId: projectId, progress: rows, summary: summary, stageDefinitions: definitions };
 }
 
 function updateProgress(data) {
@@ -1203,15 +1225,24 @@ function getContractors(filters) {
   const data = sheet.getDataRange().getValues();
   const contractors = [];
   const params = filters || {};
-  const query = String(params.query || params.search || '').toLowerCase();
+  const query = String(params.query || params.search || '').trim().toLowerCase();
   const status = String(params.status || '').trim();
   const minRating = normalizeNumber_(params.minRating || params.rating || 0);
   const specialties = normalizeSpecialties_(params.specialties || params.specialty || '');
 
   for (let i = 1; i < data.length; i++) {
     const contractor = mapContractorRow_(data[i]);
+    contractor.id = String(contractor.id || contractor.contractorId || '').trim();
     if (query) {
-      const haystack = [contractor.companyName, contractor.contactName, contractor.phone].join(' ').toLowerCase();
+      const haystack = [
+        contractor.companyName,
+        contractor.contactName,
+        contractor.phone,
+        contractor.email,
+        contractor.address,
+        contractor.note,
+        (contractor.specialties || []).join(' ')
+      ].join(' ').toLowerCase();
       if (haystack.indexOf(query) === -1) continue;
     }
     if (status && contractor.status !== status) continue;

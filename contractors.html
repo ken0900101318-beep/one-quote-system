@@ -144,6 +144,35 @@
         let editingId = '';
         let selectedRating = 5;
 
+        function normalizeContractor(item = {}) {
+            const normalizeString = value => String(value == null ? '' : value).trim();
+            const normalizeList = value => {
+                if (Array.isArray(value)) return value.map(v => normalizeString(v)).filter(Boolean);
+                if (typeof value === 'string') return value.split(',').map(v => normalizeString(v)).filter(Boolean);
+                return [];
+            };
+            const normalized = {
+                ...item,
+                id: normalizeString(item.id || item.contractorId || item.ID),
+                companyName: normalizeString(item.companyName || item.company || item.name),
+                contactName: normalizeString(item.contactName || item.contact || item.contactPerson),
+                phone: normalizeString(item.phone || item.tel || item.mobile),
+                email: normalizeString(item.email),
+                lineId: normalizeString(item.lineId || item.lineID),
+                lineUrl: normalizeString(item.lineUrl || item.lineURL),
+                status: normalizeString(item.status || 'active') || 'active',
+                address: normalizeString(item.address),
+                note: normalizeString(item.note || item.remark),
+                specialties: normalizeList(item.specialties || item.specialty || item.tags),
+                rating: Number(item.rating || 0) || 0
+            };
+            return normalized;
+        }
+
+        function getContractorId(item = {}) {
+            return String(item.id || item.contractorId || item.ID || '').trim();
+        }
+
         if (currentUser) {
             document.getElementById('contractorForm').addEventListener('submit', submitForm);
             document.getElementById('searchInput').addEventListener('input', filterDebounced);
@@ -165,7 +194,7 @@
                 Toast.error('載入工程行失敗：' + (result.error || '未知錯誤'));
                 return;
             }
-            contractors = result.contractors || [];
+            contractors = (result.contractors || []).map(normalizeContractor).filter(item => item.id || item.companyName || item.contactName || item.phone);
             renderSpecialtyFilter();
             applyFilters();
             const editId = new URLSearchParams(location.search).get('edit');
@@ -226,7 +255,15 @@
             const specialtyFilters = getSelectedSpecialties('#specialtyFilter');
 
             filteredContractors = contractors.filter(item => {
-                const haystack = [item.companyName, item.contactName, item.phone].join(' ').toLowerCase();
+                const haystack = [
+                    item.companyName,
+                    item.contactName,
+                    item.phone,
+                    item.email,
+                    item.address,
+                    item.note,
+                    (item.specialties || []).join(' ')
+                ].join(' ').toLowerCase();
                 if (search && !haystack.includes(search)) return false;
                 if (ratingFilter && Number(item.rating || 0) < ratingFilter) return false;
                 if (statusFilter && item.status !== statusFilter) return false;
@@ -240,7 +277,10 @@
             const container = document.getElementById('contractorList');
             const empty = document.getElementById('emptyState');
             empty.style.display = list.length ? 'none' : 'block';
-            container.innerHTML = list.map(item => `
+            container.innerHTML = list.map(item => {
+                const contractorId = getContractorId(item);
+                const actionDisabled = contractorId ? '' : ' disabled';
+                return `
                 <article class="contractor-card">
                     <div class="card-top">
                         <div>
@@ -259,14 +299,15 @@
                     </div>
                     <div class="badge-wrap">${(item.specialties || []).map(s => `<span class="specialty-badge">${Utils.escapeHtml(s)}</span>`).join('') || '<span class="subtle">無專長標籤</span>'}</div>
                     <div class="action-group wrap">
-                        <a class="btn btn-sm btn-secondary" href="contractor-detail.html?id=${encodeURIComponent(item.id || '')}">👁️ 詳情</a>
-                        <button class="btn btn-sm btn-primary" onclick="openModal('${encodeURIComponent(item.id || '')}')">✏️ 編輯</button>
+                        ${contractorId ? `<a class="btn btn-sm btn-secondary" href="contractor-detail.html?id=${encodeURIComponent(contractorId)}">👁️ 詳情</a>` : `<button class="btn btn-sm btn-secondary" type="button" disabled title="此筆資料缺少工程行 ID">👁️ 詳情</button>`}
+                        <button class="btn btn-sm btn-primary" type="button" onclick="openModal('${encodeURIComponent(contractorId)}')"${actionDisabled}>✏️ 編輯</button>
                         <a class="btn btn-sm btn-secondary" href="tel:${encodeURIComponent(item.phone || '')}">📲 快撥</a>
                         ${item.lineUrl ? `<a class="btn btn-sm btn-secondary" href="${Utils.escapeHtml(item.lineUrl)}" target="_blank" rel="noopener">LINE</a>` : ''}
-                        <button class="btn btn-sm btn-danger" onclick="removeContractor('${encodeURIComponent(item.id || '')}')">🗑️ 刪除</button>
+                        <button class="btn btn-sm btn-danger" type="button" onclick="removeContractor('${encodeURIComponent(contractorId)}')"${actionDisabled}>🗑️ 刪除</button>
                     </div>
                 </article>
-            `).join('');
+            `;
+            }).join('');
         }
 
         function openModal(id = '') {
@@ -281,7 +322,7 @@
             document.getElementById('modalTitle').textContent = editingId ? '編輯工程行' : '新增工程行';
 
             if (editingId) {
-                const item = contractors.find(c => c.id === editingId);
+                const item = contractors.find(c => getContractorId(c) === editingId);
                 if (!item) {
                     Toast.error('找不到工程行資料');
                     closeModal();
@@ -358,7 +399,7 @@
 
         async function removeContractor(id) {
             const realId = decodeURIComponent(id);
-            const item = contractors.find(c => c.id === realId);
+            const item = contractors.find(c => getContractorId(c) === realId);
             if (!item) return;
             if (!confirm(`確定要刪除「${item.companyName}」嗎？`)) return;
             const result = await QuoteAPI.deleteContractor(realId);

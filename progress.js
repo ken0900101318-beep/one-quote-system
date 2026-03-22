@@ -53,6 +53,52 @@ window.ProgressManager = (() => {
         return '必填：' + required.map(key => FIELD_LABELS[key] || key).join('、');
     }
 
+
+    function buildDefaultStage(definition, index) {
+        return {
+            id: '',
+            projectId,
+            stageKey: definition.key,
+            stageName: definition.name,
+            order: Number(definition.order || index + 1),
+            status: 'not_started',
+            progressPercent: 0,
+            dueDate: '',
+            actualDate: '',
+            overdueDays: 0,
+            contractorName: projectData.contractorName || '',
+            installItems: '',
+            acceptanceResult: '',
+            note: '',
+            photos: [],
+            updatedBy: '',
+            requirements: definition.requiredFields || []
+        };
+    }
+
+    function normalizeProgressPayload(progressList, definitions) {
+        const definitionList = Array.isArray(definitions) && definitions.length ? definitions : [];
+        const progressListSafe = Array.isArray(progressList) ? progressList : [];
+        if (!definitionList.length) return progressListSafe.slice();
+        const progressMap = new Map();
+        progressListSafe.forEach(stage => {
+            if (!stage || !stage.stageKey || progressMap.has(stage.stageKey)) return;
+            progressMap.set(stage.stageKey, stage);
+        });
+        return definitionList.map((definition, index) => {
+            const existing = progressMap.get(definition.key);
+            return existing ? {
+                ...buildDefaultStage(definition, index),
+                ...existing,
+                stageKey: existing.stageKey || definition.key,
+                stageName: existing.stageName || definition.name,
+                order: Number(existing.order || definition.order || index + 1),
+                requirements: Array.isArray(existing.requirements) && existing.requirements.length ? existing.requirements : (definition.requiredFields || []),
+                photos: Array.isArray(existing.photos) ? existing.photos : []
+            } : buildDefaultStage(definition, index);
+        });
+    }
+
     function renderSummary() {
         const summaryBox = document.getElementById('progressSummaryBox');
         if (!summaryBox) return;
@@ -156,9 +202,9 @@ window.ProgressManager = (() => {
             Toast.error('施工進度載入失敗：' + (result.error || '未知錯誤'));
             return result;
         }
-        progressData = result.progress || [];
+        stageDefinitions = Array.isArray(result.stageDefinitions) ? result.stageDefinitions : [];
+        progressData = normalizeProgressPayload(result.progress, stageDefinitions);
         progressSummary = result.summary || null;
-        stageDefinitions = result.stageDefinitions || [];
         renderSummary();
         renderTimeline();
         return result;
