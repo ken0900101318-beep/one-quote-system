@@ -470,7 +470,7 @@ window.ProgressManager = (() => {
             Toast.error('儲存失敗：' + (result.error || '未知錯誤'));
             return;
         }
-        progressData = result.progress || progressData;
+        progressData = normalizeProgressPayload(result.progress, stageDefinitions);
         progressSummary = result.summary || progressSummary;
         renderSummary();
         renderTimeline();

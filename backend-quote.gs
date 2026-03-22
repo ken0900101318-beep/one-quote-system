@@ -700,32 +700,74 @@ function getProgressStageDefinitions_() {
   });
 }
 
-function getDefaultProgressStages_(projectId, baseProject) {
+function buildDefaultProgressStage_(projectId, baseProject, stage) {
   const project = baseProject || {};
   const contractorName = String(project.contractorName || '').trim();
   const installItems = extractInstallItemsFromProject_(project);
   const createdAt = parseDateValue_(project.createdAt) || new Date();
+  const dueDate = new Date(createdAt.getTime());
+  dueDate.setDate(dueDate.getDate() + Number(stage.defaultDueDays || 0));
+  return {
+    id: 'PRG' + Date.now() + '_' + stage.order + '_' + Math.floor(Math.random() * 1000),
+    projectId: String(projectId || '').trim(),
+    stageKey: stage.key,
+    stageName: stage.name,
+    order: Number(stage.order || 0),
+    status: 'not_started',
+    progressPercent: 0,
+    dueDate: normalizeDateInput_(dueDate),
+    actualDate: '',
+    overdueDays: 0,
+    contractorName: contractorName,
+    installItems: installItems,
+    acceptanceResult: '',
+    note: '',
+    photos: [],
+    updatedBy: '',
+    createdAt: createdAt,
+    updatedAt: createdAt
+  };
+}
+
+function getDefaultProgressStages_(projectId, baseProject) {
   return getProgressStageDefinitions_().map(function(stage) {
-    const dueDate = new Date(createdAt.getTime());
-    dueDate.setDate(dueDate.getDate() + Number(stage.defaultDueDays || 0));
-    return normalizeProgressRow_(Object.assign({}, stage, {
-      projectId: projectId,
+    return buildDefaultProgressStage_(projectId, baseProject, stage);
+  });
+}
+
+function mergeProgressRowsWithDefinitions_(projectId, project, rows) {
+  const definitions = getProgressStageDefinitions_();
+  const existingByStage = {};
+  (Array.isArray(rows) ? rows : []).forEach(function(item) {
+    if (!item || !item.stageKey || existingByStage[item.stageKey]) return;
+    existingByStage[item.stageKey] = item;
+  });
+  return definitions.map(function(stage) {
+    const fallback = buildDefaultProgressStage_(projectId, project, stage);
+    const existing = existingByStage[stage.key] || {};
+    const merged = Object.assign({}, fallback, existing, {
+      projectId: String(projectId || '').trim(),
       stageKey: stage.key,
       stageName: stage.name,
-      order: stage.order,
-      status: 'not_started',
-      progressPercent: 0,
-      dueDate: dueDate,
-      actualDate: '',
-      overdueDays: 0,
-      contractorName: contractorName,
-      installItems: installItems,
-      acceptanceResult: '',
-      note: '',
-      photos: [],
-      updatedBy: ''
-    }), true);
-  });
+      order: Number(stage.order || fallback.order || 0)
+    });
+    merged.status = normalizeProgressStatus_(merged.status);
+    merged.progressPercent = merged.status === 'completed' ? 100 : clampProgressPercent_(merged.progressPercent);
+    merged.dueDate = normalizeDateInput_(merged.dueDate);
+    merged.actualDate = normalizeDateInput_(merged.actualDate);
+    merged.contractorName = String(merged.contractorName || '').trim().slice(0, 100);
+    merged.installItems = String(merged.installItems || '').trim().slice(0, 500);
+    merged.acceptanceResult = String(merged.acceptanceResult || '').trim().slice(0, 100);
+    merged.note = String(merged.note || '').trim().slice(0, 1000);
+    merged.updatedBy = String(merged.updatedBy || '').trim().slice(0, 100);
+    merged.photos = Array.isArray(merged.photos) ? merged.photos.map(function(photo) {
+      return sanitizeProgressPhoto_(photo);
+    }).filter(function(photo) { return !!photo; }).slice(0, 6) : [];
+    merged.overdueDays = calculateOverdueDays_(merged.dueDate, merged.actualDate, merged.status);
+    merged.isOverdue = merged.overdueDays > 0 && normalizeProgressStatus_(merged.status) !== 'completed';
+    merged.requirements = stage.requiredFields || [];
+    return merged;
+  }).sort(function(a, b) { return a.order - b.order; });
 }
 
 function mapProgressRow_(row) {
@@ -841,13 +883,14 @@ function normalizeProgressRow_(progress, isCreate, createdAtOverride) {
   const updatedBy = String(progress.updatedBy || '').trim().slice(0, 100);
   const photos = Array.isArray(progress.photos) ? progress.photos.map(function(item) { return sanitizeProgressPhoto_(item); }).filter(function(item) { return !!item; }).slice(0, 6) : [];
   if (!String(progress.projectId || '').trim()) return { success: false, error: '缺少專案 ID' };
-  if ((stageDefinition.requiredFields || []).indexOf('contractorName') >= 0 && !contractorName) {
+  const shouldValidateRequiredFields = status !== 'not_started';
+  if (shouldValidateRequiredFields && (stageDefinition.requiredFields || []).indexOf('contractorName') >= 0 && !contractorName) {
     return { success: false, error: '此階段需要填寫工程行' };
   }
-  if ((stageDefinition.requiredFields || []).indexOf('installItems') >= 0 && !installItems) {
+  if (shouldValidateRequiredFields && (stageDefinition.requiredFields || []).indexOf('installItems') >= 0 && !installItems) {
     return { success: false, error: '此階段需要填寫安裝項目' };
   }
-  if ((stageDefinition.requiredFields || []).indexOf('acceptanceResult') >= 0 && !acceptanceResult) {
+  if (shouldValidateRequiredFields && (stageDefinition.requiredFields || []).indexOf('acceptanceResult') >= 0 && !acceptanceResult) {
     return { success: false, error: '此階段需要填寫驗收結果' };
   }
   return {
@@ -878,39 +921,30 @@ function normalizeProgressRow_(progress, isCreate, createdAtOverride) {
 function ensureProjectProgressRows_(projectId, project) {
   const sheet = getProgressSheet_();
   const data = sheet.getDataRange().getValues();
-  const rows = [];
+  const existingRows = [];
   for (var i = 1; i < data.length; i++) {
     const item = mapProgressRow_(data[i]);
-    if (item.projectId === projectId) rows.push(item);
+    if (item.projectId === projectId) existingRows.push(item);
   }
 
-  const defaults = getDefaultProgressStages_(projectId, project || {}).map(function(item) {
-    return item.progress || item;
-  });
-  const existingByStage = {};
-  rows.sort(function(a, b) { return a.order - b.order; }).forEach(function(item) {
-    if (!existingByStage[item.stageKey]) {
-      existingByStage[item.stageKey] = item;
+  const merged = mergeProgressRowsWithDefinitions_(projectId, project || {}, existingRows);
+  const existingStageKeys = {};
+  existingRows.forEach(function(item) {
+    if (item && item.stageKey && !existingStageKeys[item.stageKey]) {
+      existingStageKeys[item.stageKey] = true;
     }
   });
 
-  const missing = [];
-  const merged = defaults.map(function(defaultStage) {
-    const existing = existingByStage[defaultStage.stageKey];
-    if (existing) return existing;
-    missing.push(defaultStage);
-    return defaultStage;
+  const missing = merged.filter(function(item) {
+    return !existingStageKeys[item.stageKey];
   });
 
-  if (!rows.length || missing.length) {
-    const rowsToInsert = rows.length ? missing : merged;
-    if (rowsToInsert.length) {
-      const values = rowsToInsert.map(function(item) { return progressToRow_(item); });
-      sheet.getRange(sheet.getLastRow() + 1, 1, values.length, PROGRESS_HEADERS.length).setValues(values);
-    }
+  if (missing.length) {
+    const values = missing.map(function(item) { return progressToRow_(item); });
+    sheet.getRange(sheet.getLastRow() + 1, 1, values.length, PROGRESS_HEADERS.length).setValues(values);
   }
 
-  return merged.sort(function(a, b) { return a.order - b.order; });
+  return merged;
 }
 
 function calculateOverdueDays_(dueDate, actualDate, status) {
@@ -925,8 +959,8 @@ function calculateOverdueDays_(dueDate, actualDate, status) {
 }
 
 function buildProjectProgressSummary_(rows) {
-  const list = Array.isArray(rows) ? rows.slice().sort(function(a, b) { return a.order - b.order; }) : [];
-  const total = list.length || PROGRESS_STAGE_DEFINITIONS.length;
+  const list = mergeProgressRowsWithDefinitions_('', {}, Array.isArray(rows) ? rows : []);
+  const total = PROGRESS_STAGE_DEFINITIONS.length;
   const completed = list.filter(function(item) { return normalizeProgressStatus_(item.status) === 'completed'; }).length;
   const percent = total ? Math.round((completed / total) * 100) : 0;
   let currentStage = null;
@@ -966,33 +1000,7 @@ function getProjectProgress(projectId) {
   const projectResult = getProject(projectId);
   if (!projectResult.success) return projectResult;
   const definitions = getProgressStageDefinitions_();
-  const progressMap = {};
-  ensureProjectProgressRows_(projectId, projectResult.project).forEach(function(item) {
-    if (!progressMap[item.stageKey]) progressMap[item.stageKey] = item;
-  });
-  const rows = definitions.map(function(stage) {
-    const item = progressMap[stage.key] || normalizeProgressRow_(Object.assign({}, stage, {
-      projectId: projectId,
-      stageKey: stage.key,
-      stageName: stage.name,
-      order: stage.order,
-      status: 'not_started',
-      progressPercent: 0,
-      dueDate: '',
-      actualDate: '',
-      overdueDays: 0,
-      contractorName: String(projectResult.project.contractorName || '').trim(),
-      installItems: '',
-      acceptanceResult: '',
-      note: '',
-      photos: [],
-      updatedBy: ''
-    }), true).progress;
-    item.overdueDays = calculateOverdueDays_(item.dueDate, item.actualDate, item.status);
-    item.isOverdue = item.overdueDays > 0 && normalizeProgressStatus_(item.status) !== 'completed';
-    item.requirements = stage.requiredFields || [];
-    return item;
-  }).sort(function(a, b) { return a.order - b.order; });
+  const rows = mergeProgressRowsWithDefinitions_(projectId, projectResult.project, ensureProjectProgressRows_(projectId, projectResult.project));
   const summary = buildProjectProgressSummary_(rows);
   return { success: true, projectId: projectId, progress: rows, summary: summary, stageDefinitions: definitions };
 }
