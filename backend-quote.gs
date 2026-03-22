@@ -918,16 +918,58 @@ function normalizeProgressRow_(progress, isCreate, createdAtOverride) {
   };
 }
 
-function ensureProjectProgressRows_(projectId, project) {
+function resolveProjectIdentifier_(projectId) {
+  const lookupId = String(projectId || '').trim();
+  if (!lookupId) return { success: false, error: '缺少專案 ID' };
+
+  const sheet = SpreadsheetApp.openById(QUOTE_SHEET_ID).getSheetByName(SHEETS.PROJECTS);
+  const data = sheet.getDataRange().getValues();
+  const paymentMap = getPaymentMap_();
+
+  for (var i = 1; i < data.length; i++) {
+    const rowId = String(data[i][0] || '').trim();
+    const rowProjectNumber = String(data[i][1] || '').trim();
+    if (rowId === lookupId || rowProjectNumber === lookupId) {
+      return {
+        success: true,
+        inputId: lookupId,
+        projectId: rowId,
+        projectNumber: rowProjectNumber,
+        project: buildProjectFromRow_(data[i], paymentMap)
+      };
+    }
+  }
+
+  return { success: false, error: '找不到專案' };
+}
+
+function getStoredProgressRowsByProjectId_(projectId, projectNumber) {
+  const canonicalId = String(projectId || '').trim();
+  const projectNumberText = String(projectNumber || '').trim();
+  const acceptedIds = {};
+  if (canonicalId) acceptedIds[canonicalId] = true;
+  if (projectNumberText) acceptedIds[projectNumberText] = true;
+
   const sheet = getProgressSheet_();
   const data = sheet.getDataRange().getValues();
   const existingRows = [];
   for (var i = 1; i < data.length; i++) {
     const item = mapProgressRow_(data[i]);
-    if (item.projectId === projectId) existingRows.push(item);
+    const rowProjectId = String(item.projectId || '').trim();
+    if (!acceptedIds[rowProjectId]) continue;
+    if (rowProjectId !== canonicalId) {
+      item.projectId = canonicalId;
+      sheet.getRange(i + 1, 2).setValue(canonicalId);
+    }
+    existingRows.push(item);
   }
+  return existingRows;
+}
 
-  const merged = mergeProgressRowsWithDefinitions_(projectId, project || {}, existingRows);
+function ensureProjectProgressRows_(projectId, project, projectNumber) {
+  const canonicalId = String(projectId || '').trim();
+  const existingRows = getStoredProgressRowsByProjectId_(canonicalId, projectNumber);
+  const merged = mergeProgressRowsWithDefinitions_(canonicalId, project || {}, existingRows);
   const existingStageKeys = {};
   existingRows.forEach(function(item) {
     if (item && item.stageKey && !existingStageKeys[item.stageKey]) {
@@ -940,6 +982,7 @@ function ensureProjectProgressRows_(projectId, project) {
   });
 
   if (missing.length) {
+    const sheet = getProgressSheet_();
     const values = missing.map(function(item) { return progressToRow_(item); });
     sheet.getRange(sheet.getLastRow() + 1, 1, values.length, PROGRESS_HEADERS.length).setValues(values);
   }
@@ -960,7 +1003,7 @@ function calculateOverdueDays_(dueDate, actualDate, status) {
 
 function buildProjectProgressSummary_(rows) {
   const list = mergeProgressRowsWithDefinitions_('', {}, Array.isArray(rows) ? rows : []);
-  const total = PROGRESS_STAGE_DEFINITIONS.length;
+  const total = Math.max(list.length, PROGRESS_STAGE_DEFINITIONS.length);
   const completed = list.filter(function(item) { return normalizeProgressStatus_(item.status) === 'completed'; }).length;
   const percent = total ? Math.round((completed / total) * 100) : 0;
   let currentStage = null;
@@ -997,12 +1040,21 @@ function buildProjectProgressSummary_(rows) {
 
 function getProjectProgress(projectId) {
   if (!projectId) return { success: false, error: '缺少專案 ID' };
-  const projectResult = getProject(projectId);
-  if (!projectResult.success) return projectResult;
+  const resolved = resolveProjectIdentifier_(projectId);
+  if (!resolved.success) return resolved;
+
   const definitions = getProgressStageDefinitions_();
-  const rows = mergeProgressRowsWithDefinitions_(projectId, projectResult.project, ensureProjectProgressRows_(projectId, projectResult.project));
+  const rows = ensureProjectProgressRows_(resolved.projectId, resolved.project, resolved.projectNumber);
   const summary = buildProjectProgressSummary_(rows);
-  return { success: true, projectId: projectId, progress: rows, summary: summary, stageDefinitions: definitions };
+
+  return {
+    success: true,
+    projectId: resolved.projectId,
+    projectNumber: resolved.projectNumber,
+    progress: rows,
+    summary: Object.assign({}, summary, { totalStages: definitions.length }),
+    stageDefinitions: definitions
+  };
 }
 
 function updateProgress(data) {
@@ -1011,26 +1063,29 @@ function updateProgress(data) {
   const stageKey = String(payload.stageKey || '').trim();
   if (!projectId) return { success: false, error: '缺少專案 ID' };
   if (!stageKey) return { success: false, error: '缺少階段 Key' };
-  const projectResult = getProject(projectId);
-  if (!projectResult.success) return projectResult;
-  const existingRows = ensureProjectProgressRows_(projectId, projectResult.project);
+  const resolved = resolveProjectIdentifier_(projectId);
+  if (!resolved.success) return resolved;
+  const existingRows = ensureProjectProgressRows_(resolved.projectId, resolved.project, resolved.projectNumber);
   const target = existingRows.filter(function(item) { return item.stageKey === stageKey; })[0];
   if (!target) return { success: false, error: '找不到施工階段' };
-  const merged = Object.assign({}, target, payload);
-  if (!merged.contractorName) merged.contractorName = String(projectResult.project.contractorName || '').trim();
-  if (!merged.installItems) merged.installItems = extractInstallItemsFromProject_(projectResult.project);
+  const merged = Object.assign({}, target, payload, { projectId: resolved.projectId });
+  if (!merged.contractorName) merged.contractorName = String(resolved.project.contractorName || '').trim();
+  if (!merged.installItems) merged.installItems = extractInstallItemsFromProject_(resolved.project);
   const normalized = normalizeProgressRow_(merged, false, target.createdAt || new Date());
   if (!normalized.success) return normalized;
   normalized.progress.overdueDays = calculateOverdueDays_(normalized.progress.dueDate, normalized.progress.actualDate, normalized.progress.status);
   const sheet = getProgressSheet_();
   const values = sheet.getDataRange().getValues();
+  const acceptedIds = {};
+  acceptedIds[resolved.projectId] = true;
+  if (resolved.projectNumber) acceptedIds[resolved.projectNumber] = true;
   for (var i = 1; i < values.length; i++) {
-    if (String(values[i][1]) === projectId && String(values[i][2]) === stageKey) {
+    if (acceptedIds[String(values[i][1]) || ''] && String(values[i][2]) === stageKey) {
       sheet.getRange(i + 1, 1, 1, PROGRESS_HEADERS.length).setValues([progressToRow_(normalized.progress)]);
       break;
     }
   }
-  const refreshed = getProjectProgress(projectId);
+  const refreshed = getProjectProgress(resolved.projectId);
   return { success: true, message: '施工進度已更新', stage: normalized.progress, progress: refreshed.progress, summary: refreshed.summary };
 }
 
@@ -1465,7 +1520,7 @@ function buildProjectFromRow_(row, paymentMap) {
   const paymentSummary = buildPaymentSummary_(totalPrice, payments);
   const contractor = projectData.contractorId ? getContractor(projectData.contractorId) : null;
   const contractorInfo = contractor && contractor.success ? contractor.contractor : null;
-  const progressRows = ensureProjectProgressRows_(projectId, Object.assign({}, projectData, { id: projectId, createdAt: row[7] }));
+  const progressRows = ensureProjectProgressRows_(projectId, Object.assign({}, projectData, { id: projectId, createdAt: row[7] }), row[1]);
   const progressSummary = buildProjectProgressSummary_(progressRows);
 
   return Object.assign({}, projectData, {

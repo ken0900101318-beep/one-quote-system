@@ -120,7 +120,7 @@ window.ProgressManager = (() => {
                 <div class="progress-summary-list">
                     <div class="progress-summary-item">
                         <small>完成階段</small>
-                        <strong>${Number((progressSummary && progressSummary.completedStages) || 0)} / ${Number((progressSummary && progressSummary.totalStages) || progressData.length || 7)}</strong>
+                        <strong>${Number((progressSummary && progressSummary.completedStages) || 0)} / ${Number((progressSummary && progressSummary.totalStages) || stageDefinitions.length || progressData.length || 7)}</strong>
                     </div>
                     <div class="progress-summary-item">
                         <small>目前階段</small>
